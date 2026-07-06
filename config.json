@@ -1,0 +1,4 @@
+{
+  "server": "https://displayed-chapter-small-saves.trycloudflare.com",
+  "note": "Khi Cloudflare Quick Tunnel đổi link, chỉ sửa dòng server này."
+}
