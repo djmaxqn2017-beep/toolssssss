@@ -3,12 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap: https://ssl.gstatic.com 'unsafe-eval'; style-src 'self' 'unsafe-inline'; media-src *; img-src 'self' data: content:; connect-src *;">
+    <meta http-equiv="Content-Security-Policy" content="default-src * data: gap: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data: content: blob:; media-src *; connect-src *;">
     <title>Tool AI Tài Xỉu</title>
-    <meta name="theme-color" content="#07140b">
-    <link rel="manifest" href="manifest.json">
-    <link rel="icon" href="icon.svg" type="image/svg+xml">
-
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background: #07140b; color: #fff; text-align: center; padding: 12px; margin: 0; }
@@ -48,8 +44,8 @@
 <div class="wrapper">
     <h2>AI TÀI XỈU CLOUD</h2>
     <div class="sub">Nhập tổng 3 xúc xắc - Server AI phân tích BigData</div>
-    <div id="tag-online" class="status-online">● ĐÃ KẾT NỐI SERVER AI</div>
-    <div id="tag-offline" class="status-offline">❌ KHÔNG CÓ MẠNG - KHÓA ỨNG DỤNG</div>
+    <div id="tag-online" class="status-online" style="display:none">● ĐÃ KẾT NỐI SERVER AI</div>
+    <div id="tag-offline" class="status-offline" style="display:inline-block">ĐANG KẾT NỐI SERVER...</div>
 
     <div id="main-form">
         <label for="server_url" style="display:none">Địa chỉ Server:</label>
@@ -203,7 +199,21 @@
         ]);
     }
 
-    window.addEventListener("load", loadServerConfig);
+    
+    window.addEventListener("error", function(e) {
+        document.getElementById("tag-online").style.display = "none";
+        document.getElementById("tag-offline").style.display = "inline-block";
+        document.getElementById("tag-offline").innerText = "LỖI JAVASCRIPT";
+        document.getElementById("result").innerText = "LỖI JS";
+        document.getElementById("result").style.color = "#ff4466";
+        document.getElementById("server_info").innerText = "Lỗi JS: " + e.message;
+    });
+
+    window.addEventListener("load", function() {
+        document.getElementById("server_info").innerText = "JavaScript đã chạy. Đang kiểm tra server...";
+        loadServerConfig();
+    });
+
 
     function normalizePercent(v) {
         const n = Number(v);
@@ -368,13 +378,6 @@
     document.getElementById("total_input").addEventListener("keydown", function(e) {
         if (e.key === "Enter") sendDataToServerAI();
     });
-
-
-    if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
-            navigator.serviceWorker.register("service-worker.js").catch(() => {});
-        });
-    }
 
 </script>
 </body>
