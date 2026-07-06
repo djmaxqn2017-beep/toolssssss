@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src * data: gap: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data: content: blob:; media-src *; connect-src *;">
-<title>AI Tài Xỉu Cloud</title>
+<title>AI Tài Xỉu Cloud V2</title>
 <meta name="theme-color" content="#120022">
 
 <style>
@@ -347,6 +347,8 @@ function updateUI(data,total,raw){
     if(data.ket_qua_van_truoc)lines.push(data.ket_qua_van_truoc);
     if(data.trang_thai_tay)lines.push(data.trang_thai_tay);
     if(data.panel_text)lines.push(data.panel_text);
+    if(data.dang_khoa_an_toan)lines.push("🔒 ĐANG KHÓA CẦU");
+    if(data.mo_khoa_cho_tay_sau)lines.push("✅ Đã mở khóa - tay này chưa tính ăn");
     if(data.xu_huong_text)lines.push(data.xu_huong_text);
     document.getElementById("server_info").innerText=lines.join(" | ")||"Đã nhận kết quả từ server.";
     updateHistory(total,raw);
@@ -402,8 +404,24 @@ async function backOne(){
             headers:{"Content-Type":"application/json"},
             body:JSON.stringify({device_id:deviceId,action:"BACK"})
         });
-        historyLocal.pop();updateHistory();
-        document.getElementById("server_info").innerText=data.message||"Đã BACK 1 ván";
+
+        historyLocal.pop();
+        const restore=data.restore_state||null;
+        if(restore){
+            const raw=restore.dice_raw || (Array.isArray(restore.dice)?restore.dice.join(""):");
+            if(raw){
+                document.getElementById("total_input").value=raw;
+                updatePreview();
+            }else if(restore.tong_da_tinh){
+                document.getElementById("total_input").value=String(restore.tong_da_tinh);
+                updatePreview();
+            }
+            updateUI(restore, restore.tong_da_tinh||restore.total||null, raw||"");
+            document.getElementById("server_info").innerText=(data.message||"Đã BACK")+" | Đã khôi phục kết quả trước.";
+        }else{
+            updateHistory();
+            document.getElementById("server_info").innerText=data.message||"Đã BACK 1 ván";
+        }
     }catch(e){alert("Lỗi BACK: "+e.message)}
 }
 async function newTable(){
@@ -425,6 +443,15 @@ window.addEventListener("load",()=>{updatePreview();loadServerConfig()});
 window.addEventListener("error",e=>{
     document.getElementById("server_info").innerText="Lỗi JavaScript: "+e.message;
 });
+
+if("serviceWorker" in navigator){
+    window.addEventListener("load",()=>{
+        navigator.serviceWorker.register("service-worker.js?v=2.1").then(reg=>{
+            if(reg && reg.update) reg.update();
+        }).catch(()=>{});
+    });
+}
+
 </script>
 </body>
 </html>

@@ -1,5 +1,4 @@
 {
-  "server": "https://miss-reel-assists-supports.trycloudflare.com",
-  "note": "Auto updated by AUTO_UPDATE_TUNNEL.js",
-  "updated_at": "2026-07-06T04:40:49.242Z"
+  "server": "https://YOUR-CLOUDFLARE-LINK.trycloudflare.com",
+  "note": "AUTO_UPDATE_TUNNEL.js sẽ tự cập nhật dòng server này khi chạy."
 }
