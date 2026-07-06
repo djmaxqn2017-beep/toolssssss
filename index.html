@@ -4,161 +4,157 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src * data: gap: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data: content: blob:; media-src *; connect-src *;">
-<title>Tool AI Cloud Predictor</title>
+<title>AI Tài Xỉu Cloud</title>
+<meta name="theme-color" content="#120022">
 
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{
     width:100%;height:100%;margin:0;padding:0;overflow:hidden;
-    font-family:'Segoe UI',Arial,sans-serif;
-    background:#0b0b16;color:#fff
+    font-family:'Segoe UI',Arial,sans-serif;color:#fff;
+    background:#040009;
 }
 body{display:flex;justify-content:center;align-items:center}
 .app{
-    width:100vw;height:100dvh;max-width:450px;margin:0 auto;
-    background:radial-gradient(circle at top,#1b1b3d 0,#0b0b16 45%,#05050c 100%);
-    display:flex;flex-direction:column;position:relative;overflow:hidden;
-    border-left:1px solid #1f1f42;border-right:1px solid #1f1f42
+    width:100vw;height:100dvh;max-width:450px;margin:0 auto;position:relative;overflow:hidden;
+    display:flex;flex-direction:column;
+    background:
+      radial-gradient(circle at 15% 10%,rgba(176,0,255,.35),transparent 28%),
+      radial-gradient(circle at 85% 18%,rgba(0,255,255,.24),transparent 26%),
+      radial-gradient(circle at 50% 85%,rgba(255,0,160,.24),transparent 32%),
+      linear-gradient(180deg,#18002e 0%,#090014 44%,#030007 100%);
+    border-left:1px solid rgba(0,255,255,.38);
+    border-right:1px solid rgba(255,0,255,.36);
 }
+.app::before{
+    content:"";position:absolute;inset:-2px;pointer-events:none;
+    background:linear-gradient(120deg,transparent,#00fff0,transparent,#ff00d4,transparent);
+    opacity:.22;animation:ledMove 5s linear infinite;
+}
+.app::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background-image:
+      radial-gradient(#ffffff 0.8px,transparent 1px),
+      radial-gradient(#00fff0 0.7px,transparent 1px),
+      radial-gradient(#ff00d4 0.7px,transparent 1px);
+    background-size:80px 80px,120px 120px,160px 160px;
+    background-position:0 0,40px 20px,20px 70px;
+    opacity:.17;animation:stars 18s linear infinite;
+}
+@keyframes ledMove{0%{filter:hue-rotate(0deg);transform:translateX(-8%)}50%{filter:hue-rotate(120deg)}100%{filter:hue-rotate(360deg);transform:translateX(8%)}}
+@keyframes stars{from{background-position:0 0,40px 20px,20px 70px}to{background-position:0 220px,40px 260px,20px 300px}}
 .top{
-    height:100px;padding:13px 12px 8px;
-    background:linear-gradient(180deg,#181836,#121225);
-    border-bottom:1px solid #2d2d5a;
-    box-shadow:0 8px 32px rgba(0,0,0,.6)
+    position:relative;z-index:1;height:98px;padding:13px 12px 8px;
+    background:linear-gradient(180deg,rgba(43,0,77,.92),rgba(12,0,28,.82));
+    border-bottom:1px solid rgba(0,255,255,.28);
+    box-shadow:0 8px 34px rgba(0,0,0,.7),0 0 22px rgba(255,0,255,.12);
 }
 .title{
-    color:#00ffaa;text-transform:uppercase;letter-spacing:2px;
-    font-size:22px;font-weight:900;margin:0;text-align:center
+    text-align:center;text-transform:uppercase;letter-spacing:2px;
+    font-size:22px;font-weight:1000;margin:0;
+    background:linear-gradient(90deg,#00fff0,#ff4dff,#00ffaa);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 18px rgba(0,255,255,.28);
 }
-.sub{
-    color:#8e8eaf;font-size:12px;text-align:center;margin-top:5px
-}
+.sub{color:#bda7ff;font-size:11px;text-align:center;margin-top:5px}
 .status{
     margin:9px auto 0;width:max-content;max-width:96%;
-    padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;
-    border:1px solid #00ffaa;color:#00ffaa;background:#121225
+    padding:5px 14px;border-radius:20px;font-size:11px;font-weight:900;
+    border:1px solid #00fff0;color:#00fff0;background:rgba(7,0,20,.85);
+    box-shadow:0 0 12px rgba(0,255,255,.28)
 }
-.status.off{border-color:#ff3366;color:#ff3366;background:#1a0c18}
-.content{flex:1;overflow:auto;padding:12px 12px 94px}
-.card{
-    background:#121225;border:1px solid #1f1f42;border-radius:20px;
-    padding:13px;margin-bottom:12px;
-    box-shadow:0 8px 32px rgba(0,0,0,.6)
+.status.off{border-color:#ff3366;color:#ff4e7a;box-shadow:0 0 12px rgba(255,0,100,.28)}
+.content{position:relative;z-index:1;flex:1;overflow:auto;padding:12px 12px 96px}
+.card,.brain-box,.section{
+    background:rgba(16,0,34,.78);
+    border:1px solid rgba(0,255,255,.24);
+    border-radius:18px;padding:12px;margin-bottom:12px;
+    box-shadow:0 10px 30px rgba(0,0,0,.55),0 0 22px rgba(128,0,255,.14) inset;
+    backdrop-filter:blur(4px);
 }
-.label{
-    display:block;text-align:left;margin-left:2%;
-    font-size:13px;color:#8e8eaf;margin-bottom:6px
-}
-.input-row{display:grid;grid-template-columns:1fr 88px;gap:8px}
+.label{display:block;text-align:left;font-size:13px;color:#d7cbff;margin:0 0 7px 2px}
+.input-row{display:grid;grid-template-columns:1fr 90px;gap:9px}
 input{
-    width:100%;height:55px;border:1px solid #2d2d5a;background:#181836;
-    color:#fff;border-radius:10px;text-align:center;font-size:27px;
-    font-weight:900;outline:none
+    width:100%;height:55px;border-radius:13px;border:1px solid rgba(0,255,255,.38);
+    background:rgba(3,0,16,.72);color:#fff;text-align:center;outline:none;
+    font-size:29px;font-weight:1000;text-shadow:0 0 10px rgba(0,255,255,.4)
 }
 .sum-box{
-    height:55px;border-radius:10px;border:1px solid #00ffaa;
-    background:#181836;display:flex;flex-direction:column;
-    justify-content:center;align-items:center
+    height:55px;border-radius:13px;border:1px solid #ffcc00;background:rgba(28,15,0,.55);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    box-shadow:0 0 14px rgba(255,204,0,.2)
 }
-.sum-box .small{font-size:10px;color:#8e8eaf}
-.sum-box .big{font-size:25px;font-weight:900;color:#ffcc00}
-button{
-    border:none;color:white;font-weight:bold;border-radius:10px;cursor:pointer
-}
+.sum-box .small{font-size:10px;color:#ffe899;font-weight:900}
+.sum-box .big{font-size:25px;font-weight:1000;color:#ffcc00}
+button{border:none;color:#fff;font-weight:1000;border-radius:13px;cursor:pointer}
 .main-btn{
     width:100%;height:55px;margin-top:10px;
-    background:linear-gradient(135deg,#0077ff,#00ffaa);
-    font-size:17px;box-shadow:0 4px 15px rgba(0,255,170,.3)
+    background:linear-gradient(135deg,#6d2bff,#00fff0,#ff4dff);
+    background-size:220% 220%;animation:btnLed 3.4s ease infinite;
+    font-size:16px;box-shadow:0 4px 20px rgba(0,255,255,.28)
 }
-.main-btn:disabled{opacity:.78}
+@keyframes btnLed{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 .actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px}
 .small-btn{
-    height:44px;background:#181836;border:1px solid #2d2d5a;
-    color:#fff;font-size:15px
+    height:44px;background:rgba(20,0,48,.82);
+    border:1px solid rgba(0,255,255,.28);font-size:15px;
+    box-shadow:0 0 14px rgba(0,255,255,.12) inset;
 }
-.danger{background:#381323;border-color:#ff3366}
-.brain-box{
-    padding:16px;background:#181836;border-radius:12px;
-    border:1px solid #2d2d5a;text-align:center
-}
-.muted{font-size:13px;color:#8e8eaf}
+.danger{border-color:rgba(255,60,120,.55);background:rgba(74,0,36,.72)}
+.brain-box{text-align:center}
+.muted{font-size:12px;color:#cbbcff}
 #result{
-    font-size:43px;color:#ffcc00;margin:10px 0 4px;
-    font-weight:1000;text-shadow:0 0 18px rgba(255,204,0,.25)
+    font-size:43px;color:#ffcc00;margin:10px 0 5px;font-weight:1000;
+    text-shadow:0 0 18px rgba(255,204,0,.32)
 }
-#percent{
-    font-size:16px;color:#00ffaa;font-weight:bold
-}
-#accuracy{font-size:13px;margin-top:5px;color:#fff}
-.server-status{
-    color:#8e8eaf;font-size:12px;margin-top:10px;line-height:1.35;
-    max-height:52px;overflow:auto
-}
-.section{
-    background:#121225;border:1px solid #1f1f42;border-radius:14px;
-    padding:12px;margin-bottom:12px;text-align:left
-}
-.section h3{
-    margin:0 0 10px;font-size:15px;color:#ffffff
-}
-.bet-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#percent{font-size:16px;color:#00fff0;font-weight:1000}
+#accuracy{font-size:13px;color:#fff;margin-top:4px}
+.server-status{font-size:12px;color:#cbbcff;line-height:1.35;margin-top:8px;max-height:60px;overflow:auto}
+.section h3{margin:0 0 10px;font-size:15px;color:#fff}
+.bet-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .bet{
-    min-height:73px;background:#181836;border:1px solid #2d2d5a;
-    border-radius:12px;text-align:center;padding:10px
+    min-height:73px;background:rgba(7,0,24,.72);border:1px solid rgba(0,255,255,.24);
+    border-radius:13px;text-align:center;padding:10px
 }
-.bet.hot{
-    border-color:#ffcc00;box-shadow:0 0 0 2px rgba(255,204,0,.18) inset
-}
-.bet-title{font-size:17px;font-weight:900}
-.bet-sub{font-size:11px;color:#8e8eaf;margin-top:3px}
-.bet-pct{font-size:22px;color:#ffcc00;font-weight:900;margin-top:5px}
-.bar-bg{
-    height:6px;background:#10102a;border-radius:20px;overflow:hidden;margin-top:7px
-}
-.bar{height:100%;background:#00ffaa;width:0%}
+.bet.hot{border-color:#ffcc00;box-shadow:0 0 18px rgba(255,204,0,.18) inset}
+.bet-title{font-size:17px;font-weight:1000}
+.bet-sub{font-size:11px;color:#bda7ff;margin-top:2px}
+.bet-pct{font-size:22px;color:#ffcc00;font-weight:1000;margin-top:5px}
+.bar-bg{height:6px;background:#140027;border-radius:20px;overflow:hidden;margin-top:7px}
+.bar{height:100%;background:linear-gradient(90deg,#6d2bff,#00fff0,#ff4dff);width:0%}
 .total-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
 .total-cell{
-    height:50px;border:1px solid #2d2d5a;background:#181836;
-    border-radius:9px;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;text-align:center
+    height:50px;border:1px solid rgba(0,255,255,.22);background:rgba(7,0,24,.72);
+    border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center
 }
-.total-cell.hot{border-color:#ffcc00;background:#252036}
-.total-n{font-size:16px;font-weight:900}
-.total-p{font-size:10px;color:#8e8eaf}
+.total-cell.hot{border-color:#ffcc00;background:rgba(55,34,0,.62)}
+.total-n{font-size:16px;font-weight:1000}
+.total-p{font-size:10px;color:#cbbcff}
 .dice-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
 .dice-cell{
-    min-height:49px;border:1px solid #2d2d5a;background:#181836;
-    border-radius:9px;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;font-size:10px;text-align:center
+    min-height:49px;border:1px solid rgba(0,255,255,.22);background:rgba(7,0,24,.72);
+    border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;text-align:center
 }
-.dice-face{font-size:19px;font-weight:900;color:#fff}
-.history{
-    display:flex;gap:5px;overflow-x:auto;padding:7px 0 2px;margin-top:7px
-}
-.pill{
-    min-width:39px;padding:5px 7px;border-radius:8px;background:#142d6d;
-    font-size:11px;font-weight:900;text-align:center;border:1px solid #0077ff
-}
-.pill.tai{background:#5b1526;border-color:#ff3366}
+.dice-face{font-size:19px;font-weight:1000}
+.history{display:flex;gap:5px;overflow-x:auto;padding:7px 0 2px;margin-top:7px}
+.pill{min-width:39px;padding:5px 7px;border-radius:8px;background:#13007a;font-size:11px;font-weight:1000;text-align:center;border:1px solid #00fff0}
+.pill.tai{background:#74123a;border-color:#ff4d8c}
 .bottom{
-    position:absolute;left:0;right:0;bottom:0;height:78px;
-    background:linear-gradient(180deg,rgba(18,18,37,.88),#0b0b16);
-    border-top:1px solid #2d2d5a;padding:8px 10px;
-    display:grid;grid-template-columns:repeat(4,1fr);gap:7px
+    position:absolute;z-index:2;left:0;right:0;bottom:0;height:80px;
+    background:linear-gradient(180deg,rgba(21,0,45,.92),rgba(4,0,10,.98));
+    border-top:1px solid rgba(0,255,255,.28);
+    padding:8px 10px;display:grid;grid-template-columns:1fr 1fr 1.15fr;gap:8px
 }
 .quick{
-    border-radius:12px;background:#181836;color:#fff;font-size:17px;
-    font-weight:900;border:1px solid #2d2d5a
+    border-radius:13px;background:rgba(20,0,48,.82);color:#fff;font-size:14px;
+    font-weight:1000;border:1px solid rgba(0,255,255,.28)
 }
-.quick.hot{
-    background:linear-gradient(135deg,#0077ff,#00ffaa);
-    border:none;color:#fff
-}
+.quick.red{border-color:rgba(255,60,120,.55);background:rgba(74,0,36,.72)}
+.quick.hot{background:linear-gradient(135deg,#6d2bff,#00fff0,#ff4dff);background-size:220% 220%;animation:btnLed 3.4s ease infinite}
 @media(max-height:760px){
-    .top{height:84px}.title{font-size:20px}.sub{font-size:11px}
-    .content{padding-bottom:82px}.card,.section{padding:10px;margin-bottom:9px}
-    #result{font-size:36px}.bottom{height:70px}
-    input,.sum-box,.main-btn{height:48px}
+    .top{height:84px}.title{font-size:19px}.content{padding-bottom:82px}
+    .card,.brain-box,.section{padding:9px;margin-bottom:9px}
+    input,.sum-box,.main-btn{height:48px}#result{font-size:36px}.bottom{height:70px}
 }
 </style>
 </head>
@@ -166,24 +162,19 @@ button{
 <body>
 <div class="app">
     <div class="top">
-        <div class="title">AI CLOUD PREDICTOR</div>
-        <div class="sub">Nhập 3 mặt xúc xắc, ví dụ 345 → tổng 12</div>
+        <div class="title">AI TÀI XỈU CLOUD</div>
+        <div class="sub">Nhập 3 mặt xúc xắc, ví dụ 345 → tự cộng = 12</div>
         <div id="status" class="status off">ĐANG KẾT NỐI SERVER...</div>
     </div>
 
     <div class="content">
         <div class="card">
-            <label class="label" for="total_input">Tổng 3 xúc xắc vừa ra:</label>
+            <label class="label" for="total_input">Nhập 3 xúc xắc vừa ra:</label>
             <div class="input-row">
                 <input id="total_input" inputmode="numeric" maxlength="3" placeholder="345">
-                <div class="sum-box">
-                    <div class="small">TỔNG</div>
-                    <div class="big" id="sum_preview">--</div>
-                </div>
+                <div class="sum-box"><div class="small">TỔNG</div><div class="big" id="sum_preview">--</div></div>
             </div>
-
             <button class="main-btn" id="send_btn" onclick="sendDataToServerAI()" disabled>ĐANG KẾT NỐI SERVER...</button>
-
             <div class="actions">
                 <button class="small-btn" onclick="backOne()">↩ BACK</button>
                 <button class="small-btn danger" onclick="newTable()">🔄 Đổi bàn</button>
@@ -191,10 +182,10 @@ button{
         </div>
 
         <div class="brain-box">
-            <div class="muted">KẾT QUẢ TỪ TIẾN TRÌNH SERVER AI:</div>
+            <div class="muted">KẾT QUẢ TỪ SERVER AI</div>
             <div id="result">CHỜ DỮ LIỆU...</div>
             <div id="percent">Tài: 0% | Xỉu: 0%</div>
-            <div id="accuracy">Độ chính xác đám mây: 0.0%</div>
+            <div id="accuracy">Độ đúng máy này: 0.00%</div>
             <div class="server-status" id="server_info">Trạng thái: Đang đợi lệnh Fetch API...</div>
             <div class="history" id="history"></div>
         </div>
@@ -208,7 +199,7 @@ button{
         </div>
 
         <div class="section">
-            <h3>Tổng 4–17</h3>
+            <h3>Tổng điểm 4–17</h3>
             <div class="total-grid" id="total-bars"></div>
         </div>
 
@@ -219,25 +210,24 @@ button{
     </div>
 
     <div class="bottom">
-        <button class="quick" onclick="quickDice('111')">111</button>
-        <button class="quick" onclick="quickDice('222')">222</button>
-        <button class="quick" onclick="quickDice('333')">333</button>
-        <button class="quick hot" onclick="sendDataToServerAI()">GỬI</button>
+        <button class="quick" onclick="backOne()">↩ BACK</button>
+        <button class="quick red" onclick="newTable()">🔄 Đổi bàn</button>
+        <button class="quick hot" onclick="sendDataToServerAI()">GỬI DATA</button>
     </div>
 </div>
 
 <script>
-const CONFIG_URL = "https://djmaxqn2017-beep.github.io/toolssssss/config.json";
-let SERVER_URL = "";
-const deviceIdKey = "TAIXIU_DEVICE_ID";
-let deviceId = localStorage.getItem(deviceIdKey);
-if (!deviceId) {
-    deviceId = "TX_" + Math.random().toString(36).slice(2, 10).toUpperCase() + "_" + Date.now();
-    localStorage.setItem(deviceIdKey, deviceId);
+const CONFIG_URL="https://djmaxqn2017-beep.github.io/toolssssss/config.json";
+let SERVER_URL="";
+const deviceIdKey="TAIXIU_DEVICE_ID";
+let deviceId=localStorage.getItem(deviceIdKey);
+if(!deviceId){
+    deviceId="TX_"+Math.random().toString(36).slice(2,10).toUpperCase()+"_"+Date.now();
+    localStorage.setItem(deviceIdKey,deviceId);
 }
-const historyLocal = [];
+const historyLocal=[];
 
-function setStatus(ok, text){
+function setStatus(ok,text){
     const s=document.getElementById("status");
     s.className=ok?"status":"status off";
     s.innerText=text;
@@ -250,7 +240,7 @@ function parseInputValue(){
     const raw=String(document.getElementById("total_input").value||"").trim();
     if(/^[1-6]{3}$/.test(raw)){
         const dice=raw.split("").map(Number);
-        const total=dice.reduce((s,x)=>s+x,0);
+        const total=dice[0]+dice[1]+dice[2];
         return {ok:true,total,raw,dice,note:`${dice[0]} + ${dice[1]} + ${dice[2]} = ${total}`};
     }
     const total=Number(raw);
@@ -265,51 +255,46 @@ function updatePreview(){
 }
 document.getElementById("total_input").addEventListener("input",updatePreview);
 document.getElementById("total_input").addEventListener("keydown",e=>{if(e.key==="Enter")sendDataToServerAI()});
-function quickDice(v){
-    document.getElementById("total_input").value=v;
-    updatePreview();
-}
 function apiUrl(path){return SERVER_URL.replace(/\/$/,"")+path}
-function fetchWithTimeout(url,options={},timeoutMs=10000){
+function fetchWithTimeout(url,options={},timeoutMs=12000){
     return Promise.race([
         fetch(url,options),
         new Promise((_,reject)=>setTimeout(()=>reject(new Error("Kết nối quá thời gian")),timeoutMs))
     ]);
 }
+async function fetchJsonOrError(url, options){
+    const r=await fetchWithTimeout(url,options,12000);
+    const text=await r.text();
+    let data=null;
+    try{data=text?JSON.parse(text):null}catch{}
+    if(!r.ok){
+        const msg=(data&&(data.error||data.message))?String(data.error||data.message):text.slice(0,160);
+        throw new Error("HTTP "+r.status+" - "+msg);
+    }
+    return data||{};
+}
 async function loadServerConfig(){
     const btn=document.getElementById("send_btn");
-    btn.disabled=true;
-    btn.innerText="ĐANG KẾT NỐI SERVER...";
+    btn.disabled=true;btn.innerText="ĐANG KẾT NỐI SERVER...";
     setStatus(false,"ĐANG KẾT NỐI SERVER...");
     document.getElementById("server_info").innerText="Đang đọc config.json...";
-
     try{
-        const cfg=await fetch(CONFIG_URL+"?t="+Date.now(),{cache:"no-store"}).then(r=>{
-            if(!r.ok)throw new Error("Không tải được config.json");
-            return r.json();
-        });
+        const cfg=await fetchJsonOrError(CONFIG_URL+"?t="+Date.now(),{cache:"no-store"});
         SERVER_URL=String(cfg.server||"").trim().replace(/\/$/,"");
         if(!SERVER_URL.startsWith("https://"))throw new Error("URL server không hợp lệ");
-
-        const st=await fetchWithTimeout(SERVER_URL+"/api/status?t="+Date.now(),{cache:"no-store"},10000).then(r=>{
-            if(!r.ok)throw new Error("Server không phản hồi /api/status");
-            return r.json();
-        });
+        const st=await fetchJsonOrError(SERVER_URL+"/api/status?t="+Date.now(),{cache:"no-store"});
         if(!st.success)throw new Error("Server status không hợp lệ");
-
-        btn.disabled=false;
-        btn.innerText="GỬI DATA & NHẬN DỰ ĐOÁN";
+        btn.disabled=false;btn.innerText="GỬI DATA & NHẬN GỢI Ý";
         setStatus(true,"● ĐÃ KẾT NỐI SERVER AI");
         document.getElementById("result").innerText="CHỜ DỮ LIỆU...";
         document.getElementById("result").style.color="#ffcc00";
         document.getElementById("server_info").innerText="Đã kết nối server: "+SERVER_URL;
         return true;
     }catch(e){
-        btn.disabled=false;
-        btn.innerText="THỬ KẾT NỐI LẠI";
-        setStatus(false,"SERVER OFFLINE");
-        document.getElementById("result").innerText="SERVER AI OFF/LỖI";
-        document.getElementById("result").style.color="#ff3366";
+        btn.disabled=false;btn.innerText="THỬ KẾT NỐI LẠI";
+        setStatus(false,"SERVER LỖI");
+        document.getElementById("result").innerText="LỖI";
+        document.getElementById("result").style.color="#ff4e7a";
         document.getElementById("server_info").innerText="Lỗi kết nối: "+e.message;
         return false;
     }
@@ -318,8 +303,8 @@ function makeBar(pct){
     pct=normalizePercent(pct);
     return `<div class="bar-bg"><div class="bar" style="width:${pct}%"></div></div>`;
 }
-function updateHistory(total, raw){
-    if(total) historyLocal.push({total,raw});
+function updateHistory(total,raw){
+    if(total)historyLocal.push({total,raw});
     document.getElementById("history").innerHTML=historyLocal.slice(-18).map(x=>
         `<span class="pill ${x.total>=11?'tai':''}">${x.total}<br>${x.total>=11?'T':'X'}</span>`
     ).join("");
@@ -328,28 +313,19 @@ function updateUI(data,total,raw){
     const pred=data.ket_qua_du_doan||data.prediction||"CHỜ";
     const tai=normalizePercent(data.phan_tram_tai??data.tai_percent??0);
     const xiu=normalizePercent(data.phan_tram_xiu??data.xiu_percent??0);
-
     document.getElementById("result").innerText=pred;
-    document.getElementById("result").style.color=String(pred).includes("TÀI")?"#ff3366":"#00ffaa";
+    document.getElementById("result").style.color=String(pred).includes("TÀI")?"#ff4e7a":"#00fff0";
     document.getElementById("percent").innerText=`Tài: ${tai.toFixed(2)}% | Xỉu: ${xiu.toFixed(2)}%`;
-
     const acc=data.accuracy_may_nay?.rate??data.do_chinh_xac??data.do_tin_cay??0;
-    document.getElementById("accuracy").innerText="Độ chính xác đám mây: "+normalizePercent(acc).toFixed(2)+"%";
+    document.getElementById("accuracy").innerText="Độ đúng máy này: "+normalizePercent(acc).toFixed(2)+"%";
 
     document.getElementById("tx-bars").innerHTML=`
-        <div class="bet ${xiu>=tai?'hot':''}">
-            <div class="bet-title">XỈU</div><div class="bet-sub">3–10</div>
-            <div class="bet-pct">${xiu.toFixed(2)}%</div>${makeBar(xiu)}
-        </div>
-        <div class="bet ${tai>xiu?'hot':''}">
-            <div class="bet-title">TÀI</div><div class="bet-sub">11–18</div>
-            <div class="bet-pct">${tai.toFixed(2)}%</div>${makeBar(tai)}
-        </div>`;
+      <div class="bet ${xiu>=tai?'hot':''}"><div class="bet-title">XỈU</div><div class="bet-sub">3–10</div><div class="bet-pct">${xiu.toFixed(2)}%</div>${makeBar(xiu)}</div>
+      <div class="bet ${tai>xiu?'hot':''}"><div class="bet-title">TÀI</div><div class="bet-sub">11–18</div><div class="bet-pct">${tai.toFixed(2)}%</div>${makeBar(tai)}</div>`;
 
     const totalStats=data.phan_tram_tong_4_17||data.phan_tram_tong||data.total_pct||{};
-    let maxPct=0;
+    let maxPct=0,totalHtml="";
     for(let i=4;i<=17;i++)maxPct=Math.max(maxPct,normalizePercent(totalStats[i]??totalStats[String(i)]??0));
-    let totalHtml="";
     for(let i=4;i<=17;i++){
         const p=normalizePercent(totalStats[i]??totalStats[String(i)]??0);
         totalHtml+=`<div class="total-cell ${p===maxPct&&p>0?'hot':''}"><div class="total-n">${i}</div><div class="total-p">${p.toFixed(1)}%</div></div>`;
@@ -375,10 +351,7 @@ function updateUI(data,total,raw){
     updateHistory(total,raw);
 }
 async function sendDataToServerAI(){
-    if(!SERVER_URL){
-        const ok=await loadServerConfig();
-        if(!ok)return;
-    }
+    if(!SERVER_URL){const ok=await loadServerConfig();if(!ok)return}
     const parsed=parseInputValue();
     if(!parsed.ok){alert(parsed.note);return}
 
@@ -386,41 +359,48 @@ async function sendDataToServerAI(){
     document.getElementById("result").style.color="#ffcc00";
     document.getElementById("server_info").innerText=parsed.note+" | Đang gửi lên server...";
 
+    const payload={
+        device_id:deviceId,
+        dice:parsed.raw,
+        xuc_xac:parsed.raw,
+        dice_array:parsed.dice,
+        tong:parsed.total,
+        ket_qua_truoc:parsed.total,
+        tong_3_xuc_xac:parsed.total
+    };
+
     try{
-        const payload={
-            device_id:deviceId,
-            dice:parsed.raw,
-            xuc_xac:parsed.raw,
-            dice_array:parsed.dice,
-            tong:parsed.total,
-            ket_qua_truoc:parsed.total,
-            tong_3_xuc_xac:parsed.total
-        };
-        const data=await fetchWithTimeout(apiUrl("/api/predict"),{
+        const data=await fetchJsonOrError(apiUrl("/api/predict"),{
             method:"POST",
             headers:{"Content-Type":"application/json"},
             body:JSON.stringify(payload)
-        },12000).then(r=>{
-            if(!r.ok)throw new Error("Server từ chối /api/predict");
-            return r.json();
         });
         updateUI(data,parsed.total,parsed.raw);
     }catch(e){
-        SERVER_URL="";
-        setStatus(false,"SERVER LỖI");
-        document.getElementById("result").innerText="SERVER AI OFF/LỖI";
-        document.getElementById("result").style.color="#ff3366";
-        document.getElementById("server_info").innerText="Lỗi kết nối: "+e.message;
+        // Retry bằng body tối giản cho server cũ
+        try{
+            const data=await fetchJsonOrError(apiUrl("/api/predict"),{
+                method:"POST",
+                headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({device_id:deviceId,tong:parsed.total,ket_qua_truoc:parsed.total})
+            });
+            updateUI(data,parsed.total,parsed.raw);
+        }catch(e2){
+            setStatus(false,"SERVER LỖI");
+            document.getElementById("result").innerText="LỖI";
+            document.getElementById("result").style.color="#ff4e7a";
+            document.getElementById("server_info").innerText="Lỗi /api/predict: "+e2.message;
+        }
     }
 }
 async function backOne(){
     if(!SERVER_URL){const ok=await loadServerConfig();if(!ok)return}
     try{
-        const data=await fetchWithTimeout(apiUrl("/api/clear"),{
+        const data=await fetchJsonOrError(apiUrl("/api/clear"),{
             method:"POST",
             headers:{"Content-Type":"application/json"},
             body:JSON.stringify({device_id:deviceId,action:"BACK"})
-        }).then(r=>r.json());
+        });
         historyLocal.pop();updateHistory();
         document.getElementById("server_info").innerText=data.message||"Đã BACK 1 ván";
     }catch(e){alert("Lỗi BACK: "+e.message)}
@@ -429,11 +409,11 @@ async function newTable(){
     if(!SERVER_URL){const ok=await loadServerConfig();if(!ok)return}
     if(!confirm("Đổi bàn mới?"))return;
     try{
-        const data=await fetchWithTimeout(apiUrl("/api/clear"),{
+        const data=await fetchJsonOrError(apiUrl("/api/clear"),{
             method:"POST",
             headers:{"Content-Type":"application/json"},
             body:JSON.stringify({device_id:deviceId,action:"NEW_TABLE"})
-        }).then(r=>r.json());
+        });
         historyLocal.length=0;updateHistory();
         document.getElementById("result").innerText="BÀN MỚI";
         document.getElementById("result").style.color="#ffcc00";
