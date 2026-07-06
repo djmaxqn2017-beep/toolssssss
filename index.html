@@ -3,455 +3,374 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta http-equiv="Content-Security-Policy" content="default-src * data: gap: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data: content: blob:; media-src *; connect-src *;">
 <title>AI Tài Xỉu Cloud V2</title>
-<meta name="theme-color" content="#120022">
-
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{
-    width:100%;height:100%;margin:0;padding:0;overflow:hidden;
-    font-family:'Segoe UI',Arial,sans-serif;color:#fff;
-    background:#040009;
-}
+html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;font-family:'Segoe UI',Arial,sans-serif;color:#fff;background:#030006}
 body{display:flex;justify-content:center;align-items:center}
-.app{
-    width:100vw;height:100dvh;max-width:450px;margin:0 auto;position:relative;overflow:hidden;
-    display:flex;flex-direction:column;
-    background:
-      radial-gradient(circle at 15% 10%,rgba(176,0,255,.35),transparent 28%),
-      radial-gradient(circle at 85% 18%,rgba(0,255,255,.24),transparent 26%),
-      radial-gradient(circle at 50% 85%,rgba(255,0,160,.24),transparent 32%),
-      linear-gradient(180deg,#18002e 0%,#090014 44%,#030007 100%);
-    border-left:1px solid rgba(0,255,255,.38);
-    border-right:1px solid rgba(255,0,255,.36);
-}
-.app::before{
-    content:"";position:absolute;inset:0;pointer-events:none;
-    background:
-      linear-gradient(120deg,rgba(0,255,240,.08),transparent 32%,rgba(255,0,212,.07),transparent 68%),
-      radial-gradient(circle at 25% 20%,rgba(0,255,240,.10),transparent 22%),
-      radial-gradient(circle at 78% 72%,rgba(255,0,212,.10),transparent 28%);
-    opacity:.85;
-}
-.app::after{
-    content:"";position:absolute;inset:0;pointer-events:none;
-    background-image:
-      radial-gradient(#ffffff 0.8px,transparent 1px),
-      radial-gradient(#00fff0 0.7px,transparent 1px),
-      radial-gradient(#ff00d4 0.7px,transparent 1px);
-    background-size:90px 90px,130px 130px,170px 170px;
-    background-position:0 0,40px 20px,20px 70px;
-    opacity:.16;
-}
-.top{
-    position:relative;z-index:1;height:98px;padding:13px 12px 8px;
-    background:linear-gradient(180deg,rgba(43,0,77,.92),rgba(12,0,28,.82));
-    border-bottom:1px solid rgba(0,255,255,.28);
-    box-shadow:0 8px 34px rgba(0,0,0,.7),0 0 22px rgba(255,0,255,.12);
-}
-.title{
-    text-align:center;text-transform:uppercase;letter-spacing:2px;
-    font-size:22px;font-weight:1000;margin:0;
-    background:linear-gradient(90deg,#00fff0,#ff4dff,#00ffaa);
-    -webkit-background-clip:text;background-clip:text;color:transparent;
-    text-shadow:0 0 18px rgba(0,255,255,.28);
-}
-.sub{color:#bda7ff;font-size:11px;text-align:center;margin-top:5px}
-.status{
-    margin:9px auto 0;width:max-content;max-width:96%;
-    padding:5px 14px;border-radius:20px;font-size:11px;font-weight:900;
-    border:1px solid #00fff0;color:#00fff0;background:rgba(7,0,20,.85);
-    box-shadow:0 0 12px rgba(0,255,255,.28)
-}
-.status.off{border-color:#ff3366;color:#ff4e7a;box-shadow:0 0 12px rgba(255,0,100,.28)}
-.content{position:relative;z-index:1;flex:1;overflow:auto;padding:12px 12px 96px}
-.card,.brain-box,.section{
-    background:rgba(16,0,34,.78);
-    border:1px solid rgba(0,255,255,.24);
-    border-radius:18px;padding:12px;margin-bottom:12px;
-    box-shadow:0 10px 30px rgba(0,0,0,.55),0 0 22px rgba(128,0,255,.14) inset;
-    backdrop-filter:blur(4px);
-}
-.label{display:block;text-align:left;font-size:13px;color:#d7cbff;margin:0 0 7px 2px}
-.input-row{display:grid;grid-template-columns:1fr 90px;gap:9px}
-input{
-    width:100%;height:55px;border-radius:13px;border:1px solid rgba(0,255,255,.38);
-    background:rgba(3,0,16,.72);color:#fff;text-align:center;outline:none;
-    font-size:29px;font-weight:1000;text-shadow:0 0 10px rgba(0,255,255,.4)
-}
-.sum-box{
-    height:55px;border-radius:13px;border:1px solid #ffcc00;background:rgba(28,15,0,.55);
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    box-shadow:0 0 14px rgba(255,204,0,.2)
-}
-.sum-box .small{font-size:10px;color:#ffe899;font-weight:900}
-.sum-box .big{font-size:25px;font-weight:1000;color:#ffcc00}
-button{border:none;color:#fff;font-weight:1000;border-radius:13px;cursor:pointer}
-.main-btn{
-    width:100%;height:55px;margin-top:10px;
-    background:linear-gradient(135deg,#6d2bff,#00fff0,#ff4dff);
-    background-size:220% 220%;animation:btnLed 3.4s ease infinite;
-    font-size:16px;box-shadow:0 4px 20px rgba(0,255,255,.28)
-}
-@keyframes btnLed{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px}
-.small-btn{
-    height:44px;background:rgba(20,0,48,.82);
-    border:1px solid rgba(0,255,255,.28);font-size:15px;
-    box-shadow:0 0 14px rgba(0,255,255,.12) inset;
-}
-.danger{border-color:rgba(255,60,120,.55);background:rgba(74,0,36,.72)}
-.brain-box{text-align:center}
-.muted{font-size:12px;color:#cbbcff}
-#result{
-    font-size:43px;color:#ffcc00;margin:10px 0 5px;font-weight:1000;
-    text-shadow:0 0 18px rgba(255,204,0,.32)
-}
-#percent{font-size:16px;color:#00fff0;font-weight:1000}
-#accuracy{font-size:13px;color:#fff;margin-top:4px}
-.server-status{font-size:12px;color:#cbbcff;line-height:1.35;margin-top:8px;max-height:60px;overflow:auto}
-.section h3{margin:0 0 10px;font-size:15px;color:#fff}
-.bet-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.bet{
-    min-height:73px;background:rgba(7,0,24,.72);border:1px solid rgba(0,255,255,.24);
-    border-radius:13px;text-align:center;padding:10px
-}
+.app{width:100vw;height:100dvh;max-width:450px;position:relative;overflow:hidden;display:flex;flex-direction:column;background:radial-gradient(circle at 20% 10%,rgba(120,0,255,.28),transparent 28%),radial-gradient(circle at 78% 75%,rgba(255,0,180,.18),transparent 30%),linear-gradient(180deg,#250044 0%,#0b001a 45%,#030006 100%);border-left:1px solid rgba(0,255,255,.35);border-right:1px solid rgba(255,0,255,.25)}
+.app:after{content:"";position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(#fff 0.7px,transparent 1px),radial-gradient(#00fff0 0.6px,transparent 1px),radial-gradient(#ff00d4 0.6px,transparent 1px);background-size:90px 90px,130px 130px,170px 170px;background-position:0 0,40px 20px,20px 70px;opacity:.13}
+.top{position:relative;z-index:1;padding:20px 14px 10px;background:linear-gradient(180deg,rgba(54,0,90,.92),rgba(19,0,42,.84));border-bottom:1px solid rgba(0,255,255,.25)}
+.title{text-align:center;text-transform:uppercase;letter-spacing:3px;font-size:26px;font-weight:1000;margin:0;background:linear-gradient(90deg,#6ee9ff,#ff66ff,#b5ffef);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 18px rgba(0,255,255,.25)}
+.sub{text-align:center;color:#d7cbff;font-size:12px;margin-top:6px}
+.status{margin:14px auto 0;width:max-content;max-width:96%;padding:8px 22px;border-radius:30px;font-size:13px;font-weight:1000;border:2px solid #ff4e7a;color:#ff6d91;background:rgba(20,0,32,.88);box-shadow:0 0 16px rgba(255,50,110,.25)}
+.status.ok{border-color:#00fff0;color:#00fff0;box-shadow:0 0 16px rgba(0,255,240,.28)}
+.content{position:relative;z-index:1;flex:1;overflow:auto;padding:14px 14px 105px}
+.card,.brain,.section{background:rgba(20,0,45,.78);border:1px solid rgba(0,255,255,.25);border-radius:24px;padding:14px;margin-bottom:14px;box-shadow:0 10px 28px rgba(0,0,0,.55),0 0 20px rgba(145,0,255,.12) inset}
+.label{font-size:15px;color:#e7ddff;margin:0 0 10px 0}
+.input-row{display:grid;grid-template-columns:1fr 105px;gap:12px}
+input{width:100%;height:66px;border-radius:16px;border:1px solid rgba(0,255,255,.45);background:#070015;color:#fff;text-align:center;font-size:31px;font-weight:1000;outline:none;text-shadow:0 0 13px rgba(0,255,255,.45)}
+.sum-box{height:66px;border-radius:16px;border:2px solid #ffcc00;background:rgba(31,12,0,.45);display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 0 15px rgba(255,204,0,.20)}
+.sum-box .small{font-size:12px;color:#ffeaa6;font-weight:1000}
+.sum-box .big{font-size:28px;font-weight:1000;color:#ffcc00}
+button{border:none;color:#fff;font-weight:1000;border-radius:16px;cursor:pointer}
+.main-btn{width:100%;height:64px;margin-top:14px;background:linear-gradient(135deg,#00e8ff,#28fff2,#90a7ff);font-size:18px;box-shadow:0 0 20px rgba(0,255,255,.25)}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.small-btn{height:54px;background:rgba(21,0,53,.85);border:1px solid rgba(0,255,255,.25);font-size:17px;box-shadow:0 0 15px rgba(0,255,255,.10) inset}
+.danger{background:rgba(82,0,38,.75);border-color:rgba(255,70,130,.55)}
+.brain{text-align:center}
+.muted{font-size:14px;color:#cbbcff}
+.result{font-size:48px;color:#ffcc00;margin:12px 0 6px;font-weight:1000;text-shadow:0 0 22px rgba(255,204,0,.35)}
+.percent{font-size:18px;color:#00fff0;font-weight:1000}
+.accuracy{font-size:15px;color:#fff;margin-top:6px}
+.info{font-size:13px;color:#d7cbff;line-height:1.4;margin-top:10px;max-height:72px;overflow:auto}
+.section h3{margin:0 0 12px;font-size:17px;color:#fff}
+.bet-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.bet{min-height:92px;background:#070015;border:1px solid rgba(0,255,255,.22);border-radius:16px;text-align:center;padding:13px}
 .bet.hot{border-color:#ffcc00;box-shadow:0 0 18px rgba(255,204,0,.18) inset}
-.bet-title{font-size:17px;font-weight:1000}
-.bet-sub{font-size:11px;color:#bda7ff;margin-top:2px}
-.bet-pct{font-size:22px;color:#ffcc00;font-weight:1000;margin-top:5px}
-.bar-bg{height:6px;background:#140027;border-radius:20px;overflow:hidden;margin-top:7px}
-.bar{height:100%;background:linear-gradient(90deg,#6d2bff,#00fff0,#ff4dff);width:0%}
+.bet-title{font-size:20px;font-weight:1000}
+.bet-sub{font-size:13px;color:#bfaeff}
+.bet-pct{font-size:27px;color:#ffcc00;font-weight:1000;margin-top:5px}
 .total-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-.total-cell{
-    height:50px;border:1px solid rgba(0,255,255,.22);background:rgba(7,0,24,.72);
-    border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center
-}
+.total-cell,.dice-cell{border:1px solid rgba(0,255,255,.22);background:#070015;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.total-cell{height:52px}.dice-cell{min-height:50px;font-size:10px}
 .total-cell.hot{border-color:#ffcc00;background:rgba(55,34,0,.62)}
-.total-n{font-size:16px;font-weight:1000}
-.total-p{font-size:10px;color:#cbbcff}
-.dice-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
-.dice-cell{
-    min-height:49px;border:1px solid rgba(0,255,255,.22);background:rgba(7,0,24,.72);
-    border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;text-align:center
-}
-.dice-face{font-size:19px;font-weight:1000}
-.history{display:flex;gap:5px;overflow-x:auto;padding:7px 0 2px;margin-top:7px}
-.pill{min-width:39px;padding:5px 7px;border-radius:8px;background:#13007a;font-size:11px;font-weight:1000;text-align:center;border:1px solid #00fff0}
-.pill.tai{background:#74123a;border-color:#ff4d8c}
-.bottom{
-    position:absolute;z-index:2;left:0;right:0;bottom:0;height:80px;
-    background:linear-gradient(180deg,rgba(21,0,45,.92),rgba(4,0,10,.98));
-    border-top:1px solid rgba(0,255,255,.28);
-    padding:8px 10px;display:grid;grid-template-columns:1fr 1fr 1.15fr;gap:8px
-}
-.quick{
-    border-radius:13px;background:rgba(20,0,48,.82);color:#fff;font-size:14px;
-    font-weight:1000;border:1px solid rgba(0,255,255,.28)
-}
-.quick.red{border-color:rgba(255,60,120,.55);background:rgba(74,0,36,.72)}
-.quick.hot{background:linear-gradient(135deg,#6d2bff,#00fff0,#ff4dff);background-size:220% 220%;animation:btnLed 3.4s ease infinite}
-@media(max-height:760px){
-    .top{height:84px}.title{font-size:19px}.content{padding-bottom:82px}
-    .card,.brain-box,.section{padding:9px;margin-bottom:9px}
-    input,.sum-box,.main-btn{height:48px}#result{font-size:36px}.bottom{height:70px}
-}
+.total-n,.dice-face{font-weight:1000}.total-n{font-size:16px}.total-p{font-size:10px;color:#cbbcff}.dice-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}.dice-face{font-size:19px}
+.bottom{position:absolute;z-index:2;left:0;right:0;bottom:0;height:92px;background:linear-gradient(180deg,rgba(21,0,45,.92),rgba(4,0,10,.98));border-top:1px solid rgba(0,255,255,.28);padding:10px;display:grid;grid-template-columns:1fr 1fr 1.15fr;gap:10px}
+.quick{background:rgba(21,0,53,.9);border:1px solid rgba(0,255,255,.25);font-size:16px}.quick.red{background:rgba(82,0,38,.75);border-color:rgba(255,70,130,.55)}.quick.hot{background:linear-gradient(135deg,#00e8ff,#28fff2,#90a7ff)}
+@media(max-height:760px){.top{padding-top:12px}.title{font-size:21px}.content{padding-bottom:85px}.bottom{height:78px}.card,.brain,.section{padding:11px;margin-bottom:10px}input,.sum-box,.main-btn{height:54px}.result{font-size:38px}}
 </style>
 </head>
-
 <body>
 <div class="app">
-    <div class="top">
-        <div class="title">AI TÀI XỈU CLOUD</div>
-        <div class="sub">Nhập 3 mặt xúc xắc, ví dụ 345 → tự cộng = 12</div>
-        <div id="status" class="status off">ĐANG KẾT NỐI SERVER...</div>
+  <div class="top">
+    <div class="title">AI TÀI XỈU CLOUD</div>
+    <div class="sub">Nhập 3 mặt xúc xắc, ví dụ 345 → tự cộng = 12</div>
+    <div id="status" class="status">ĐANG KẾT NỐI SERVER...</div>
+  </div>
+  <div class="content">
+    <div class="card">
+      <div class="label">Nhập 3 xúc xắc vừa ra:</div>
+      <div class="input-row">
+        <input id="total_input" inputmode="numeric" maxlength="3" placeholder="345" autocomplete="off">
+        <div class="sum-box"><div class="small">TỔNG</div><div class="big" id="sum_preview">--</div></div>
+      </div>
+      <button class="main-btn" id="send_btn" onclick="sendDataToServerAI()">ĐANG KẾT NỐI SERVER...</button>
+      <div class="actions">
+        <button class="small-btn" onclick="backOne()">↩️ BACK</button>
+        <button class="small-btn danger" onclick="newTable()">🔄 Đổi bàn</button>
+      </div>
     </div>
-
-    <div class="content">
-        <div class="card">
-            <label class="label" for="total_input">Nhập 3 xúc xắc vừa ra:</label>
-            <div class="input-row">
-                <input id="total_input" inputmode="numeric" maxlength="3" placeholder="345">
-                <div class="sum-box"><div class="small">TỔNG</div><div class="big" id="sum_preview">--</div></div>
-            </div>
-            <button class="main-btn" id="send_btn" onclick="sendDataToServerAI()" disabled>ĐANG KẾT NỐI SERVER...</button>
-            <div class="actions">
-                <button class="small-btn" onclick="backOne()">↩ BACK</button>
-                <button class="small-btn danger" onclick="newTable()">🔄 Đổi bàn</button>
-            </div>
-        </div>
-
-        <div class="brain-box">
-            <div class="muted">KẾT QUẢ TỪ SERVER AI</div>
-            <div id="result">CHỜ DỮ LIỆU...</div>
-            <div id="percent">Tài: 0% | Xỉu: 0%</div>
-            <div id="accuracy">Độ đúng máy này: 0.00%</div>
-            <div class="server-status" id="server_info">Trạng thái: Đang đợi lệnh Fetch API...</div>
-            <div class="history" id="history"></div>
-        </div>
-
-        <div class="section">
-            <h3>Tài / Xỉu</h3>
-            <div class="bet-grid" id="tx-bars">
-                <div class="bet"><div class="bet-title">XỈU</div><div class="bet-sub">3–10</div><div class="bet-pct">0%</div></div>
-                <div class="bet"><div class="bet-title">TÀI</div><div class="bet-sub">11–18</div><div class="bet-pct">0%</div></div>
-            </div>
-        </div>
-
-        <div class="section">
-            <h3>Tổng điểm 4–17</h3>
-            <div class="total-grid" id="total-bars"></div>
-        </div>
-
-        <div class="section">
-            <h3>Mặt xúc xắc / Đôi / Bộ ba</h3>
-            <div class="dice-grid" id="dice-bars"></div>
-        </div>
+    <div class="brain">
+      <div class="muted">KẾT QUẢ TỪ SERVER AI</div>
+      <div id="result" class="result">CHỜ DỮ LIỆU...</div>
+      <div id="percent" class="percent">Tài: 0% | Xỉu: 0%</div>
+      <div id="accuracy" class="accuracy">Độ đúng máy này: 0.00%</div>
+      <div id="server_info" class="info">Trạng thái: JavaScript đang khởi động...</div>
     </div>
-
-    <div class="bottom">
-        <button class="quick" onclick="backOne()">↩ BACK</button>
-        <button class="quick red" onclick="newTable()">🔄 Đổi bàn</button>
-        <button class="quick hot" onclick="sendDataToServerAI()">GỬI DATA</button>
+    <div class="section">
+      <h3>Tài / Xỉu</h3>
+      <div class="bet-grid" id="tx-bars">
+        <div class="bet"><div class="bet-title">XỈU</div><div class="bet-sub">3–10</div><div class="bet-pct">0%</div></div>
+        <div class="bet"><div class="bet-title">TÀI</div><div class="bet-sub">11–18</div><div class="bet-pct">0%</div></div>
+      </div>
     </div>
+    <div class="section"><h3>Tổng điểm 4–17</h3><div class="total-grid" id="total-bars"></div></div>
+    <div class="section"><h3>Mặt xúc xắc / Đôi / Bộ ba</h3><div class="dice-grid" id="dice-bars"></div></div>
+  </div>
+  <div class="bottom">
+    <button class="quick" onclick="backOne()">↩️ BACK</button>
+    <button class="quick red" onclick="newTable()">🔄 Đổi bàn</button>
+    <button class="quick hot" onclick="sendDataToServerAI()">GỬI DATA</button>
+  </div>
 </div>
-
 <script>
-const CONFIG_URL="https://djmaxqn2017-beep.github.io/toolssssss/config.json";
-let SERVER_URL="";
-const deviceIdKey="TAIXIU_DEVICE_ID";
-let deviceId=localStorage.getItem(deviceIdKey);
-if(!deviceId){
-    deviceId="TX_"+Math.random().toString(36).slice(2,10).toUpperCase()+"_"+Date.now();
-    localStorage.setItem(deviceIdKey,deviceId);
-}
-const historyLocal=[];
+(function(){
+'use strict';
 
-function setStatus(ok,text){
-    const s=document.getElementById("status");
-    s.className=ok?"status":"status off";
-    s.innerText=text;
+const CONFIG_URL = 'https://djmaxqn2017-beep.github.io/toolssssss/config.json';
+let SERVER_URL = '';
+const deviceIdKey = 'TAIXIU_DEVICE_ID';
+let deviceId = localStorage.getItem(deviceIdKey);
+if(!deviceId){
+  deviceId = 'TX_' + Math.random().toString(36).slice(2,10).toUpperCase() + '_' + Date.now();
+  localStorage.setItem(deviceIdKey, deviceId);
 }
-function normalizePercent(v){
-    const n=Number(v);
-    return Number.isFinite(n)?Math.max(0,Math.min(100,n)):0;
+
+const $ = id => document.getElementById(id);
+
+function setStatus(ok, text){
+  $('status').className = ok ? 'status ok' : 'status';
+  $('status').innerText = text;
+}
+function setBtn(text, disabled){
+  $('send_btn').innerText = text;
+  $('send_btn').disabled = !!disabled;
 }
 function parseInputValue(){
-    const raw=String(document.getElementById("total_input").value||"").trim();
-    if(/^[1-6]{3}$/.test(raw)){
-        const dice=raw.split("").map(Number);
-        const total=dice[0]+dice[1]+dice[2];
-        return {ok:true,total,raw,dice,note:`${dice[0]} + ${dice[1]} + ${dice[2]} = ${total}`};
-    }
-    const total=Number(raw);
-    if(Number.isInteger(total)&&total>=3&&total<=18){
-        return {ok:true,total,raw:String(total),dice:null,note:`Tổng đã nhập: ${total}`};
-    }
-    return {ok:false,total:null,raw,dice:null,note:"Vui lòng nhập 3 mặt xúc xắc 111-666 hoặc tổng 3-18."};
+  const raw = String($('total_input').value || '').trim();
+  if(/^[1-6]{3}$/.test(raw)){
+    const dice = raw.split('').map(Number);
+    const total = dice[0] + dice[1] + dice[2];
+    return {ok:true, raw, dice, total, note:`${dice[0]}+${dice[1]}+${dice[2]} = ${total}`};
+  }
+  const n = Number(raw);
+  if(Number.isInteger(n) && n >= 3 && n <= 18){
+    return {ok:true, raw:String(n), dice:null, total:n, note:`Tổng đã nhập: ${n}`};
+  }
+  return {ok:false, raw, dice:null, total:null, note:'Nhập 3 mặt xúc xắc 111–666 hoặc tổng 3–18'};
 }
 function updatePreview(){
-    const p=parseInputValue();
-    document.getElementById("sum_preview").innerText=p.ok?p.total:"--";
+  const p = parseInputValue();
+  $('sum_preview').innerText = p.ok ? p.total : '--';
 }
-document.getElementById("total_input").addEventListener("input",updatePreview);
-document.getElementById("total_input").addEventListener("keydown",e=>{if(e.key==="Enter")sendDataToServerAI()});
-function apiUrl(path){return SERVER_URL.replace(/\/$/,"")+path}
-function fetchWithTimeout(url,options={},timeoutMs=12000){
-    return Promise.race([
-        fetch(url,options),
-        new Promise((_,reject)=>setTimeout(()=>reject(new Error("Kết nối quá thời gian")),timeoutMs))
-    ]);
+function fetchWithTimeout(url, options, ms){
+  return Promise.race([
+    fetch(url, options || {}),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Kết nối quá thời gian')), ms || 12000))
+  ]);
 }
-async function fetchJsonOrError(url, options){
-    const r=await fetchWithTimeout(url,options,12000);
-    const text=await r.text();
-    let data=null;
-    try{data=text?JSON.parse(text):null}catch{}
-    if(!r.ok){
-        const msg=(data&&(data.error||data.message))?String(data.error||data.message):text.slice(0,160);
-        throw new Error("HTTP "+r.status+" - "+msg);
+async function jsonFetch(url, options){
+  const r = await fetchWithTimeout(url, options || {}, 12000);
+  const text = await r.text();
+  let data = {};
+  try{ data = text ? JSON.parse(text) : {}; }catch(e){ data = {raw:text}; }
+  if(!r.ok){
+    throw new Error('HTTP ' + r.status + ' - ' + (data.error || data.message || text.slice(0,120)));
+  }
+  return data;
+}
+function api(path){ return SERVER_URL.replace(/\/$/,'') + path; }
+
+async function unregisterSW(){
+  try{
+    if('serviceWorker' in navigator){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for(const reg of regs) await reg.unregister();
     }
-    return data||{};
+  }catch(e){}
 }
+
 async function loadServerConfig(){
-    const btn=document.getElementById("send_btn");
-    btn.disabled=true;btn.innerText="ĐANG KẾT NỐI SERVER...";
-    setStatus(false,"ĐANG KẾT NỐI SERVER...");
-    document.getElementById("server_info").innerText="Đang đọc config.json...";
-    try{
-        const cfg=await fetchJsonOrError(CONFIG_URL+"?t="+Date.now(),{cache:"no-store"});
-        SERVER_URL=String(cfg.server||"").trim().replace(/\/$/,"");
-        if(!SERVER_URL.startsWith("https://"))throw new Error("URL server không hợp lệ");
-        const st=await fetchJsonOrError(SERVER_URL+"/api/status?t="+Date.now(),{cache:"no-store"});
-        if(!st.success)throw new Error("Server status không hợp lệ");
-        btn.disabled=false;btn.innerText="GỬI DATA & NHẬN GỢI Ý";
-        setStatus(true,"● ĐÃ KẾT NỐI SERVER AI");
-        document.getElementById("result").innerText="CHỜ DỮ LIỆU...";
-        document.getElementById("result").style.color="#ffcc00";
-        document.getElementById("server_info").innerText="Đã kết nối server: "+SERVER_URL;
-        return true;
-    }catch(e){
-        btn.disabled=false;btn.innerText="THỬ KẾT NỐI LẠI";
-        setStatus(false,"SERVER LỖI");
-        document.getElementById("result").innerText="LỖI";
-        document.getElementById("result").style.color="#ff4e7a";
-        document.getElementById("server_info").innerText="Lỗi kết nối: "+e.message;
-        return false;
+  setStatus(false,'ĐANG KẾT NỐI SERVER...');
+  setBtn('ĐANG KẾT NỐI SERVER...', true);
+  $('server_info').innerText = 'Đang đọc config.json...';
+
+  try{
+    await unregisterSW();
+
+    const cfg = await jsonFetch(CONFIG_URL + '?t=' + Date.now(), {cache:'no-store'});
+    SERVER_URL = String(cfg.server || '').trim().replace(/\/$/,'');
+    if(!SERVER_URL || !SERVER_URL.startsWith('https://')){
+      throw new Error('config.json chưa có server https hợp lệ');
     }
-}
-function makeBar(pct){
-    pct=normalizePercent(pct);
-    return `<div class="bar-bg"><div class="bar" style="width:${pct}%"></div></div>`;
-}
-function updateHistory(total,raw){
-    if(total)historyLocal.push({total,raw});
-    document.getElementById("history").innerHTML=historyLocal.slice(-18).map(x=>
-        `<span class="pill ${x.total>=11?'tai':''}">${x.total}<br>${x.total>=11?'T':'X'}</span>`
-    ).join("");
-}
-function updateUI(data,total,raw){
-    const pred=data.ket_qua_du_doan||data.prediction||"CHỜ";
-    const tai=normalizePercent(data.phan_tram_tai??data.tai_percent??0);
-    const xiu=normalizePercent(data.phan_tram_xiu??data.xiu_percent??0);
-    document.getElementById("result").innerText=pred;
-    document.getElementById("result").style.color=String(pred).includes("TÀI")?"#ff4e7a":"#00fff0";
-    document.getElementById("percent").innerText=`Tài: ${tai.toFixed(2)}% | Xỉu: ${xiu.toFixed(2)}%`;
-    const acc=data.accuracy_may_nay?.rate??data.do_chinh_xac??data.do_tin_cay??0;
-    document.getElementById("accuracy").innerText="Độ đúng máy này: "+normalizePercent(acc).toFixed(2)+"%";
 
-    document.getElementById("tx-bars").innerHTML=`
-      <div class="bet ${xiu>=tai?'hot':''}"><div class="bet-title">XỈU</div><div class="bet-sub">3–10</div><div class="bet-pct">${xiu.toFixed(2)}%</div>${makeBar(xiu)}</div>
-      <div class="bet ${tai>xiu?'hot':''}"><div class="bet-title">TÀI</div><div class="bet-sub">11–18</div><div class="bet-pct">${tai.toFixed(2)}%</div>${makeBar(tai)}</div>`;
+    const st = await jsonFetch(SERVER_URL + '/api/status?t=' + Date.now(), {cache:'no-store'});
+    if(!st.success) throw new Error('/api/status không trả success:true');
 
-    const totalStats=data.phan_tram_tong_4_17||data.phan_tram_tong||data.total_pct||{};
-    let maxPct=0,totalHtml="";
-    for(let i=4;i<=17;i++)maxPct=Math.max(maxPct,normalizePercent(totalStats[i]??totalStats[String(i)]??0));
-    for(let i=4;i<=17;i++){
-        const p=normalizePercent(totalStats[i]??totalStats[String(i)]??0);
-        totalHtml+=`<div class="total-cell ${p===maxPct&&p>0?'hot':''}"><div class="total-n">${i}</div><div class="total-p">${p.toFixed(1)}%</div></div>`;
-    }
-    document.getElementById("total-bars").innerHTML=totalHtml;
-
-    const face=data.phan_tram_mat_xuc_xac||data.face_pct||{};
-    const dbl=data.phan_tram_doi||data.double_pct||{};
-    const tri=data.phan_tram_bo_ba||data.triple_pct||{};
-    let diceHtml="";
-    for(let i=1;i<=6;i++)diceHtml+=`<div class="dice-cell"><div class="dice-face">${i}</div><div>Mặt ${normalizePercent(face[i]??face[String(i)]??0).toFixed(1)}%</div></div>`;
-    for(let i=1;i<=6;i++)diceHtml+=`<div class="dice-cell"><div class="dice-face">${i}${i}</div><div>Đôi ${normalizePercent(dbl[i]??dbl[String(i)]??0).toFixed(1)}%</div></div>`;
-    for(let i=1;i<=6;i++)diceHtml+=`<div class="dice-cell"><div class="dice-face">${i}${i}${i}</div><div>Bộ ${normalizePercent(tri[i]??tri[String(i)]??0).toFixed(1)}%</div></div>`;
-    document.getElementById("dice-bars").innerHTML=diceHtml;
-
-    const lines=[];
-    if(raw)lines.push("Xúc xắc: "+raw+" | Tổng: "+total);
-    if(data.ket_qua_van_truoc)lines.push(data.ket_qua_van_truoc);
-    if(data.trang_thai_tay)lines.push(data.trang_thai_tay);
-    if(data.panel_text)lines.push(data.panel_text);
-    if(data.dang_khoa_an_toan)lines.push("🔒 ĐANG KHÓA CẦU");
-    if(data.mo_khoa_cho_tay_sau)lines.push("✅ Đã mở khóa - tay này chưa tính ăn");
-    if(data.xu_huong_text)lines.push(data.xu_huong_text);
-    document.getElementById("server_info").innerText=lines.join(" | ")||"Đã nhận kết quả từ server.";
-    updateHistory(total,raw);
+    setStatus(true,'● ĐÃ KẾT NỐI SERVER AI');
+    setBtn('GỬI DATA & NHẬN GỢI Ý', false);
+    $('result').innerText = 'CHỜ DỮ LIỆU...';
+    $('result').style.color = '#ffcc00';
+    $('server_info').innerText = 'Đã kết nối: ' + SERVER_URL;
+    updatePreview();
+    return true;
+  }catch(e){
+    setStatus(false,'SERVER LỖI');
+    setBtn('THỬ KẾT NỐI LẠI', false);
+    $('result').innerText = 'LỖI';
+    $('result').style.color = '#ff5f87';
+    $('server_info').innerText = 'Lỗi kết nối: ' + e.message;
+    updatePreview();
+    return false;
+  }
 }
+
+function percent(n){
+  n = Number(n);
+  return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0;
+}
+function renderBars(p){
+  p = percent(p);
+  return '<div style="height:6px;background:#140027;border-radius:20px;overflow:hidden;margin-top:8px"><div style="height:100%;width:'+p+'%;background:linear-gradient(90deg,#7b2cff,#00fff0,#ff4dff)"></div></div>';
+}
+function renderResult(data, total, raw){
+  const pred = data.ket_qua_du_doan || data.prediction || 'CHỜ';
+  const tai = percent(data.phan_tram_tai);
+  const xiu = percent(data.phan_tram_xiu);
+
+  $('result').innerText = pred;
+  $('result').style.color = String(pred).includes('TÀI') ? '#ff5f87' : '#00fff0';
+  $('percent').innerText = 'Tài: ' + tai.toFixed(2) + '% | Xỉu: ' + xiu.toFixed(2) + '%';
+
+  const acc = data.accuracy_may_nay && typeof data.accuracy_may_nay.rate !== 'undefined' ? data.accuracy_may_nay.rate : (data.do_tin_cay || 0);
+  $('accuracy').innerText = 'Độ đúng máy này: ' + percent(acc).toFixed(2) + '%';
+
+  $('tx-bars').innerHTML =
+    '<div class="bet '+(xiu>=tai?'hot':'')+'"><div class="bet-title">XỈU</div><div class="bet-sub">3–10</div><div class="bet-pct">'+xiu.toFixed(2)+'%</div>'+renderBars(xiu)+'</div>' +
+    '<div class="bet '+(tai>xiu?'hot':'')+'"><div class="bet-title">TÀI</div><div class="bet-sub">11–18</div><div class="bet-pct">'+tai.toFixed(2)+'%</div>'+renderBars(tai)+'</div>';
+
+  const totalStats = data.phan_tram_tong_4_17 || data.phan_tram_tong || data.total_pct || {};
+  let max = 0;
+  for(let i=4;i<=17;i++) max = Math.max(max, percent(totalStats[i] || totalStats[String(i)] || 0));
+  let th = '';
+  for(let i=4;i<=17;i++){
+    const v = percent(totalStats[i] || totalStats[String(i)] || 0);
+    th += '<div class="total-cell '+(v===max && v>0?'hot':'')+'"><div class="total-n">'+i+'</div><div class="total-p">'+v.toFixed(1)+'%</div></div>';
+  }
+  $('total-bars').innerHTML = th;
+
+  const face = data.phan_tram_mat_xuc_xac || data.face_pct || {};
+  const dbl = data.phan_tram_doi || data.double_pct || {};
+  const tri = data.phan_tram_bo_ba || data.triple_pct || {};
+  let dh = '';
+  for(let i=1;i<=6;i++) dh += '<div class="dice-cell"><div class="dice-face">'+i+'</div><div>Mặt '+percent(face[i]||face[String(i)]||0).toFixed(1)+'%</div></div>';
+  for(let i=1;i<=6;i++) dh += '<div class="dice-cell"><div class="dice-face">'+i+i+'</div><div>Đôi '+percent(dbl[i]||dbl[String(i)]||0).toFixed(1)+'%</div></div>';
+  for(let i=1;i<=6;i++) dh += '<div class="dice-cell"><div class="dice-face">'+i+i+i+'</div><div>Bộ '+percent(tri[i]||tri[String(i)]||0).toFixed(1)+'%</div></div>';
+  $('dice-bars').innerHTML = dh;
+
+  const lines = [];
+  if(raw) lines.push('Xúc xắc: ' + raw + ' | Tổng: ' + total);
+  if(data.trang_thai_tay) lines.push(data.trang_thai_tay);
+  if(data.panel_text) lines.push(data.panel_text);
+  if(data.xu_huong_text) lines.push(data.xu_huong_text);
+  $('server_info').innerText = lines.join(' | ') || 'Đã nhận dữ liệu.';
+}
+
 async function sendDataToServerAI(){
-    if(!SERVER_URL){const ok=await loadServerConfig();if(!ok)return}
-    const parsed=parseInputValue();
-    if(!parsed.ok){alert(parsed.note);return}
+  if(!SERVER_URL){
+    const ok = await loadServerConfig();
+    if(!ok) return;
+  }
 
-    document.getElementById("result").innerText="ĐANG PHÂN TÍCH...";
-    document.getElementById("result").style.color="#ffcc00";
-    document.getElementById("server_info").innerText=parsed.note+" | Đang gửi lên server...";
+  const p = parseInputValue();
+  updatePreview();
+  if(!p.ok){
+    alert(p.note);
+    return;
+  }
 
-    const payload={
-        device_id:deviceId,
-        dice:parsed.raw,
-        xuc_xac:parsed.raw,
-        dice_array:parsed.dice,
-        tong:parsed.total,
-        ket_qua_truoc:parsed.total,
-        tong_3_xuc_xac:parsed.total
+  setBtn('ĐANG PHÂN TÍCH...', true);
+  $('result').innerText = 'ĐANG PHÂN TÍCH...';
+  $('result').style.color = '#ffcc00';
+  $('server_info').innerText = p.note + ' | Đang gửi lên server...';
+
+  try{
+    const payload = {
+      device_id: deviceId,
+      dice: p.raw,
+      xuc_xac: p.raw,
+      dice_array: p.dice,
+      tong: p.total,
+      ket_qua_truoc: p.total,
+      tong_3_xuc_xac: p.total
     };
-
-    try{
-        const data=await fetchJsonOrError(apiUrl("/api/predict"),{
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify(payload)
-        });
-        updateUI(data,parsed.total,parsed.raw);
-    }catch(e){
-        // Retry bằng body tối giản cho server cũ
-        try{
-            const data=await fetchJsonOrError(apiUrl("/api/predict"),{
-                method:"POST",
-                headers:{"Content-Type":"application/json"},
-                body:JSON.stringify({device_id:deviceId,tong:parsed.total,ket_qua_truoc:parsed.total})
-            });
-            updateUI(data,parsed.total,parsed.raw);
-        }catch(e2){
-            setStatus(false,"SERVER LỖI");
-            document.getElementById("result").innerText="LỖI";
-            document.getElementById("result").style.color="#ff4e7a";
-            document.getElementById("server_info").innerText="Lỗi /api/predict: "+e2.message;
-        }
-    }
+    const data = await jsonFetch(api('/api/predict'), {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    renderResult(data, p.total, p.raw);
+    setStatus(true,'● ĐÃ KẾT NỐI SERVER AI');
+    setBtn('GỬI DATA & NHẬN GỢI Ý', false);
+  }catch(e){
+    setStatus(false,'SERVER LỖI');
+    setBtn('THỬ KẾT NỐI LẠI', false);
+    $('result').innerText = 'LỖI';
+    $('result').style.color = '#ff5f87';
+    $('server_info').innerText = 'Lỗi /api/predict: ' + e.message;
+  }
 }
+
 async function backOne(){
-    if(!SERVER_URL){const ok=await loadServerConfig();if(!ok)return}
-    try{
-        const data=await fetchJsonOrError(apiUrl("/api/clear"),{
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({device_id:deviceId,action:"BACK"})
-        });
+  if(!SERVER_URL){
+    const ok = await loadServerConfig();
+    if(!ok) return;
+  }
+  try{
+    const data = await jsonFetch(api('/api/clear'), {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({device_id:deviceId, action:'BACK'})
+    });
+    if(data.restore_state){
+      renderResult(data.restore_state, data.restore_state.tong_da_tinh, data.restore_state.dice_raw);
+    }else{
+      $('server_info').innerText = data.message || 'Đã BACK.';
+    }
+  }catch(e){
+    $('server_info').innerText = 'Lỗi BACK: ' + e.message;
+  }
+}
 
-        historyLocal.pop();
-        const restore=data.restore_state||null;
-        if(restore){
-            const raw=restore.dice_raw || (Array.isArray(restore.dice)?restore.dice.join(""):");
-            if(raw){
-                document.getElementById("total_input").value=raw;
-                updatePreview();
-            }else if(restore.tong_da_tinh){
-                document.getElementById("total_input").value=String(restore.tong_da_tinh);
-                updatePreview();
-            }
-            updateUI(restore, restore.tong_da_tinh||restore.total||null, raw||"");
-            document.getElementById("server_info").innerText=(data.message||"Đã BACK")+" | Đã khôi phục kết quả trước.";
-        }else{
-            updateHistory();
-            document.getElementById("server_info").innerText=data.message||"Đã BACK 1 ván";
-        }
-    }catch(e){alert("Lỗi BACK: "+e.message)}
-}
 async function newTable(){
-    if(!SERVER_URL){const ok=await loadServerConfig();if(!ok)return}
-    if(!confirm("Đổi bàn mới?"))return;
-    try{
-        const data=await fetchJsonOrError(apiUrl("/api/clear"),{
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({device_id:deviceId,action:"NEW_TABLE"})
-        });
-        historyLocal.length=0;updateHistory();
-        document.getElementById("result").innerText="BÀN MỚI";
-        document.getElementById("result").style.color="#ffcc00";
-        document.getElementById("server_info").innerText=data.message||"Đã đổi bàn";
-    }catch(e){alert("Lỗi đổi bàn: "+e.message)}
+  if(!SERVER_URL){
+    const ok = await loadServerConfig();
+    if(!ok) return;
+  }
+  if(!confirm('Đổi bàn mới?')) return;
+  try{
+    const data = await jsonFetch(api('/api/clear'), {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({device_id:deviceId, action:'NEW_TABLE'})
+    });
+    $('result').innerText = 'BÀN MỚI';
+    $('result').style.color = '#ffcc00';
+    $('percent').innerText = 'Tài: 0% | Xỉu: 0%';
+    $('accuracy').innerText = 'Độ đúng máy này: 0.00%';
+    $('server_info').innerText = data.message || 'Đã đổi bàn.';
+    $('tx-bars').innerHTML = '<div class="bet"><div class="bet-title">XỈU</div><div class="bet-sub">3–10</div><div class="bet-pct">0%</div></div><div class="bet"><div class="bet-title">TÀI</div><div class="bet-sub">11–18</div><div class="bet-pct">0%</div></div>';
+    $('total-bars').innerHTML = '';
+    $('dice-bars').innerHTML = '';
+  }catch(e){
+    $('server_info').innerText = 'Lỗi đổi bàn: ' + e.message;
+  }
 }
-window.addEventListener("load",()=>{updatePreview();loadServerConfig()});
-window.addEventListener("error",e=>{
-    document.getElementById("server_info").innerText="Lỗi JavaScript: "+e.message;
+
+window.sendDataToServerAI = sendDataToServerAI;
+window.backOne = backOne;
+window.newTable = newTable;
+
+window.addEventListener('error', function(e){
+  $('server_info').innerText = 'Lỗi JavaScript: ' + e.message;
+  setStatus(false, 'LỖI JAVASCRIPT');
+  setBtn('LỖI JAVASCRIPT', false);
 });
 
-if("serviceWorker" in navigator){
-    window.addEventListener("load",()=>{
-        navigator.serviceWorker.register("service-worker.js?v=2.1").then(reg=>{
-            if(reg && reg.update) reg.update();
-        }).catch(()=>{});
-    });
-}
+document.addEventListener('DOMContentLoaded', function(){
+  $('total_input').addEventListener('input', updatePreview);
+  $('total_input').addEventListener('keyup', updatePreview);
+  $('total_input').addEventListener('change', updatePreview);
+  $('total_input').addEventListener('keydown', function(e){
+    if(e.key === 'Enter') sendDataToServerAI();
+  });
+  updatePreview();
+  loadServerConfig();
+});
 
+window.addEventListener('beforeunload', function(){
+  if(SERVER_URL){
+    try{
+      navigator.sendBeacon(SERVER_URL + '/api/offline', new Blob([JSON.stringify({device_id:deviceId})], {type:'application/json'}));
+    }catch(e){}
+  }
+});
+})();
 </script>
 </body>
 </html>
