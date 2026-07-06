@@ -1,384 +1,381 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Content-Security-Policy" content="default-src * data: gap: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data: content: blob:; media-src *; connect-src *;">
-    <title>Tool AI Tài Xỉu</title>
-    <style>
-        * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: #07140b; color: #fff; text-align: center; padding: 12px; margin: 0; }
-        .wrapper { max-width: 520px; margin: 12px auto; background: #0d2212; padding: 18px; border-radius: 18px; box-shadow: 0 8px 32px rgba(0,0,0,0.65); border: 1px solid #1d7a35; }
-        h2 { color: #74ff8d; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 4px 0; }
-        .sub { color: #9cd4a6; font-size: 12px; margin-bottom: 12px; }
-        .status-online { color: #74ff8d; font-weight: bold; font-size: 12px; border: 1px solid #74ff8d; display: inline-block; padding: 3px 10px; border-radius: 12px; margin-bottom: 12px; }
-        .status-offline { color: #ff4466; font-weight: bold; font-size: 12px; border: 1px solid #ff4466; display: none; padding: 3px 10px; border-radius: 12px; margin-bottom: 12px; }
-        label { display: block; text-align: left; margin-left: 2%; font-size: 13px; color: #a8c9ad; }
-        input { width: 100%; padding: 14px; margin: 7px 0 12px 0; border: 1px solid #216d34; background: #101d13; color: #fff; border-radius: 10px; text-align: center; font-size: 17px; outline: none; }
-        button { border: none; color: #fff; font-weight: bold; border-radius: 10px; cursor: pointer; }
-        .main-btn { width: 100%; padding: 15px; background: linear-gradient(135deg, #1c9f3e, #74ff8d); font-size: 17px; box-shadow: 0 4px 15px rgba(116,255,141,0.22); }
-        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0 12px; }
-        .quick { padding: 13px 0; background: #31a84b; font-size: 16px; }
-        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-        .small-btn { padding: 12px; background: #27783a; font-size: 15px; }
-        .danger { background: #7c2b35; }
-        .brain-box { margin-top: 16px; padding: 15px; background: #101d13; border-radius: 12px; border: 1px solid #216d34; }
-        #result { font-size: 38px; color: #ffcc00; margin: 10px 0 3px; font-weight: bold; }
-        #percent { font-size: 17px; color: #74ff8d; font-weight: bold; }
-        .server-status { color: #8fb896; font-size: 12px; margin-top: 10px; line-height: 1.4; }
-        .section { margin-top: 12px; padding: 12px; background: #0b3216; border: 1px solid #1d7a35; border-radius: 12px; text-align: left; }
-        .section h3 { margin: 0 0 10px; font-size: 15px; color: #ffffff; }
-        .bar-wrap { margin-bottom: 9px; }
-        .bar-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
-        .bar-bg { height: 7px; background: #123d1d; border-radius: 20px; overflow: hidden; }
-        .bar { height: 100%; background: #74ff8d; width: 0%; }
-        .mini-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; }
-        .mini-card { background: #123d1d; border-radius: 8px; padding: 7px; text-align: center; font-size: 12px; }
-        .history { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin-top: 8px; }
-        .pill { padding: 5px 8px; border-radius: 20px; font-size: 12px; font-weight: bold; background: #1c9f3e; }
-        .pill.xiu { background: #2755b8; }
-        .muted { color: #9cd4a6; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src * data: gap: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data: content: blob:; media-src *; connect-src *;">
+<title>Tool AI Tài Xỉu</title>
+<meta name="theme-color" content="#06240f">
+
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;font-family:Arial,'Segoe UI',sans-serif;background:#031308;color:#fff}
+body{display:flex;justify-content:center;align-items:center}
+.app{
+    width:100vw;height:100dvh;max-width:430px;margin:0 auto;
+    background:radial-gradient(circle at top,#155c27 0,#073013 38%,#031308 100%);
+    display:flex;flex-direction:column;position:relative;overflow:hidden;
+    border-left:1px solid #0a5c25;border-right:1px solid #0a5c25
+}
+.top{
+    height:96px;padding:12px 12px 8px;
+    background:linear-gradient(180deg,#0c3818,#082711);
+    border-bottom:1px solid #1f7d36;
+    box-shadow:0 5px 20px rgba(0,0,0,.5);
+}
+.title{font-size:23px;font-weight:900;color:#72ff8b;letter-spacing:1px;margin-top:2px;text-align:center}
+.sub{font-size:11px;color:#b8efc1;text-align:center;margin-top:4px}
+.status{
+    margin:8px auto 0;width:max-content;max-width:96%;
+    padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;
+    border:1px solid #72ff8b;color:#72ff8b;background:#0b2b13
+}
+.status.off{border-color:#ff536b;color:#ff536b;background:#321017}
+.content{flex:1;overflow:auto;padding:10px 10px 92px}
+.card{
+    background:rgba(4,30,12,.92);border:1px solid #1c8636;border-radius:14px;
+    padding:10px;margin-bottom:10px;box-shadow:0 8px 24px rgba(0,0,0,.35)
+}
+.label{font-size:12px;color:#c9f7d0;text-align:left;margin:0 0 6px}
+.input-row{display:grid;grid-template-columns:1fr 86px;gap:8px}
+input{
+    width:100%;height:54px;border-radius:12px;border:1px solid #2b9348;
+    background:#092012;color:#fff;font-size:27px;font-weight:900;text-align:center;outline:none
+}
+.sum-box{
+    height:54px;border-radius:12px;border:1px solid #ffd34d;background:#173112;
+    display:flex;flex-direction:column;align-items:center;justify-content:center
+}
+.sum-box .small{font-size:10px;color:#e6e8a8}
+.sum-box .big{font-size:24px;font-weight:900;color:#ffd34d}
+.main-btn{
+    width:100%;height:54px;margin-top:9px;border:none;border-radius:12px;
+    background:linear-gradient(135deg,#19a941,#69ff86);color:white;font-size:16px;font-weight:900
+}
+.main-btn:disabled{opacity:.8}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.btn{height:43px;border:none;border-radius:10px;color:#fff;font-weight:900;font-size:14px;background:#237c38}
+.btn.red{background:#8d2f3a}
+.result-card{text-align:center}
+.muted{font-size:12px;color:#bde8c5;margin-bottom:4px}
+.result{
+    font-size:45px;line-height:1.05;font-weight:1000;color:#ffd11a;
+    text-shadow:0 3px 0 #6e4200,0 0 20px rgba(255,210,0,.25);margin:6px 0
+}
+.percent{font-size:16px;font-weight:900;color:#72ff8b}
+.accuracy{font-size:13px;color:#fff;margin-top:4px}
+.info{font-size:11px;color:#b7d9bd;margin-top:7px;line-height:1.35;max-height:48px;overflow:auto}
+.bet-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bet{
+    min-height:70px;border:1px solid #1f8d3a;background:#0a3216;border-radius:12px;
+    padding:9px;text-align:center;position:relative;overflow:hidden
+}
+.bet.hot{border-color:#ffd34d;box-shadow:0 0 0 2px rgba(255,211,77,.25) inset}
+.bet-title{font-size:16px;font-weight:900}
+.bet-sub{font-size:11px;color:#afeabb;margin-top:3px}
+.bet-pct{font-size:21px;color:#ffd34d;font-weight:900;margin-top:5px}
+.bar-bg{height:6px;background:#083014;border-radius:10px;overflow:hidden;margin-top:7px}
+.bar{height:100%;background:#70ff8a;width:0%}
+.total-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.total-cell{
+    height:51px;border:1px solid #267d39;background:#0a3216;border-radius:8px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center
+}
+.total-cell.hot{border-color:#ffd34d;background:#31420f}
+.total-n{font-size:16px;font-weight:900}
+.total-p{font-size:10px;color:#cbefd1}
+.dice-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.dice-cell{
+    min-height:48px;border:1px solid #267d39;background:#0a3216;border-radius:8px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px
+}
+.dice-face{font-size:20px;font-weight:900;color:#fff}
+.history{
+    display:flex;gap:5px;overflow-x:auto;padding:6px 0 2px;margin-top:6px
+}
+.pill{
+    min-width:38px;padding:5px 7px;border-radius:7px;background:#153b87;color:#fff;
+    font-size:11px;font-weight:900;text-align:center;border:1px solid #396dca
+}
+.pill.tai{background:#8c1d2d;border-color:#e44058}
+.bottom{
+    position:absolute;left:0;right:0;bottom:0;height:78px;
+    background:linear-gradient(180deg,rgba(5,20,9,.85),#030c05);
+    border-top:1px solid #1d7a35;padding:8px 10px;display:grid;grid-template-columns:repeat(4,1fr);gap:7px
+}
+.quick{
+    border:none;border-radius:12px;background:#153e1d;color:#fff;font-size:17px;font-weight:900;
+    border:1px solid #2b8542
+}
+.quick.hot{background:#235915;border-color:#ffd34d;color:#ffd34d}
+.section-title{font-size:13px;font-weight:900;margin:0 0 8px;color:#fff;text-align:left}
+@media(max-height:760px){
+    .top{height:82px}.title{font-size:20px}.content{padding-bottom:82px}
+    .result{font-size:37px}.card{padding:8px;margin-bottom:8px}
+    input,.sum-box,.main-btn{height:48px}.bottom{height:70px}
+}
+</style>
 </head>
+
 <body>
-<div class="wrapper">
-    <h2>AI TÀI XỈU CLOUD</h2>
-    <div class="sub">Nhập tổng 3 xúc xắc - Server AI phân tích BigData</div>
-    <div id="tag-online" class="status-online" style="display:none">● ĐÃ KẾT NỐI SERVER AI</div>
-    <div id="tag-offline" class="status-offline" style="display:inline-block">ĐANG KẾT NỐI SERVER...</div>
+<div class="app">
+    <div class="top">
+        <div class="title">AI TÀI XỈU CLOUD</div>
+        <div class="sub">Nhập 3 mặt xúc xắc, ví dụ 345 → tự cộng = 12</div>
+        <div id="status" class="status off">ĐANG KẾT NỐI SERVER...</div>
+    </div>
 
-    <div id="main-form">
-        <label for="server_url" style="display:none">Địa chỉ Server:</label>
-        <input type="hidden" id="server_url" placeholder="http://IP_MAY_TINH:3001" value="">
+    <div class="content">
+        <div class="card">
+            <div class="label">Nhập 3 xúc xắc vừa ra:</div>
+            <div class="input-row">
+                <input id="total_input" inputmode="numeric" maxlength="3" placeholder="345">
+                <div class="sum-box">
+                    <div class="small">TỔNG</div>
+                    <div class="big" id="sum_preview">--</div>
+                </div>
+            </div>
+            <button class="main-btn" id="send_btn" onclick="sendDataToServerAI()" disabled>ĐANG KẾT NỐI SERVER...</button>
+            <div class="actions">
+                <button class="btn" onclick="backOne()">↩ BACK</button>
+                <button class="btn red" onclick="newTable()">🔄 Đổi bàn</button>
+            </div>
+        </div>
 
-        <label for="total_input">Tổng 3 xúc xắc vừa ra:</label>
-        <input type="text" id="total_input" inputmode="numeric" maxlength="3" placeholder="Nhập tổng 3-18 hoặc 3 mặt VD: 312">
+        <div class="card result-card">
+            <div class="muted">KẾT QUẢ TỪ SERVER AI</div>
+            <div id="result" class="result">CHỜ...</div>
+            <div id="percent" class="percent">Tài: 0% | Xỉu: 0%</div>
+            <div id="accuracy" class="accuracy">Độ đúng máy này: 0.00%</div>
+            <div id="server_info" class="info">Đang tải cấu hình...</div>
+            <div class="history" id="history"></div>
+        </div>
 
-        <div class="grid" id="quick-grid"></div>
-        <button class="main-btn" id="send_btn" onclick="sendDataToServerAI()" disabled>ĐANG KẾT NỐI SERVER...</button>
-        <div class="row">
-            <button class="small-btn" onclick="backOne()">↩ BACK</button>
-            <button class="small-btn danger" onclick="newTable()">🔄 Đổi bàn</button>
+        <div class="card">
+            <div class="section-title">Tài / Xỉu</div>
+            <div class="bet-grid" id="tx-bars">
+                <div class="bet"><div class="bet-title">XỈU</div><div class="bet-sub">3–10</div><div class="bet-pct">0%</div></div>
+                <div class="bet"><div class="bet-title">TÀI</div><div class="bet-sub">11–18</div><div class="bet-pct">0%</div></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="section-title">Tổng điểm 4–17</div>
+            <div class="total-grid" id="total-bars"></div>
+        </div>
+
+        <div class="card">
+            <div class="section-title">Mặt xúc xắc / Đôi / Bộ ba</div>
+            <div class="dice-grid" id="dice-bars"></div>
         </div>
     </div>
 
-    <div class="brain-box">
-        <div class="muted">KẾT QUẢ TỪ SERVER AI:</div>
-        <div id="result">CHỜ DỮ LIỆU...</div>
-        <div id="percent">Tài: 0% | Xỉu: 0%</div>
-        <div id="accuracy">Độ đúng máy này: 0.0%</div>
-        <div class="server-status" id="server_info">Trạng thái: Đang đợi lệnh Fetch API...</div>
-        <div class="history" id="history"></div>
-    </div>
-
-    <div class="section">
-        <h3>Tài / Xỉu</h3>
-        <div id="tx-bars"></div>
-    </div>
-
-    <div class="section">
-        <h3>Tổng 4–17</h3>
-        <div class="mini-grid" id="total-bars"></div>
-    </div>
-
-    <div class="section">
-        <h3>Mặt xúc xắc / Đôi / Bộ ba</h3>
-        <div class="mini-grid" id="dice-bars"></div>
+    <div class="bottom">
+        <button class="quick" onclick="quickDice('111')">111</button>
+        <button class="quick" onclick="quickDice('222')">222</button>
+        <button class="quick" onclick="quickDice('333')">333</button>
+        <button class="quick hot" onclick="sendDataToServerAI()">GỬI</button>
     </div>
 </div>
 
 <script>
-    const deviceIdKey = "TAIXIU_DEVICE_ID";
-    let deviceId = localStorage.getItem(deviceIdKey);
-    if (!deviceId) {
-        deviceId = "TX_" + Math.random().toString(36).slice(2, 10).toUpperCase() + "_" + Date.now();
-        localStorage.setItem(deviceIdKey, deviceId);
+const CONFIG_URL = "https://djmaxqn2017-beep.github.io/toolssssss/config.json";
+let SERVER_URL = "";
+const deviceIdKey = "TAIXIU_DEVICE_ID";
+let deviceId = localStorage.getItem(deviceIdKey);
+if (!deviceId) {
+    deviceId = "TX_" + Math.random().toString(36).slice(2, 10).toUpperCase() + "_" + Date.now();
+    localStorage.setItem(deviceIdKey, deviceId);
+}
+const historyLocal = [];
+
+function setStatus(ok, text){
+    const s=document.getElementById("status");
+    s.className = ok ? "status" : "status off";
+    s.innerText = text;
+}
+function normalizePercent(v){
+    const n=Number(v);
+    return Number.isFinite(n)?Math.max(0,Math.min(100,n)):0;
+}
+function parseInputValue(){
+    const raw=String(document.getElementById("total_input").value||"").trim();
+    if(/^[1-6]{3}$/.test(raw)){
+        const total=raw.split("").reduce((s,x)=>s+Number(x),0);
+        return {ok:true,total,raw,note:`${raw[0]} + ${raw[1]} + ${raw[2]} = ${total}`};
     }
-
-    const historyLocal = [];
-    const quickGrid = document.getElementById("quick-grid");
-    for (let i = 3; i <= 18; i++) {
-        const btn = document.createElement("button");
-        btn.className = "quick";
-        btn.innerText = i;
-        btn.onclick = () => { document.getElementById("total_input").value = i; sendDataToServerAI(); };
-        quickGrid.appendChild(btn);
+    const total=Number(raw);
+    if(Number.isInteger(total)&&total>=3&&total<=18){
+        return {ok:true,total,raw:String(total),note:`Tổng đã nhập: ${total}`};
     }
+    return {ok:false,total:null,raw,note:"Nhập 3 mặt xúc xắc 111–666 hoặc tổng 3–18"};
+}
+function updatePreview(){
+    const p=parseInputValue();
+    document.getElementById("sum_preview").innerText=p.ok?p.total:"--";
+}
+document.getElementById("total_input").addEventListener("input", updatePreview);
+document.getElementById("total_input").addEventListener("keydown", e=>{if(e.key==="Enter")sendDataToServerAI()});
+function quickDice(v){
+    document.getElementById("total_input").value=v;
+    updatePreview();
+}
+function apiUrl(path){return SERVER_URL.replace(/\/$/,"")+path}
+function fetchWithTimeout(url,options={},timeoutMs=10000){
+    return Promise.race([
+        fetch(url,options),
+        new Promise((_,reject)=>setTimeout(()=>reject(new Error("Kết nối quá thời gian")),timeoutMs))
+    ]);
+}
+async function loadServerConfig(){
+    const btn=document.getElementById("send_btn");
+    btn.disabled=true;
+    btn.innerText="ĐANG KẾT NỐI SERVER...";
+    setStatus(false,"ĐANG KẾT NỐI SERVER...");
+    document.getElementById("server_info").innerText="Đang đọc config.json...";
 
-    setInterval(() => {
-        if (!navigator.onLine) {
-            document.getElementById("tag-online").style.display = "none";
-            document.getElementById("tag-offline").style.display = "inline-block";
-            document.getElementById("main-form").style.pointerEvents = "none";
-            document.getElementById("main-form").style.opacity = "0.35";
-            document.getElementById("result").innerText = "MẤT KẾT NỐI";
-            document.getElementById("result").style.color = "#ff4466";
-        } else {
-            document.getElementById("main-form").style.pointerEvents = "auto";
-            document.getElementById("main-form").style.opacity = "1";
-        }
-    }, 1000);
-
-    const CONFIG_URL = "https://djmaxqn2017-beep.github.io/toolssssss/config.json";
-    let SERVER_URL = "";
-
-    async function loadServerConfig(retry = 2) {
-        const sendBtn = document.getElementById("send_btn");
-        if (sendBtn) {
-            sendBtn.disabled = true;
-            sendBtn.innerText = "ĐANG KẾT NỐI SERVER...";
-        }
-
-        document.getElementById("result").innerText = "ĐANG KẾT NỐI...";
-        document.getElementById("result").style.color = "#ffcc00";
-        document.getElementById("server_info").innerText = "Đang đọc config từ GitHub Pages...";
-
-        for (let attempt = 0; attempt <= retry; attempt++) {
-            try {
-                const response = await fetch(CONFIG_URL + "?t=" + Date.now(), { cache: "no-store" });
-                if (!response.ok) throw new Error("Không tải được config.json");
-                const cfg = await response.json();
-
-                SERVER_URL = String(cfg.server || "").trim().replace(/\/$/, "");
-                if (!SERVER_URL.startsWith("https://")) {
-                    throw new Error("URL server trong config.json phải bắt đầu bằng https://");
-                }
-
-                // Kiểm tra server thật sự còn sống
-                const statusRes = await fetch(SERVER_URL + "/api/status?t=" + Date.now(), { cache: "no-store" });
-                if (!statusRes.ok) throw new Error("Server không phản hồi /api/status");
-                const statusJson = await statusRes.json();
-                if (!statusJson.success) throw new Error("Server trả về trạng thái không hợp lệ");
-
-                document.getElementById("tag-online").style.display = "inline-block";
-                document.getElementById("tag-offline").style.display = "none";
-                document.getElementById("main-form").style.pointerEvents = "auto";
-                document.getElementById("main-form").style.opacity = "1";
-                document.getElementById("result").innerText = "CHỜ DỮ LIỆU...";
-                document.getElementById("result").style.color = "#ffcc00";
-                document.getElementById("server_info").innerText = "Đã kết nối server: " + SERVER_URL;
-
-                if (sendBtn) {
-                    sendBtn.disabled = false;
-                    sendBtn.innerText = "GỬI DATA & NHẬN GỢI Ý";
-                }
-                return true;
-            } catch (e) {
-                if (attempt < retry) {
-                    document.getElementById("server_info").innerText = "Kết nối lỗi, đang thử lại lần " + (attempt + 1) + "...";
-                    await new Promise(resolve => setTimeout(resolve, 1200));
-                    continue;
-                }
-
-                document.getElementById("tag-online").style.display = "none";
-                document.getElementById("tag-offline").style.display = "inline-block";
-                document.getElementById("main-form").style.pointerEvents = "auto";
-                document.getElementById("main-form").style.opacity = "1";
-                document.getElementById("result").innerText = "SERVER OFFLINE";
-                document.getElementById("result").style.color = "#ff4466";
-                document.getElementById("server_info").innerText =
-                    "Không kết nối được server. Kiểm tra cloudflared, node server.js hoặc config.json. Lỗi: " + e.message;
-
-                if (sendBtn) {
-                    sendBtn.disabled = false;
-                    sendBtn.innerText = "THỬ KẾT NỐI LẠI";
-                }
-                return false;
-            }
-        }
-    }
-
-    function apiUrl(path) {
-        return SERVER_URL.replace(/\/$/, "") + path;
-    }
-
-    function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
-        return Promise.race([
-            fetch(url, options),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Kết nối quá thời gian")), timeoutMs))
-        ]);
-    }
-
-    
-    window.addEventListener("error", function(e) {
-        document.getElementById("tag-online").style.display = "none";
-        document.getElementById("tag-offline").style.display = "inline-block";
-        document.getElementById("tag-offline").innerText = "LỖI JAVASCRIPT";
-        document.getElementById("result").innerText = "LỖI JS";
-        document.getElementById("result").style.color = "#ff4466";
-        document.getElementById("server_info").innerText = "Lỗi JS: " + e.message;
-    });
-
-    window.addEventListener("load", function() {
-        document.getElementById("server_info").innerText = "JavaScript đã chạy. Đang kiểm tra server...";
-        loadServerConfig();
-    });
-
-
-    function normalizePercent(v) {
-        const n = Number(v);
-        return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0;
-    }
-
-    function makeBar(name, pct) {
-        pct = normalizePercent(pct);
-        return `<div class="bar-wrap"><div class="bar-label"><span>${name}</span><b>${pct.toFixed(2)}%</b></div><div class="bar-bg"><div class="bar" style="width:${pct}%"></div></div></div>`;
-    }
-
-    function makeMini(name, pct) {
-        pct = normalizePercent(pct);
-        return `<div class="mini-card"><b>${name}</b><br>${pct.toFixed(2)}%<div class="bar-bg" style="margin-top:5px"><div class="bar" style="width:${pct}%"></div></div></div>`;
-    }
-
-    function updateHistory(total) {
-        if (total) historyLocal.push(Number(total));
-        const box = document.getElementById("history");
-        box.innerHTML = historyLocal.slice(-20).map(t => {
-            const cls = t >= 11 ? "pill" : "pill xiu";
-            return `<span class="${cls}">${t} ${t >= 11 ? "T" : "X"}</span>`;
-        }).join("");
-    }
-
-    function updateUI(data, total) {
-        const pred = data.ket_qua_du_doan || data.prediction || "CHỜ";
-        const tai = normalizePercent(data.phan_tram_tai ?? data.tai_percent ?? data.phan_tram_con ?? 0);
-        const xiu = normalizePercent(data.phan_tram_xiu ?? data.xiu_percent ?? data.phan_tram_cai ?? 0);
-
-        document.getElementById("result").innerText = pred;
-        document.getElementById("result").style.color = String(pred).includes("TÀI") ? "#ff4466" : "#74ff8d";
-        document.getElementById("percent").innerText = `Tài: ${tai.toFixed(2)}% | Xỉu: ${xiu.toFixed(2)}%`;
-
-        const acc = data.accuracy_may_nay?.rate ?? data.do_chinh_xac ?? data.do_tin_cay ?? 0;
-        document.getElementById("accuracy").innerText = "Độ đúng máy này: " + normalizePercent(acc).toFixed(2) + "%";
-        document.getElementById("server_info").innerText = data.xu_huong_text || data.panel_text || ("BigData: " + (data.tong_mau_du_lieu || 0) + " mẫu");
-
-        document.getElementById("tx-bars").innerHTML = makeBar("TÀI", tai) + makeBar("XỈU", xiu);
-
-        const totalStats = data.phan_tram_tong_4_17 || data.phan_tram_tong || data.total_percent || data.tong_4_17 || {};
-        let totalHtml = "";
-        for (let i = 4; i <= 17; i++) totalHtml += makeMini("Tổng " + i, totalStats[i] ?? totalStats[String(i)] ?? 0);
-        document.getElementById("total-bars").innerHTML = totalHtml;
-
-        const diceStats = data.phan_tram_mat_xuc_xac || data.dice_percent || data.xuc_xac || {};
-        const doubleStats = data.phan_tram_doi || data.double_percent || data.doi || {};
-        const tripleStats = data.phan_tram_bo_ba || data.triple_percent || data.bo_ba || {};
-        let diceHtml = "";
-        for (let i = 1; i <= 6; i++) diceHtml += makeMini("Mặt " + i, diceStats[i] ?? diceStats[String(i)] ?? 0);
-        for (let i = 1; i <= 6; i++) diceHtml += makeMini("Đôi " + i, doubleStats[i] ?? doubleStats[String(i)] ?? 0);
-        for (let i = 1; i <= 6; i++) diceHtml += makeMini("Bộ ba " + i, tripleStats[i] ?? tripleStats[String(i)] ?? 0);
-        document.getElementById("dice-bars").innerHTML = diceHtml;
-
-        updateHistory(total);
-    }
-
-    function parseInputValue() {
-        const raw = String(document.getElementById("total_input").value || "").trim();
-
-        // Cho phép nhập 3 mặt xúc xắc dạng 312 = 3 + 1 + 2 = 6
-        if (/^[1-6]{3}$/.test(raw)) {
-            const total = raw.split("").reduce((s, x) => s + Number(x), 0);
-            return { ok: true, total, note: `Đã hiểu ${raw} = ${raw[0]} + ${raw[1]} + ${raw[2]} = ${total}` };
-        }
-
-        // Cho phép nhập tổng trực tiếp từ 3 đến 18
-        const total = Number(raw);
-        if (Number.isInteger(total) && total >= 3 && total <= 18) {
-            return { ok: true, total, note: `Tổng đã nhập: ${total}` };
-        }
-
-        return { ok: false, total: null, note: "Vui lòng nhập tổng 3-18 hoặc 3 mặt xúc xắc, ví dụ 312." };
-    }
-
-    async function sendDataToServerAI() {
-        if (!SERVER_URL) {
-            const okConfig = await loadServerConfig();
-            if (!okConfig) return;
-        }
-        const parsed = parseInputValue();
-        if (!parsed.ok) {
-            alert(parsed.note);
-            return;
-        }
-
-        const total = parsed.total;
-        document.getElementById("result").innerText = "ĐANG GỌI SERVER...";
-        document.getElementById("result").style.color = "#ffcc00";
-        document.getElementById("server_info").innerText = parsed.note + " | Đang gửi lên server...";
-
-        fetchWithTimeout(apiUrl("/api/predict"), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                device_id: deviceId,
-                tong: total,
-                ket_qua_truoc: total,
-                tong_3_xuc_xac: total
-            })
-        })
-        .then(response => {
-            if (!response.ok) throw new Error("Server từ chối hoặc đang sập");
-            return response.json();
-        })
-        .then(data => {
-            updateUI(data, total);
-
-            const lines = [];
-            if (parsed.note) lines.push(parsed.note);
-            if (data.ket_qua_van_truoc) lines.push(data.ket_qua_van_truoc);
-            if (data.trang_thai_tay) lines.push(data.trang_thai_tay);
-            if (data.panel_text) lines.push(data.panel_text);
-            if (data.xu_huong_text) lines.push(data.xu_huong_text);
-
-            document.getElementById("server_info").innerText = lines.join(" | ");
-        })
-        .catch(error => {
-            SERVER_URL = "";
-            document.getElementById("tag-online").style.display = "none";
-            document.getElementById("tag-offline").style.display = "inline-block";
-            document.getElementById("result").innerText = "SERVER AI OFF/LỖI";
-            document.getElementById("result").style.color = "#ff4466";
-            document.getElementById("server_info").innerText = "Lỗi kết nối: " + error.message + " | Hãy kiểm tra cloudflared hoặc sửa config.json.";
+    try{
+        const cfg=await fetch(CONFIG_URL+"?t="+Date.now(),{cache:"no-store"}).then(r=>{
+            if(!r.ok) throw new Error("Không tải được config.json");
+            return r.json();
         });
+        SERVER_URL=String(cfg.server||"").trim().replace(/\/$/,"");
+        if(!SERVER_URL.startsWith("https://")) throw new Error("URL server không hợp lệ");
+
+        const st=await fetchWithTimeout(SERVER_URL+"/api/status?t="+Date.now(),{cache:"no-store"},10000).then(r=>{
+            if(!r.ok) throw new Error("Server không phản hồi /api/status");
+            return r.json();
+        });
+        if(!st.success) throw new Error("Server status không hợp lệ");
+
+        btn.disabled=false;
+        btn.innerText="GỬI DATA & NHẬN GỢI Ý";
+        setStatus(true,"● ĐÃ KẾT NỐI SERVER AI");
+        document.getElementById("server_info").innerText="Đã kết nối: "+SERVER_URL;
+        return true;
+    }catch(e){
+        btn.disabled=false;
+        btn.innerText="THỬ KẾT NỐI LẠI";
+        setStatus(false,"SERVER OFFLINE");
+        document.getElementById("result").innerText="OFFLINE";
+        document.getElementById("result").style.color="#ff536b";
+        document.getElementById("server_info").innerText="Lỗi: "+e.message;
+        return false;
     }
+}
+function makeBar(pct){
+    pct=normalizePercent(pct);
+    return `<div class="bar-bg"><div class="bar" style="width:${pct}%"></div></div>`;
+}
+function updateHistory(total){
+    if(total) historyLocal.push(Number(total));
+    document.getElementById("history").innerHTML=historyLocal.slice(-18).map(t=>
+        `<span class="pill ${t>=11?'tai':''}">${t}<br>${t>=11?'T':'X'}</span>`
+    ).join("");
+}
+function updateUI(data,total){
+    const pred=data.ket_qua_du_doan || data.prediction || "CHỜ";
+    const tai=normalizePercent(data.phan_tram_tai ?? 0);
+    const xiu=normalizePercent(data.phan_tram_xiu ?? 0);
 
-    async function backOne() {
-        if (!SERVER_URL) {
-            const okConfig = await loadServerConfig();
-            if (!okConfig) return;
-        }
-        fetchWithTimeout(apiUrl("/api/clear"), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ device_id: deviceId, action: "BACK" })
-        }).then(r => r.json()).then(data => {
-            historyLocal.pop();
-            updateHistory();
-            document.getElementById("server_info").innerText = data.message || "Đã BACK 1 ván";
-        }).catch(err => alert("Lỗi BACK: " + err.message));
+    document.getElementById("result").innerText=pred;
+    document.getElementById("result").style.color=String(pred).includes("TÀI")?"#ff536b":"#72ff8b";
+    document.getElementById("percent").innerText=`Tài: ${tai.toFixed(2)}% | Xỉu: ${xiu.toFixed(2)}%`;
+
+    const acc=data.accuracy_may_nay?.rate ?? data.do_tin_cay ?? 0;
+    document.getElementById("accuracy").innerText="Độ đúng máy này: "+normalizePercent(acc).toFixed(2)+"%";
+
+    document.getElementById("tx-bars").innerHTML=`
+        <div class="bet ${xiu>=tai?'hot':''}">
+            <div class="bet-title">XỈU</div><div class="bet-sub">3–10</div>
+            <div class="bet-pct">${xiu.toFixed(2)}%</div>${makeBar(xiu)}
+        </div>
+        <div class="bet ${tai>xiu?'hot':''}">
+            <div class="bet-title">TÀI</div><div class="bet-sub">11–18</div>
+            <div class="bet-pct">${tai.toFixed(2)}%</div>${makeBar(tai)}
+        </div>`;
+
+    const totalStats=data.phan_tram_tong_4_17 || data.phan_tram_tong || data.total_pct || {};
+    let maxPct=0; for(let i=4;i<=17;i++) maxPct=Math.max(maxPct, normalizePercent(totalStats[i]??totalStats[String(i)]??0));
+    let totalHtml="";
+    for(let i=4;i<=17;i++){
+        const p=normalizePercent(totalStats[i]??totalStats[String(i)]??0);
+        totalHtml+=`<div class="total-cell ${p===maxPct&&p>0?'hot':''}"><div class="total-n">${i}</div><div class="total-p">${p.toFixed(1)}%</div></div>`;
     }
+    document.getElementById("total-bars").innerHTML=totalHtml;
 
-    async function newTable() {
-        if (!SERVER_URL) {
-            const okConfig = await loadServerConfig();
-            if (!okConfig) return;
-        }
-        if (!confirm("Đổi bàn mới?")) return;
-        fetchWithTimeout(apiUrl("/api/clear"), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ device_id: deviceId, action: "NEW_TABLE" })
-        }).then(r => r.json()).then(data => {
-            historyLocal.length = 0;
-            updateHistory();
-            document.getElementById("result").innerText = "BÀN MỚI";
-            document.getElementById("server_info").innerText = data.message || "Đã đổi bàn";
-        }).catch(err => alert("Lỗi đổi bàn: " + err.message));
+    const face=data.phan_tram_mat_xuc_xac || data.face_pct || {};
+    const dbl=data.phan_tram_doi || data.double_pct || {};
+    const tri=data.phan_tram_bo_ba || data.triple_pct || {};
+    let diceHtml="";
+    for(let i=1;i<=6;i++) diceHtml+=`<div class="dice-cell"><div class="dice-face">${i}</div><div>Mặt ${normalizePercent(face[i]??face[String(i)]??0).toFixed(1)}%</div></div>`;
+    for(let i=1;i<=6;i++) diceHtml+=`<div class="dice-cell"><div class="dice-face">${i}${i}</div><div>Đôi ${normalizePercent(dbl[i]??dbl[String(i)]??0).toFixed(1)}%</div></div>`;
+    for(let i=1;i<=6;i++) diceHtml+=`<div class="dice-cell"><div class="dice-face">${i}${i}${i}</div><div>Bộ ${normalizePercent(tri[i]??tri[String(i)]??0).toFixed(1)}%</div></div>`;
+    document.getElementById("dice-bars").innerHTML=diceHtml;
+
+    const lines=[];
+    if(data.ket_qua_van_truoc) lines.push(data.ket_qua_van_truoc);
+    if(data.trang_thai_tay) lines.push(data.trang_thai_tay);
+    if(data.panel_text) lines.push(data.panel_text);
+    if(data.xu_huong_text) lines.push(data.xu_huong_text);
+    document.getElementById("server_info").innerText=lines.join(" | ") || "Đã nhận kết quả từ server";
+    updateHistory(total);
+}
+async function sendDataToServerAI(){
+    if(!SERVER_URL){
+        const ok=await loadServerConfig();
+        if(!ok) return;
     }
+    const parsed=parseInputValue();
+    if(!parsed.ok){alert(parsed.note);return}
+    document.getElementById("result").innerText="ĐANG PHÂN TÍCH...";
+    document.getElementById("result").style.color="#ffd11a";
+    document.getElementById("server_info").innerText=parsed.note+" | Đang gửi lên server...";
 
-    document.getElementById("total_input").addEventListener("keydown", function(e) {
-        if (e.key === "Enter") sendDataToServerAI();
-    });
-
+    try{
+        const data=await fetchWithTimeout(apiUrl("/api/predict"),{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({device_id:deviceId,tong:parsed.total,ket_qua_truoc:parsed.total,tong_3_xuc_xac:parsed.total})
+        },12000).then(r=>{
+            if(!r.ok) throw new Error("Server từ chối /api/predict");
+            return r.json();
+        });
+        updateUI(data,parsed.total);
+    }catch(e){
+        SERVER_URL="";
+        setStatus(false,"SERVER LỖI");
+        document.getElementById("result").innerText="LỖI";
+        document.getElementById("result").style.color="#ff536b";
+        document.getElementById("server_info").innerText="Lỗi kết nối: "+e.message;
+    }
+}
+async function backOne(){
+    if(!SERVER_URL){const ok=await loadServerConfig();if(!ok)return}
+    try{
+        const data=await fetchWithTimeout(apiUrl("/api/clear"),{
+            method:"POST",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({device_id:deviceId,action:"BACK"})
+        }).then(r=>r.json());
+        historyLocal.pop(); updateHistory();
+        document.getElementById("server_info").innerText=data.message||"Đã BACK 1 ván";
+    }catch(e){alert("Lỗi BACK: "+e.message)}
+}
+async function newTable(){
+    if(!SERVER_URL){const ok=await loadServerConfig();if(!ok)return}
+    if(!confirm("Đổi bàn mới?"))return;
+    try{
+        const data=await fetchWithTimeout(apiUrl("/api/clear"),{
+            method:"POST",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({device_id:deviceId,action:"NEW_TABLE"})
+        }).then(r=>r.json());
+        historyLocal.length=0; updateHistory();
+        document.getElementById("result").innerText="BÀN MỚI";
+        document.getElementById("result").style.color="#ffd11a";
+        document.getElementById("server_info").innerText=data.message||"Đã đổi bàn";
+    }catch(e){alert("Lỗi đổi bàn: "+e.message)}
+}
+window.addEventListener("load",()=>{updatePreview();loadServerConfig()});
 </script>
 </body>
 </html>
