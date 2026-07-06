@@ -1,0 +1,18 @@
+{
+  "name": "AI Tài Xỉu Cloud",
+  "short_name": "Tài Xỉu AI",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#07140b",
+  "theme_color": "#07140b",
+  "description": "Tool AI Tài Xỉu Cloud",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

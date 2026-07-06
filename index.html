@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap: https://ssl.gstatic.com 'unsafe-eval'; style-src 'self' 'unsafe-inline'; media-src *; img-src 'self' data: content:; connect-src *;">
     <title>Tool AI Tài Xỉu</title>
+    <meta name="theme-color" content="#07140b">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background: #07140b; color: #fff; text-align: center; padding: 12px; margin: 0; }
@@ -364,6 +368,13 @@
     document.getElementById("total_input").addEventListener("keydown", function(e) {
         if (e.key === "Enter") sendDataToServerAI();
     });
+
+
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+            navigator.serviceWorker.register("service-worker.js").catch(() => {});
+        });
+    }
 
 </script>
 </body>

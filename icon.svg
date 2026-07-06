@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#07140b"/>
+  <circle cx="256" cy="256" r="184" fill="#0d2212" stroke="#74ff8d" stroke-width="18"/>
+  <text x="256" y="218" text-anchor="middle" font-family="Arial, sans-serif" font-size="82" font-weight="700" fill="#74ff8d">AI</text>
+  <text x="256" y="314" text-anchor="middle" font-family="Arial, sans-serif" font-size="72" font-weight="700" fill="#ffcc00">TX</text>
+  <circle cx="155" cy="364" r="18" fill="#74ff8d"/>
+  <circle cx="256" cy="364" r="18" fill="#74ff8d"/>
+  <circle cx="357" cy="364" r="18" fill="#74ff8d"/>
+</svg>
