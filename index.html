@@ -27,9 +27,12 @@ body{display:flex;justify-content:center;align-items:center}
     border-right:1px solid rgba(255,0,255,.36);
 }
 .app::before{
-    content:"";position:absolute;inset:-2px;pointer-events:none;
-    background:linear-gradient(120deg,transparent,#00fff0,transparent,#ff00d4,transparent);
-    opacity:.22;animation:ledMove 5s linear infinite;
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:
+      linear-gradient(120deg,rgba(0,255,240,.08),transparent 32%,rgba(255,0,212,.07),transparent 68%),
+      radial-gradient(circle at 25% 20%,rgba(0,255,240,.10),transparent 22%),
+      radial-gradient(circle at 78% 72%,rgba(255,0,212,.10),transparent 28%);
+    opacity:.85;
 }
 .app::after{
     content:"";position:absolute;inset:0;pointer-events:none;
@@ -37,12 +40,10 @@ body{display:flex;justify-content:center;align-items:center}
       radial-gradient(#ffffff 0.8px,transparent 1px),
       radial-gradient(#00fff0 0.7px,transparent 1px),
       radial-gradient(#ff00d4 0.7px,transparent 1px);
-    background-size:80px 80px,120px 120px,160px 160px;
+    background-size:90px 90px,130px 130px,170px 170px;
     background-position:0 0,40px 20px,20px 70px;
-    opacity:.17;animation:stars 18s linear infinite;
+    opacity:.16;
 }
-@keyframes ledMove{0%{filter:hue-rotate(0deg);transform:translateX(-8%)}50%{filter:hue-rotate(120deg)}100%{filter:hue-rotate(360deg);transform:translateX(8%)}}
-@keyframes stars{from{background-position:0 0,40px 20px,20px 70px}to{background-position:0 220px,40px 260px,20px 300px}}
 .top{
     position:relative;z-index:1;height:98px;padding:13px 12px 8px;
     background:linear-gradient(180deg,rgba(43,0,77,.92),rgba(12,0,28,.82));
