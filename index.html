@@ -167,14 +167,7 @@ button{border:none;color:#fff;font-weight:1000;border-radius:16px;cursor:pointer
     <div class="section"><h3>Tổng điểm 4–17</h3><div class="total-grid" id="total-bars"></div></div>
     <div class="section"><h3>Mặt xúc xắc / Đôi / Bộ ba</h3><div class="dice-grid" id="dice-bars"></div></div>
   </div>
-  <div class="bottom" style="grid-template-columns:1fr 1fr 1fr 1.15fr">
-    <button class="quick" onclick="backOne()">↩️ BACK</button>
-    <button class="quick red" onclick="changeTable()">🔄 Đổi bàn</button>
-    <button class="quick red" onclick="resetTable()">⚠ RESET</button>
-    <button class="quick hot" onclick="sendDataToServerAI()">GỬI DATA</button>
-  </div>
-
-  <div class="bottom-actions">
+<div class="bottom-actions">
     <button class="bottom-change" onclick="changeTable()">🔄 ĐỔI BÀN</button>
     <div class="bottom-row">
       <button class="bottom-btn" onclick="backOne()">↩️ BACK</button>
@@ -313,9 +306,6 @@ function parseInputValue(){
   return {ok:false, raw, dice:null, total:null, note:'Nhập 3 mặt xúc xắc 111–666 hoặc tổng 3–18'};
 }
 function updatePreview(){
-  const tableId=getTableId();
-  if(!tableId)return;
-  if(!TABLE_VALID){const valid=await validateTable();if(!valid)return;}
   const p = parseInputValue();
   $('sum_preview').innerText = p.ok ? p.total : '--';
 }
@@ -365,7 +355,7 @@ async function loadServerConfig(){
     if(!st.success) throw new Error('/api/status không trả success:true');
 
     setStatus(true,'● ĐÃ KẾT NỐI SERVER AI');
-    setBtn('GỬI DATA & NHẬN GỢI Ý', false);
+    setBtn(TABLE_VALID ? 'GỬI DATA & NHẬN GỢI Ý' : 'CHỌN BÀN ĐỂ MỞ TOOLS', !TABLE_VALID);
     $('result').innerText = 'CHỜ DỮ LIỆU...';
     $('result').style.color = '#ffcc00';
     $('server_info').innerText = 'Đã kết nối: ' + SERVER_URL;
@@ -378,7 +368,7 @@ async function loadServerConfig(){
         }catch(e){}
       }
     }else{
-      setBtn('NHẬP SỐ BÀN ĐỂ MỞ TOOLS',true);
+      setBtn('CHỌN BÀN ĐỂ MỞ TOOLS',true);
     }
     updatePreview();
     return true;
