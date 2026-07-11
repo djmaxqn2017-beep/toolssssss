@@ -1,6 +1,3 @@
-// V2: không cache index/config/API để tránh kẹt bản cũ
-self.addEventListener('install', event => self.skipWaiting());
-self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
-self.addEventListener('fetch', event => {
-  event.respondWith(fetch(event.request));
-});
+self.addEventListener('install',e=>self.skipWaiting());
+self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
+self.addEventListener('fetch',e=>e.respondWith(fetch(e.request,{cache:'no-store'}).catch(()=>caches.match(e.request))));

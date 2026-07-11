@@ -61,18 +61,24 @@ button{border:none;color:#fff;font-weight:1000;border-radius:16px;cursor:pointer
     <div class="title">AI TÀI XỈU CLOUD</div>
     <div class="sub">Nhập 3 mặt xúc xắc, ví dụ 345 → tự cộng = 12</div>
     <div id="status" class="status">ĐANG KẾT NỐI SERVER...</div>
+    <div id="online_badge" style="position:absolute;right:12px;top:12px;padding:5px 9px;border-radius:12px;border:1px solid #00fff0;color:#00fff0;background:rgba(0,0,0,.35);font-size:11px;font-weight:900">👥 0 online</div>
   </div>
   <div class="content">
     <div class="card">
+      <div class="label">Số bàn đang chơi:</div>
+      <input id="table_input" inputmode="text" maxlength="20" placeholder="C132, 132 hoặc 131" autocomplete="off" style="margin-bottom:8px">
+      <div id="table_status" style="font-size:12px;color:#ff6d91;margin:0 0 5px 2px">Chưa xác minh số bàn</div>
+      <div id="consensus_status" style="font-size:12px;color:#cbbcff;margin:0 0 12px 2px">Chưa có kết quả chờ xác nhận</div>
       <div class="label">Nhập 3 xúc xắc vừa ra:</div>
       <div class="input-row">
         <input id="total_input" inputmode="numeric" maxlength="3" placeholder="345" autocomplete="off">
         <div class="sum-box"><div class="small">TỔNG</div><div class="big" id="sum_preview">--</div></div>
       </div>
       <button class="main-btn" id="send_btn" onclick="sendDataToServerAI()">ĐANG KẾT NỐI SERVER...</button>
-      <div class="actions">
+      <div class="actions" style="grid-template-columns:repeat(3,1fr)">
         <button class="small-btn" onclick="backOne()">↩️ BACK</button>
-        <button class="small-btn danger" onclick="newTable()">🔄 Đổi bàn</button>
+        <button class="small-btn danger" onclick="changeTable()">🔄 Đổi bàn</button>
+        <button class="small-btn danger" onclick="resetTable()">⚠ RESET</button>
       </div>
     </div>
     <div class="brain">
@@ -92,9 +98,10 @@ button{border:none;color:#fff;font-weight:1000;border-radius:16px;cursor:pointer
     <div class="section"><h3>Tổng điểm 4–17</h3><div class="total-grid" id="total-bars"></div></div>
     <div class="section"><h3>Mặt xúc xắc / Đôi / Bộ ba</h3><div class="dice-grid" id="dice-bars"></div></div>
   </div>
-  <div class="bottom">
+  <div class="bottom" style="grid-template-columns:1fr 1fr 1fr 1.15fr">
     <button class="quick" onclick="backOne()">↩️ BACK</button>
-    <button class="quick red" onclick="newTable()">🔄 Đổi bàn</button>
+    <button class="quick red" onclick="changeTable()">🔄 Đổi bàn</button>
+    <button class="quick red" onclick="resetTable()">⚠ RESET</button>
     <button class="quick hot" onclick="sendDataToServerAI()">GỬI DATA</button>
   </div>
 </div>
@@ -104,6 +111,13 @@ button{border:none;color:#fff;font-weight:1000;border-radius:16px;cursor:pointer
 
 const CONFIG_URL = 'https://djmaxqn2017-beep.github.io/toolssssss/config.json';
 let SERVER_URL = '';
+let TABLE_ID = localStorage.getItem('TAIXIU_TABLE_ID') || '';
+let TABLE_VALID = false;
+let LAST_SUBMISSION = null;
+let LAST_RENDER_SIGNATURE = '';
+let HEARTBEAT_TIMER = null;
+let SYNC_TIMER = null;
+let AUTO_RESUBMIT_BUSY = false;
 const deviceIdKey = 'TAIXIU_DEVICE_ID';
 let deviceId = localStorage.getItem(deviceIdKey);
 if(!deviceId){
@@ -121,6 +135,40 @@ function setBtn(text, disabled){
   $('send_btn').innerText = text;
   $('send_btn').disabled = !!disabled;
 }
+function getTableId(){
+  const v=String($('table_input').value||'').trim().toUpperCase();
+  if(!v){alert('Vui lòng nhập số bàn.');return '';}
+  TABLE_ID=v;localStorage.setItem('TAIXIU_TABLE_ID',v);return v;
+}
+async function validateTable(){
+  const tableId=getTableId();
+  if(!tableId){TABLE_VALID=false;setBtn('NHẬP ĐÚNG SỐ BÀN',true);return false;}
+  if(!SERVER_URL){TABLE_VALID=false;return false;}
+  $('table_status').innerText='Đang xác minh số bàn...';
+  $('table_status').style.color='#ffcc00';
+  setBtn('ĐANG XÁC MINH SỐ BÀN...',true);
+  try{
+    const data=await jsonFetch(api('/api/table/validate'),{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({device_id:deviceId,table_id:tableId})
+    });
+    if(!data.valid)throw new Error('Số bàn không hợp lệ');
+    TABLE_VALID=true;
+    $('table_status').innerText='✓ Số bàn hợp lệ: '+data.table_id;
+    $('table_status').style.color='#00fff0';
+    setBtn('GỬI DATA & NHẬN GỢI Ý',false);
+    startRealtime();
+    return true;
+  }catch(e){
+    TABLE_VALID=false;
+    $('table_status').innerText='✕ SỐ BÀN KHÔNG HỢP LỆ';
+    $('table_status').style.color='#ff5f87';
+    setBtn('TOOLS ĐÃ KHÓA',true);
+    $('server_info').innerText=e.message;
+    return false;
+  }
+}
 function parseInputValue(){
   const raw = String($('total_input').value || '').trim();
   if(/^[1-6]{3}$/.test(raw)){
@@ -135,6 +183,9 @@ function parseInputValue(){
   return {ok:false, raw, dice:null, total:null, note:'Nhập 3 mặt xúc xắc 111–666 hoặc tổng 3–18'};
 }
 function updatePreview(){
+  const tableId=getTableId();
+  if(!tableId)return;
+  if(!TABLE_VALID){const valid=await validateTable();if(!valid)return;}
   const p = parseInputValue();
   $('sum_preview').innerText = p.ok ? p.total : '--';
 }
@@ -150,7 +201,8 @@ async function jsonFetch(url, options){
   let data = {};
   try{ data = text ? JSON.parse(text) : {}; }catch(e){ data = {raw:text}; }
   if(!r.ok){
-    throw new Error('HTTP ' + r.status + ' - ' + (data.error || data.message || text.slice(0,120)));
+    const err=new Error('HTTP ' + r.status + ' - ' + (data.error || data.message || text.slice(0,120)));
+    err.data=data;err.status=r.status;throw err;
   }
   return data;
 }
@@ -187,6 +239,17 @@ async function loadServerConfig(){
     $('result').innerText = 'CHỜ DỮ LIỆU...';
     $('result').style.color = '#ffcc00';
     $('server_info').innerText = 'Đã kết nối: ' + SERVER_URL;
+    if(TABLE_ID){
+      const valid=await validateTable();
+      if(valid){
+        try{
+          const sync=await jsonFetch(api('/api/table/join'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_id:deviceId,table_id:TABLE_ID})});
+          if(sync.current_prediction)renderResult(sync.current_prediction,sync.current_prediction.tong_da_tinh,sync.current_prediction.dice_raw);
+        }catch(e){}
+      }
+    }else{
+      setBtn('NHẬP SỐ BÀN ĐỂ MỞ TOOLS',true);
+    }
     updatePreview();
     return true;
   }catch(e){
@@ -244,19 +307,101 @@ function renderResult(data, total, raw){
   $('dice-bars').innerHTML = dh;
 
   const lines = [];
+  if(data.table_id) lines.push('Bàn: '+data.table_id);
   if(raw) lines.push('Xúc xắc: ' + raw + ' | Tổng: ' + total);
+  if(data.duplicate) lines.push('Đã đồng bộ kết quả do máy khác cùng bàn vừa nhập');
   if(data.trang_thai_tay) lines.push(data.trang_thai_tay);
   if(data.panel_text) lines.push(data.panel_text);
   if(data.xu_huong_text) lines.push(data.xu_huong_text);
   $('server_info').innerText = lines.join(' | ') || 'Đã nhận dữ liệu.';
 }
 
-async function sendDataToServerAI(){
+
+function renderOnlineCount(data){
+  if(data && typeof data.online_count!=='undefined'){
+    $('online_badge').innerText='👥 '+data.online_count+' online';
+  }
+}
+function renderConsensusState(data){
+  renderOnlineCount(data);
+  if(!data)return;
+  const el=$('consensus_status');
+  if(data.pending_action){
+    const a=data.pending_action.action||data.action||'THAO TÁC';
+    el.innerText='⏳ Đang chờ máy thứ hai xác nhận '+a+' trong 5 giây';
+    el.style.color='#ffcc00';
+  }
+  if(data.conflict || data.conflict_locked){
+    el.innerText='🔒 XUNG ĐỘT: Hai máy phải nhập trùng. Nếu một máy thoát, máy còn lại được lấy.';
+    el.style.color='#ff5f87';
+    setBtn('NHẬP LẠI ĐỂ XÁC NHẬN',false);
+    return;
+  }
+  if(data.pending || data.pending_round){
+    const votes=data.pending_round?.votes||[];
+    el.innerText='⏳ Đang xác nhận nhanh: '+votes.length+' máy đã nhập';
+    el.style.color='#ffcc00';
+    setBtn('SỬA / XÁC NHẬN KẾT QUẢ',false);
+    return;
+  }
+  el.innerText='✓ Không có xung đột';
+  el.style.color='#00fff0';
+}
+async function heartbeat(){
+  if(!SERVER_URL||!TABLE_VALID||!TABLE_ID)return;
+  try{
+    const data=await jsonFetch(api('/api/heartbeat'),{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({device_id:deviceId,table_id:TABLE_ID})
+    });
+    renderConsensusState(data);
+    if(data.current_prediction){
+      const sig=JSON.stringify([data.current_prediction.tong_so_van_da_choi,data.current_prediction.dice_raw,data.current_prediction.ket_qua_du_doan,data.current_prediction.panel_text]);
+      if(sig!==LAST_RENDER_SIGNATURE){
+        LAST_RENDER_SIGNATURE=sig;
+        renderResult(data.current_prediction,data.current_prediction.tong_da_tinh,data.current_prediction.dice_raw);
+      }
+    }
+    if(data.resubmit_required && data.candidate && !AUTO_RESUBMIT_BUSY){
+      AUTO_RESUBMIT_BUSY=true;
+      try{
+        const raw=data.candidate.dice_raw||String(data.candidate.total||'');
+        $('total_input').value=raw;updatePreview();
+        await sendDataToServerAI(true);
+      }finally{AUTO_RESUBMIT_BUSY=false;}
+    }
+  }catch(e){}
+}
+async function syncTable(){
+  if(!SERVER_URL||!TABLE_VALID||!TABLE_ID)return;
+  try{
+    const data=await jsonFetch(api('/api/table/state?table_id='+encodeURIComponent(TABLE_ID)+'&t='+Date.now()),{cache:'no-store'});
+    renderConsensusState(data);
+    if(data.current_prediction){
+      const sig=JSON.stringify([data.current_prediction.tong_so_van_da_choi,data.current_prediction.dice_raw,data.current_prediction.ket_qua_du_doan,data.current_prediction.panel_text]);
+      if(sig!==LAST_RENDER_SIGNATURE){
+        LAST_RENDER_SIGNATURE=sig;
+        renderResult(data.current_prediction,data.current_prediction.tong_da_tinh,data.current_prediction.dice_raw);
+      }
+    }
+  }catch(e){}
+}
+function startRealtime(){
+  clearInterval(HEARTBEAT_TIMER);clearInterval(SYNC_TIMER);
+  HEARTBEAT_TIMER=setInterval(heartbeat,1800);
+  SYNC_TIMER=setInterval(syncTable,700);
+  heartbeat();syncTable();
+}
+
+async function sendDataToServerAI(autoResubmit=false){
   if(!SERVER_URL){
     const ok = await loadServerConfig();
     if(!ok) return;
   }
 
+  const tableId=getTableId();
+  if(!tableId)return;
+  if(!TABLE_VALID){const valid=await validateTable();if(!valid)return;}
   const p = parseInputValue();
   updatePreview();
   if(!p.ok){
@@ -270,8 +415,10 @@ async function sendDataToServerAI(){
   $('server_info').innerText = p.note + ' | Đang gửi lên server...';
 
   try{
+    LAST_SUBMISSION={table_id:tableId,dice:p.raw,total:p.total,at:Date.now()};
     const payload = {
       device_id: deviceId,
+      table_id: getTableId(),
       dice: p.raw,
       xuc_xac: p.raw,
       dice_array: p.dice,
@@ -284,67 +431,113 @@ async function sendDataToServerAI(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify(payload)
     });
-    renderResult(data, p.total, p.raw);
+    renderConsensusState(data);
+    if(data.confirmed || data.ket_qua_du_doan){
+      LAST_RENDER_SIGNATURE=JSON.stringify([data.tong_so_van_da_choi,data.dice_raw,data.ket_qua_du_doan,data.panel_text]);
+      renderResult(data,p.total,p.raw);
+      $('total_input').value='';updatePreview();
+      setBtn('GỬI DATA & NHẬN GỢI Ý',false);
+    }else if(data.pending){
+      $('result').innerText='ĐANG XÁC NHẬN...';
+      $('result').style.color='#ffcc00';
+      $('server_info').innerText=data.message||'Đang chờ máy cùng bàn.';
+      setBtn('SỬA / XÁC NHẬN KẾT QUẢ',false);
+    }
     setStatus(true,'● ĐÃ KẾT NỐI SERVER AI');
-    setBtn('GỬI DATA & NHẬN GỢI Ý', false);
   }catch(e){
-    setStatus(false,'SERVER LỖI');
-    setBtn('THỬ KẾT NỐI LẠI', false);
-    $('result').innerText = 'LỖI';
-    $('result').style.color = '#ff5f87';
-    $('server_info').innerText = 'Lỗi /api/predict: ' + e.message;
+    if(e.status===409 && e.data){
+      renderConsensusState(e.data);
+      $('result').innerText='XUNG ĐỘT';
+      $('result').style.color='#ff5f87';
+      $('server_info').innerText=e.data.message||'Hai máy nhập khác nhau.';
+      setStatus(true,'● SERVER ONLINE - BÀN ĐANG KHÓA XUNG ĐỘT');
+      setBtn('NHẬP LẠI ĐỂ XÁC NHẬN',false);
+    }else{
+      setStatus(false,'SERVER LỖI');
+      setBtn('THỬ KẾT NỐI LẠI',false);
+      $('result').innerText='LỖI';
+      $('result').style.color='#ff5f87';
+      $('server_info').innerText='Lỗi /api/predict: '+e.message;
+    }
   }
 }
 
 async function backOne(){
-  if(!SERVER_URL){
-    const ok = await loadServerConfig();
-    if(!ok) return;
-  }
+  if(!SERVER_URL){const ok=await loadServerConfig();if(!ok)return;}
+  if(!TABLE_VALID){const valid=await validateTable();if(!valid)return;}
   try{
-    const data = await jsonFetch(api('/api/clear'), {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({device_id:deviceId, action:'BACK'})
+    const data=await jsonFetch(api('/api/table/action'),{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({device_id:deviceId,table_id:TABLE_ID,action:'BACK'})
     });
-    if(data.restore_state){
-      renderResult(data.restore_state, data.restore_state.tong_da_tinh, data.restore_state.dice_raw);
-    }else{
-      $('server_info').innerText = data.message || 'Đã BACK.';
+    renderConsensusState(data);
+    if(data.pending_action){
+      $('server_info').innerText=data.message;
+      return;
     }
-  }catch(e){
-    $('server_info').innerText = 'Lỗi BACK: ' + e.message;
-  }
+    if(data.restore_state){
+      renderResult(data.restore_state,data.restore_state.tong_da_tinh,data.restore_state.dice_raw);
+    }else{
+      $('server_info').innerText=data.message||'Đã BACK.';
+    }
+  }catch(e){$('server_info').innerText='Lỗi BACK: '+e.message;}
 }
 
-async function newTable(){
-  if(!SERVER_URL){
-    const ok = await loadServerConfig();
-    if(!ok) return;
-  }
-  if(!confirm('Đổi bàn mới?')) return;
+async function changeTable(){
+  if(!SERVER_URL){const ok=await loadServerConfig();if(!ok)return;}
+  const newId=String(prompt('Nhập số bàn mới: C132, 132 hoặc 131',TABLE_ID)||'').trim().toUpperCase();
+  if(!newId||newId===TABLE_ID)return;
   try{
-    const data = await jsonFetch(api('/api/clear'), {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({device_id:deviceId, action:'NEW_TABLE'})
+    const data=await jsonFetch(api('/api/table/change'),{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({device_id:deviceId,new_table_id:newId})
     });
-    $('result').innerText = 'BÀN MỚI';
-    $('result').style.color = '#ffcc00';
-    $('percent').innerText = 'Tài: 0% | Xỉu: 0%';
-    $('accuracy').innerText = 'Độ đúng máy này: 0.00%';
-    $('server_info').innerText = data.message || 'Đã đổi bàn.';
-    $('tx-bars').innerHTML = '<div class="bet"><div class="bet-title">XỈU</div><div class="bet-sub">3–10</div><div class="bet-pct">0%</div></div><div class="bet"><div class="bet-title">TÀI</div><div class="bet-sub">11–18</div><div class="bet-pct">0%</div></div>';
-    $('total-bars').innerHTML = '';
-    $('dice-bars').innerHTML = '';
-  }catch(e){
-    $('server_info').innerText = 'Lỗi đổi bàn: ' + e.message;
-  }
+    TABLE_ID=data.new_table_id;
+    TABLE_VALID=true;
+    localStorage.setItem('TAIXIU_TABLE_ID',TABLE_ID);
+    $('table_input').value=TABLE_ID;
+    $('table_status').innerText='✓ Số bàn hợp lệ: '+TABLE_ID;
+    $('table_status').style.color='#00fff0';
+    $('server_info').innerText=data.message;
+    renderOnlineCount(data.state||{});
+    if(data.state?.current_prediction){
+      renderResult(data.state.current_prediction,data.state.current_prediction.tong_da_tinh,data.state.current_prediction.dice_raw);
+    }else{
+      $('result').innerText='BÀN '+TABLE_ID;
+      $('percent').innerText='Tài: 0% | Xỉu: 0%';
+    }
+    startRealtime();
+  }catch(e){$('server_info').innerText='Lỗi đổi bàn: '+e.message;}
 }
 
-window.sendDataToServerAI = sendDataToServerAI;
+async function resetTable(){
+  if(!SERVER_URL){const ok=await loadServerConfig();if(!ok)return;}
+  if(!TABLE_VALID){const valid=await validateTable();if(!valid)return;}
+  if(!confirm('RESET sẽ xóa lịch sử riêng của bàn '+TABLE_ID+' nhưng không xóa BigData chung. Tiếp tục?'))return;
+  try{
+    const data=await jsonFetch(api('/api/table/action'),{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({device_id:deviceId,table_id:TABLE_ID,action:'RESET'})
+    });
+    renderConsensusState(data);
+    if(data.pending_action){
+      $('server_info').innerText=data.message;
+      return;
+    }
+    $('result').innerText='ĐÃ RESET BÀN';
+    $('result').style.color='#ffcc00';
+    $('percent').innerText='Tài: 0% | Xỉu: 0%';
+    $('accuracy').innerText='Độ đúng bàn này: 0.00%';
+    $('server_info').innerText=data.message||'Đã reset bàn.';
+    $('total-bars').innerHTML='';
+    $('dice-bars').innerHTML='';
+  }catch(e){$('server_info').innerText='Lỗi RESET: '+e.message;}
+}
+
+window.sendDataToServerAI = async function(){ if(!TABLE_VALID){const ok=await validateTable();if(!ok)return;} return sendDataToServerAI(); };
 window.backOne = backOne;
-window.newTable = newTable;
+window.changeTable = changeTable;
+window.resetTable = resetTable;
 
 window.addEventListener('error', function(e){
   $('server_info').innerText = 'Lỗi JavaScript: ' + e.message;
@@ -353,6 +546,10 @@ window.addEventListener('error', function(e){
 });
 
 document.addEventListener('DOMContentLoaded', function(){
+  $('table_input').value = TABLE_ID;
+  $('table_input').addEventListener('input', function(){ TABLE_ID=String(this.value||'').trim().toUpperCase(); localStorage.setItem('TAIXIU_TABLE_ID',TABLE_ID); TABLE_VALID=false; $('table_status').innerText='Chưa xác minh số bàn'; $('table_status').style.color='#ff6d91'; setBtn('XÁC MINH SỐ BÀN',false); });
+  $('table_input').addEventListener('change', validateTable);
+  $('table_input').addEventListener('blur', validateTable);
   $('total_input').addEventListener('input', updatePreview);
   $('total_input').addEventListener('keyup', updatePreview);
   $('total_input').addEventListener('change', updatePreview);
@@ -366,7 +563,7 @@ document.addEventListener('DOMContentLoaded', function(){
 window.addEventListener('beforeunload', function(){
   if(SERVER_URL){
     try{
-      navigator.sendBeacon(SERVER_URL + '/api/offline', new Blob([JSON.stringify({device_id:deviceId})], {type:'application/json'}));
+      navigator.sendBeacon(SERVER_URL + '/api/offline', new Blob([JSON.stringify({device_id:deviceId,table_id:TABLE_ID})], {type:'application/json'}));
     }catch(e){}
   }
 });
