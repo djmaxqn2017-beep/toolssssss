@@ -19,7 +19,7 @@ body{display:flex;justify-content:center;align-items:center}
 .sub{text-align:center;color:#d7cbff;font-size:12px;margin-top:6px}
 .status{margin:14px auto 0;width:max-content;max-width:96%;padding:8px 22px;border-radius:30px;font-size:13px;font-weight:1000;border:2px solid #ff4e7a;color:#ff6d91;background:rgba(20,0,32,.88);box-shadow:0 0 16px rgba(255,50,110,.25)}
 .status.ok{border-color:#00fff0;color:#00fff0;box-shadow:0 0 16px rgba(0,255,240,.28)}
-.content{position:relative;z-index:1;flex:1;overflow:auto;padding:14px 14px 105px}
+.content{position:relative;z-index:1;flex:1;overflow:auto;padding:14px 14px 150px;}
 .card,.brain,.section{background:rgba(20,0,45,.78);border:1px solid rgba(0,255,255,.25);border-radius:24px;padding:14px;margin-bottom:14px;box-shadow:0 10px 28px rgba(0,0,0,.55),0 0 20px rgba(145,0,255,.12) inset}
 .label{font-size:15px;color:#e7ddff;margin:0 0 10px 0}
 .input-row{display:grid;grid-template-columns:1fr 105px;gap:12px}
@@ -50,10 +50,75 @@ button{border:none;color:#fff;font-weight:1000;border-radius:16px;cursor:pointer
 .total-cell{height:52px}.dice-cell{min-height:50px;font-size:10px}
 .total-cell.hot{border-color:#ffcc00;background:rgba(55,34,0,.62)}
 .total-n,.dice-face{font-weight:1000}.total-n{font-size:16px}.total-p{font-size:10px;color:#cbbcff}.dice-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}.dice-face{font-size:19px}
-.bottom{position:absolute;z-index:2;left:0;right:0;bottom:0;height:92px;background:linear-gradient(180deg,rgba(21,0,45,.92),rgba(4,0,10,.98));border-top:1px solid rgba(0,255,255,.28);padding:10px;display:grid;grid-template-columns:1fr 1fr 1.15fr;gap:10px}
-.quick{background:rgba(21,0,53,.9);border:1px solid rgba(0,255,255,.25);font-size:16px}.quick.red{background:rgba(82,0,38,.75);border-color:rgba(255,70,130,.55)}.quick.hot{background:linear-gradient(135deg,#00e8ff,#28fff2,#90a7ff)}
-@media(max-height:760px){.top{padding-top:12px}.title{font-size:21px}.content{padding-bottom:85px}.bottom{height:78px}.card,.brain,.section{padding:11px;margin-bottom:10px}input,.sum-box,.main-btn{height:54px}.result{font-size:38px}}
+
+
+@media(max-height:760px){.top{padding-top:12px}.title{font-size:21px}.content{padding-bottom:14px}.card,.brain,.section{padding:11px;margin-bottom:10px}input,.sum-box,.main-btn{height:54px}.result{font-size:38px}}
 </style>
+<style>
+.table-pick.selected{
+  border-color:#00fff0 !important;
+  color:#00fff0 !important;
+  box-shadow:0 0 18px rgba(0,255,240,.45),0 0 14px rgba(255,0,255,.25) inset !important;
+  background:linear-gradient(135deg,rgba(0,110,130,.78),rgba(55,0,100,.88)) !important;
+}
+</style>
+
+
+<style>
+.bottom-actions{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  z-index:20;
+  padding:9px 11px calc(9px + env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,rgba(18,0,38,.88),rgba(4,0,10,.98));
+  border-top:1px solid rgba(0,255,255,.28);
+  box-shadow:0 -8px 24px rgba(0,0,0,.42);
+}
+.bottom-change{
+  width:100%;
+  height:42px;
+  margin-bottom:8px;
+  border-radius:14px;
+  border:1px solid rgba(255,70,130,.55);
+  color:#fff;
+  font-size:15px;
+  font-weight:1000;
+  background:linear-gradient(135deg,rgba(85,0,48,.92),rgba(48,0,86,.92));
+  box-shadow:0 0 14px rgba(255,0,125,.18),0 0 12px rgba(0,255,255,.10) inset;
+}
+.bottom-row{
+  display:grid;
+  grid-template-columns:1fr 1fr 1.25fr;
+  gap:8px;
+}
+.bottom-btn{
+  height:48px;
+  border-radius:14px;
+  border:1px solid rgba(0,255,255,.28);
+  color:#fff;
+  font-size:14px;
+  font-weight:1000;
+  background:rgba(23,0,55,.94);
+  box-shadow:0 0 12px rgba(0,255,255,.10) inset;
+}
+.bottom-btn.reset{
+  border-color:rgba(255,75,125,.55);
+  background:rgba(80,0,38,.88);
+}
+.bottom-btn.send{
+  background:linear-gradient(135deg,#00dff4,#24f5df,#7e9fff);
+  color:#fff;
+  box-shadow:0 0 18px rgba(0,255,255,.26);
+}
+@media(max-height:760px){
+  .content{padding-bottom:135px !important}
+  .bottom-change{height:38px}
+  .bottom-btn{height:43px}
+}
+</style>
+
 </head>
 <body>
 <div class="app">
@@ -61,25 +126,29 @@ button{border:none;color:#fff;font-weight:1000;border-radius:16px;cursor:pointer
     <div class="title">AI TÀI XỈU CLOUD</div>
     <div class="sub">Nhập 3 mặt xúc xắc, ví dụ 345 → tự cộng = 12</div>
     <div id="status" class="status">ĐANG KẾT NỐI SERVER...</div>
+    <div id="current_table_badge" style="margin:8px auto 0;width:max-content;max-width:94%;padding:6px 14px;border-radius:18px;border:1px solid rgba(0,255,240,.55);color:#00fff0;background:rgba(7,0,20,.72);font-size:13px;font-weight:1000;box-shadow:0 0 14px rgba(0,255,240,.18)">BÀN: CHƯA CHỌN</div>
     <div id="online_badge" style="position:absolute;right:12px;top:12px;padding:5px 9px;border-radius:12px;border:1px solid #00fff0;color:#00fff0;background:rgba(0,0,0,.35);font-size:11px;font-weight:900">👥 0 online</div>
   </div>
   <div class="content">
     <div class="card">
-      <div class="label">Số bàn đang chơi:</div>
-      <input id="table_input" inputmode="text" maxlength="20" placeholder="C132, 132 hoặc 131" autocomplete="off" style="margin-bottom:8px">
-      <div id="table_status" style="font-size:12px;color:#ff6d91;margin:0 0 5px 2px">Chưa xác minh số bàn</div>
+      
+<div class="label">Chọn bàn đang chơi:</div>
+      <div id="table_buttons" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">
+        <button class="small-btn table-pick" data-table="C132" onclick="selectTable('C132')">C132</button>
+        <button class="small-btn table-pick" data-table="132" onclick="selectTable('132')">132</button>
+        <button class="small-btn table-pick" data-table="131" onclick="selectTable('131')">131</button>
+      </div>
+      <input id="table_input" type="hidden" value="">
+      <div id="table_status" style="font-size:12px;color:#ff6d91;margin:0 0 5px 2px">Chưa chọn bàn</div>
       <div id="consensus_status" style="font-size:12px;color:#cbbcff;margin:0 0 12px 2px">Chưa có kết quả chờ xác nhận</div>
+
       <div class="label">Nhập 3 xúc xắc vừa ra:</div>
       <div class="input-row">
         <input id="total_input" inputmode="numeric" maxlength="3" placeholder="345" autocomplete="off">
         <div class="sum-box"><div class="small">TỔNG</div><div class="big" id="sum_preview">--</div></div>
       </div>
       <button class="main-btn" id="send_btn" onclick="sendDataToServerAI()">ĐANG KẾT NỐI SERVER...</button>
-      <div class="actions" style="grid-template-columns:repeat(3,1fr)">
-        <button class="small-btn" onclick="backOne()">↩️ BACK</button>
-        <button class="small-btn danger" onclick="changeTable()">🔄 Đổi bàn</button>
-        <button class="small-btn danger" onclick="resetTable()">⚠ RESET</button>
-      </div>
+      
     </div>
     <div class="brain">
       <div class="muted">KẾT QUẢ TỪ SERVER AI</div>
@@ -103,6 +172,15 @@ button{border:none;color:#fff;font-weight:1000;border-radius:16px;cursor:pointer
     <button class="quick red" onclick="changeTable()">🔄 Đổi bàn</button>
     <button class="quick red" onclick="resetTable()">⚠ RESET</button>
     <button class="quick hot" onclick="sendDataToServerAI()">GỬI DATA</button>
+  </div>
+
+  <div class="bottom-actions">
+    <button class="bottom-change" onclick="changeTable()">🔄 ĐỔI BÀN</button>
+    <div class="bottom-row">
+      <button class="bottom-btn" onclick="backOne()">↩️ BACK</button>
+      <button class="bottom-btn reset" onclick="resetTable()">⚠ RESET</button>
+      <button class="bottom-btn send" onclick="sendDataToServerAI()">GỬI DATA</button>
+    </div>
   </div>
 </div>
 <script>
@@ -136,10 +214,61 @@ function setBtn(text, disabled){
   $('send_btn').disabled = !!disabled;
 }
 function getTableId(){
-  const v=String($('table_input').value||'').trim().toUpperCase();
-  if(!v){alert('Vui lòng nhập số bàn.');return '';}
-  TABLE_ID=v;localStorage.setItem('TAIXIU_TABLE_ID',v);return v;
+  const v=String(TABLE_ID||$('table_input').value||'').trim().toUpperCase();
+  if(!v){alert('Vui lòng bấm chọn một bàn: C132, 132 hoặc 131.');return '';}
+  return v;
 }
+async function selectTable(tableId){
+  const v=String(tableId||'').trim().toUpperCase();
+  if(!['C132','132','131'].includes(v))return;
+
+  TABLE_ID=v;
+  TABLE_VALID=false;
+  localStorage.setItem('TAIXIU_TABLE_ID',v);
+  $('table_input').value=v;
+
+  document.querySelectorAll('.table-pick').forEach(btn=>{
+    btn.classList.toggle('selected',btn.dataset.table===v);
+  });
+
+  $('table_status').innerText='Đang vào bàn '+v+'...';
+  $('current_table_badge').innerText='BÀN: '+v;
+  $('table_status').style.color='#ffcc00';
+
+  if(!SERVER_URL){
+    const ok=await loadServerConfig();
+    if(!ok)return;
+  }
+
+  const valid=await validateTable();
+  if(!valid)return;
+
+  try{
+    const data=await jsonFetch(api('/api/table/change'),{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({device_id:deviceId,new_table_id:v})
+    });
+    renderOnlineCount(data.state||{});
+    renderConsensusState(data.state||{});
+    if(data.state && data.state.current_prediction){
+      renderResult(
+        data.state.current_prediction,
+        data.state.current_prediction.tong_da_tinh,
+        data.state.current_prediction.dice_raw
+      );
+    }else{
+      $('result').innerText='ĐÃ VÀO BÀN '+v;
+      $('current_table_badge').innerText='BÀN: '+v;
+      $('result').style.color='#00fff0';
+      $('server_info').innerText='Đang chờ kết quả mới của bàn '+v+'.';
+    }
+    startRealtime();
+  }catch(e){
+    $('server_info').innerText='Lỗi vào bàn: '+e.message;
+  }
+}
+
 async function validateTable(){
   const tableId=getTableId();
   if(!tableId){TABLE_VALID=false;setBtn('NHẬP ĐÚNG SỐ BÀN',true);return false;}
@@ -156,6 +285,7 @@ async function validateTable(){
     if(!data.valid)throw new Error('Số bàn không hợp lệ');
     TABLE_VALID=true;
     $('table_status').innerText='✓ Số bàn hợp lệ: '+data.table_id;
+    $('current_table_badge').innerText='BÀN: '+data.table_id;
     $('table_status').style.color='#00fff0';
     setBtn('GỬI DATA & NHẬN GỢI Ý',false);
     startRealtime();
@@ -484,30 +614,20 @@ async function backOne(){
 }
 
 async function changeTable(){
-  if(!SERVER_URL){const ok=await loadServerConfig();if(!ok)return;}
-  const newId=String(prompt('Nhập số bàn mới: C132, 132 hoặc 131',TABLE_ID)||'').trim().toUpperCase();
-  if(!newId||newId===TABLE_ID)return;
-  try{
-    const data=await jsonFetch(api('/api/table/change'),{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({device_id:deviceId,new_table_id:newId})
-    });
-    TABLE_ID=data.new_table_id;
-    TABLE_VALID=true;
-    localStorage.setItem('TAIXIU_TABLE_ID',TABLE_ID);
-    $('table_input').value=TABLE_ID;
-    $('table_status').innerText='✓ Số bàn hợp lệ: '+TABLE_ID;
-    $('table_status').style.color='#00fff0';
-    $('server_info').innerText=data.message;
-    renderOnlineCount(data.state||{});
-    if(data.state?.current_prediction){
-      renderResult(data.state.current_prediction,data.state.current_prediction.tong_da_tinh,data.state.current_prediction.dice_raw);
-    }else{
-      $('result').innerText='BÀN '+TABLE_ID;
-      $('percent').innerText='Tài: 0% | Xỉu: 0%';
-    }
-    startRealtime();
-  }catch(e){$('server_info').innerText='Lỗi đổi bàn: '+e.message;}
+  TABLE_VALID=false;
+  TABLE_ID='';
+  localStorage.removeItem('TAIXIU_TABLE_ID');
+  $('table_input').value='';
+  document.querySelectorAll('.table-pick').forEach(btn=>btn.classList.remove('selected'));
+  $('table_status').innerText='Hãy bấm chọn bàn C132, 132 hoặc 131';
+  $('current_table_badge').innerText='BÀN: CHƯA CHỌN';
+  $('table_status').style.color='#ffcc00';
+  $('online_badge').innerText='👥 0 online';
+  $('result').innerText='CHỌN BÀN';
+  $('result').style.color='#ffcc00';
+  $('server_info').innerText='Bấm một trong ba nút bàn phía trên để vào bàn.';
+  clearInterval(HEARTBEAT_TIMER);
+  clearInterval(SYNC_TIMER);
 }
 
 async function resetTable(){
@@ -536,6 +656,7 @@ async function resetTable(){
 
 window.sendDataToServerAI = async function(){ if(!TABLE_VALID){const ok=await validateTable();if(!ok)return;} return sendDataToServerAI(); };
 window.backOne = backOne;
+window.selectTable = selectTable;
 window.changeTable = changeTable;
 window.resetTable = resetTable;
 
@@ -547,9 +668,14 @@ window.addEventListener('error', function(e){
 
 document.addEventListener('DOMContentLoaded', function(){
   $('table_input').value = TABLE_ID;
-  $('table_input').addEventListener('input', function(){ TABLE_ID=String(this.value||'').trim().toUpperCase(); localStorage.setItem('TAIXIU_TABLE_ID',TABLE_ID); TABLE_VALID=false; $('table_status').innerText='Chưa xác minh số bàn'; $('table_status').style.color='#ff6d91'; setBtn('XÁC MINH SỐ BÀN',false); });
-  $('table_input').addEventListener('change', validateTable);
-  $('table_input').addEventListener('blur', validateTable);
+  if(TABLE_ID && ['C132','132','131'].includes(TABLE_ID)){
+    document.querySelectorAll('.table-pick').forEach(btn=>{
+      btn.classList.toggle('selected',btn.dataset.table===TABLE_ID);
+    });
+    $('table_status').innerText='Bàn đã chọn: '+TABLE_ID;
+    $('current_table_badge').innerText='BÀN: '+TABLE_ID;
+    $('table_status').style.color='#00fff0';
+  }
   $('total_input').addEventListener('input', updatePreview);
   $('total_input').addEventListener('keyup', updatePreview);
   $('total_input').addEventListener('change', updatePreview);
@@ -557,7 +683,11 @@ document.addEventListener('DOMContentLoaded', function(){
     if(e.key === 'Enter') sendDataToServerAI();
   });
   updatePreview();
-  loadServerConfig();
+  loadServerConfig().then(ok=>{
+    if(ok && TABLE_ID && ['C132','132','131'].includes(TABLE_ID)){
+      selectTable(TABLE_ID);
+    }
+  });
 });
 
 window.addEventListener('beforeunload', function(){
