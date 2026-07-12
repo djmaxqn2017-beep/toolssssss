@@ -147,9 +147,7 @@ button{border:none;color:#fff;font-weight:1000;border-radius:16px;cursor:pointer
         <input id="total_input" inputmode="numeric" maxlength="3" placeholder="345" autocomplete="off">
         <div class="sum-box"><div class="small">TỔNG</div><div class="big" id="sum_preview">--</div></div>
       </div>
-      <button class="main-btn" id="send_btn" onclick="sendDataToServerAI()">ĐANG KẾT NỐI SERVER...</button>
-      
-    </div>
+</div>
     <div class="brain">
       <div class="muted">KẾT QUẢ TỪ SERVER AI</div>
       <div id="result" class="result">CHỜ DỮ LIỆU...</div>
@@ -172,7 +170,7 @@ button{border:none;color:#fff;font-weight:1000;border-radius:16px;cursor:pointer
     <div class="bottom-row">
       <button class="bottom-btn" onclick="backOne()">↩️ BACK</button>
       <button class="bottom-btn reset" onclick="resetTable()">⚠ RESET</button>
-      <button class="bottom-btn send" onclick="sendDataToServerAI()">GỬI DATA</button>
+      <button id="send_btn" class="bottom-btn send" onclick="sendDataToServerAI()">GỬI DATA</button>
     </div>
   </div>
 </div>
