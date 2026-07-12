@@ -176,6 +176,15 @@ button{border:none;color:#fff;font-weight:1000;border-radius:16px;cursor:pointer
     </div>
   </div>
 </div>
+
+<div id="popup_overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.78);align-items:center;justify-content:center;padding:18px">
+  <div style="width:min(420px,96vw);background:linear-gradient(180deg,#28004b,#090014);border:1px solid #00fff0;border-radius:22px;padding:20px;box-shadow:0 0 30px rgba(0,255,240,.25);text-align:center">
+    <div id="popup_title" style="font-size:22px;font-weight:1000;color:#ffcc00;margin-bottom:10px">THÔNG BÁO</div>
+    <div id="popup_message" style="font-size:15px;line-height:1.5;color:#fff;margin-bottom:16px"></div>
+    <div id="popup_actions" style="display:grid;gap:9px"></div>
+  </div>
+</div>
+
 <script>
 (function(){
 'use strict';
@@ -189,6 +198,10 @@ let LAST_RENDER_SIGNATURE = '';
 let HEARTBEAT_TIMER = null;
 let SYNC_TIMER = null;
 let AUTO_RESUBMIT_BUSY = false;
+let CURRENT_ROUND_TOKEN = 1;
+let LAST_SOFT_TOKEN = null;
+let LAST_POPUP_KEY = '';
+let REQUEST_BUSY = false;
 const deviceIdKey = 'TAIXIU_DEVICE_ID';
 let deviceId = localStorage.getItem(deviceIdKey);
 if(!deviceId){
@@ -292,6 +305,41 @@ async function validateTable(){
     return false;
   }
 }
+
+function closePopup(){
+  $('popup_overlay').style.display='none';
+  $('popup_actions').innerHTML='';
+}
+function showPopup(title,message,actions=[],key=''){
+  if(key && LAST_POPUP_KEY===key)return;
+  if(key)LAST_POPUP_KEY=key;
+  $('popup_title').innerText=title;
+  $('popup_message').innerText=message;
+  $('popup_actions').innerHTML='';
+  actions.forEach(a=>{
+    const b=document.createElement('button');
+    b.className='main-btn';
+    b.style.height='48px';b.style.margin='0';
+    b.innerText=a.text;
+    b.onclick=async()=>{if(a.close!==false)closePopup();await a.onClick?.();};
+    $('popup_actions').appendChild(b);
+  });
+  $('popup_overlay').style.display='flex';
+  try{navigator.vibrate?.(80);}catch(e){}
+}
+async function confirmRound(decision){
+  try{
+    const data=await jsonFetch(api('/api/round/confirm'),{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({device_id:deviceId,table_id:TABLE_ID,decision})
+    });
+    renderTableState(data);
+    if(data.confirmed)showPopup('✅ ĐÃ XÁC NHẬN','Kết quả đã được chốt và đồng bộ.',[],`confirmed-${data.round_token}`);
+  }catch(e){
+    $('server_info').innerText=e.message;
+  }
+}
+
 function parseInputValue(){
   const raw = String($('total_input').value || '').trim();
   if(/^[1-6]{3}$/.test(raw)){
@@ -306,8 +354,8 @@ function parseInputValue(){
   return {ok:false, raw, dice:null, total:null, note:'Nhập 3 mặt xúc xắc 111–666 hoặc tổng 3–18'};
 }
 function updatePreview(){
-  const p = parseInputValue();
-  $('sum_preview').innerText = p.ok ? p.total : '--';
+  const p=parseInputValue();
+  $('sum_preview').innerText=p.ok?p.total:'--';
 }
 function fetchWithTimeout(url, options, ms){
   return Promise.race([
@@ -355,7 +403,8 @@ async function loadServerConfig(){
     if(!st.success) throw new Error('/api/status không trả success:true');
 
     setStatus(true,'● ĐÃ KẾT NỐI SERVER AI');
-    setBtn(TABLE_VALID ? 'GỬI DATA & NHẬN GỢI Ý' : 'CHỌN BÀN ĐỂ MỞ TOOLS', !TABLE_VALID);
+    REQUEST_BUSY=false;
+    setBtn('GỬI DATA & NHẬN GỢI Ý', false);
     $('result').innerText = 'CHỜ DỮ LIỆU...';
     $('result').style.color = '#ffcc00';
     $('server_info').innerText = 'Đã kết nối: ' + SERVER_URL;
@@ -368,7 +417,7 @@ async function loadServerConfig(){
         }catch(e){}
       }
     }else{
-      setBtn('CHỌN BÀN ĐỂ MỞ TOOLS',true);
+      setBtn('NHẬP SỐ BÀN ĐỂ MỞ TOOLS',true);
     }
     updatePreview();
     return true;
@@ -467,53 +516,85 @@ function renderConsensusState(data){
   el.innerText='✓ Không có xung đột';
   el.style.color='#00fff0';
 }
+
+function renderTableState(data){
+  if(!data)return;
+  renderOnlineCount(data);
+  if(data.round_token)CURRENT_ROUND_TOKEN=data.round_token;
+  renderConsensusState(data);
+
+  const sr=data.soft_round;
+  if(sr && sr.provisional_prediction){
+    renderResult(sr.provisional_prediction,sr.total,sr.dice_raw);
+  }else if(data.current_prediction){
+    renderResult(data.current_prediction,data.current_prediction.tong_da_tinh,data.current_prediction.dice_raw);
+  }
+
+  if(sr){
+    const key=`${TABLE_ID}-${sr.token}-${sr.status}-${data.viewer_role}`;
+    if(sr.status==='WAIT_CONFIRM' && data.viewer_role==='CONFIRMER'){
+      showPopup(
+        'XÁC NHẬN KẾT QUẢ',
+        `Máy cùng bàn vừa nhập ${sr.dice_raw}. Kết quả này có đúng không?`,
+        [
+          {text:'✅ ĐÚNG',onClick:()=>confirmRound('CORRECT')},
+          {text:'❌ SAI',onClick:()=>confirmRound('WRONG')}
+        ],
+        key
+      );
+    }
+    if(sr.status==='WAIT_FIX' && data.must_fix){
+      showPopup(
+        '⚠ BẠN ĐÃ NHẬP SAI',
+        'Máy cùng bàn báo kết quả bạn nhập không đúng. Hãy bấm BACK hoặc sửa số rồi GỬI DATA ngay.',
+        [
+          {text:'↩ BACK & SỬA',onClick:async()=>{await backOne();$('total_input').focus();}}
+        ],
+        key
+      );
+    }
+    if(sr.status==='WAIT_FIX' && data.viewer_role==='CONFIRMER'){
+      showPopup(
+        '⏳ ĐANG CHỜ SỬA',
+        'Máy nhập đang được yêu cầu sửa kết quả. Nếu máy đó mất kết nối, bạn sẽ được quyền nhập thay.',
+        [{text:'ĐÓNG',onClick:async()=>{}}],
+        key
+      );
+    }
+  }
+}
+
 async function heartbeat(){
   if(!SERVER_URL||!TABLE_VALID||!TABLE_ID)return;
   try{
     const data=await jsonFetch(api('/api/heartbeat'),{
-      method:'POST',headers:{'Content-Type':'application/json'},
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({device_id:deviceId,table_id:TABLE_ID})
     });
-    renderConsensusState(data);
-    if(data.current_prediction){
-      const sig=JSON.stringify([data.current_prediction.tong_so_van_da_choi,data.current_prediction.dice_raw,data.current_prediction.ket_qua_du_doan,data.current_prediction.panel_text]);
-      if(sig!==LAST_RENDER_SIGNATURE){
-        LAST_RENDER_SIGNATURE=sig;
-        renderResult(data.current_prediction,data.current_prediction.tong_da_tinh,data.current_prediction.dice_raw);
-      }
-    }
-    if(data.resubmit_required && data.candidate && !AUTO_RESUBMIT_BUSY){
-      AUTO_RESUBMIT_BUSY=true;
-      try{
-        const raw=data.candidate.dice_raw||String(data.candidate.total||'');
-        $('total_input').value=raw;updatePreview();
-        await sendDataToServerAI(true);
-      }finally{AUTO_RESUBMIT_BUSY=false;}
-    }
+    renderTableState(data);
   }catch(e){}
 }
 async function syncTable(){
   if(!SERVER_URL||!TABLE_VALID||!TABLE_ID)return;
   try{
-    const data=await jsonFetch(api('/api/table/state?table_id='+encodeURIComponent(TABLE_ID)+'&t='+Date.now()),{cache:'no-store'});
-    renderConsensusState(data);
-    if(data.current_prediction){
-      const sig=JSON.stringify([data.current_prediction.tong_so_van_da_choi,data.current_prediction.dice_raw,data.current_prediction.ket_qua_du_doan,data.current_prediction.panel_text]);
-      if(sig!==LAST_RENDER_SIGNATURE){
-        LAST_RENDER_SIGNATURE=sig;
-        renderResult(data.current_prediction,data.current_prediction.tong_da_tinh,data.current_prediction.dice_raw);
-      }
-    }
+    const data=await jsonFetch(
+      api('/api/table/state?table_id='+encodeURIComponent(TABLE_ID)+'&device_id='+encodeURIComponent(deviceId)+'&t='+Date.now()),
+      {cache:'no-store'}
+    );
+    renderTableState(data);
   }catch(e){}
 }
 function startRealtime(){
   clearInterval(HEARTBEAT_TIMER);clearInterval(SYNC_TIMER);
-  HEARTBEAT_TIMER=setInterval(heartbeat,1800);
-  SYNC_TIMER=setInterval(syncTable,700);
+  HEARTBEAT_TIMER=setInterval(heartbeat,900);
+  SYNC_TIMER=setInterval(syncTable,350);
   heartbeat();syncTable();
 }
 
 async function sendDataToServerAI(autoResubmit=false){
+  if(REQUEST_BUSY)return;
+  REQUEST_BUSY=true;
   if(!SERVER_URL){
     const ok = await loadServerConfig();
     if(!ok) return;
@@ -539,6 +620,7 @@ async function sendDataToServerAI(autoResubmit=false){
     const payload = {
       device_id: deviceId,
       table_id: getTableId(),
+      round_token: CURRENT_ROUND_TOKEN,
       dice: p.raw,
       xuc_xac: p.raw,
       dice_array: p.dice,
@@ -551,8 +633,12 @@ async function sendDataToServerAI(autoResubmit=false){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify(payload)
     });
-    renderConsensusState(data);
-    if(data.confirmed || data.ket_qua_du_doan){
+    renderTableState(data);
+    if(data.provisional_prediction){
+      renderResult(data.provisional_prediction,p.total,p.raw);
+      $('server_info').innerText=data.message||'Dự đoán tạm đã sẵn sàng.';
+      setBtn('GỬI DATA & NHẬN GỢI Ý',false);
+    }else if(data.confirmed || data.ket_qua_du_doan){
       LAST_RENDER_SIGNATURE=JSON.stringify([data.tong_so_van_da_choi,data.dice_raw,data.ket_qua_du_doan,data.panel_text]);
       renderResult(data,p.total,p.raw);
       $('total_input').value='';updatePreview();
@@ -580,6 +666,7 @@ async function sendDataToServerAI(autoResubmit=false){
       $('server_info').innerText='Lỗi /api/predict: '+e.message;
     }
   }
+  finally{REQUEST_BUSY=false;}
 }
 
 async function backOne(){
@@ -595,7 +682,11 @@ async function backOne(){
       $('server_info').innerText=data.message;
       return;
     }
-    if(data.restore_state){
+    if(data.status==='local_back'){
+      showPopup('↩ ĐÃ BACK','Kết quả tạm đã được hủy. Hãy nhập lại kết quả đúng.',[{text:'NHẬP LẠI',onClick:async()=>{$('total_input').value='';updatePreview();$('total_input').focus();}}],`back-${Date.now()}`);
+      $('result').innerText='NHẬP LẠI';
+      $('server_info').innerText=data.message;
+    }else if(data.restore_state){
       renderResult(data.restore_state,data.restore_state.tong_da_tinh,data.restore_state.dice_raw);
     }else{
       $('server_info').innerText=data.message||'Đã BACK.';
