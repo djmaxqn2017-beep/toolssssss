@@ -733,10 +733,14 @@ function getTableId(){
   return v;
 }
 async function enterLobbyTable(tableId){
-  document.body.classList.add('room-mode');
-  $('room_name_chip').innerText=tableMode(tableId)+' • '+tableName(tableId);
   const ok=await selectTable(tableId);
-  if(!ok){
+  if(ok){
+    document.body.classList.add('room-mode');
+    requestAnimationFrame(()=>{
+      const content=document.querySelector('#room_view .content');
+      if(content)content.scrollTop=0;
+    });
+  }else{
     document.body.classList.remove('room-mode');
   }
 }
@@ -745,63 +749,73 @@ async function selectTable(tableId){
   const v=String(tableId||'').trim().toUpperCase();
   if(!VALID_TABLES.includes(v))return false;
 
-  TABLE_ID=v;
-  TABLE_VALID=false;
-  localStorage.setItem('TAIXIU_TABLE_ID',v);
-  $('table_input').value=v;
-
-  document.querySelectorAll('.table-pick').forEach(btn=>{
-    btn.classList.toggle('selected',btn.dataset.table===v);
-  });
-
-  $('table_status').innerText='Đang vào '+tableMode(v)+' • '+tableName(v)+'...';
-  $('current_table_badge').innerText=tableMode(v)+' • '+tableName(v);
-  if($('room_name_chip'))$('room_name_chip').innerText=tableMode(v)+' • '+tableName(v);
-  $('table_status').style.color='#ffcc00';
-
   if(!SERVER_URL){
-    const ok=await loadServerConfig();
-    if(!ok)return false;
+    const connected=await loadServerConfig();
+    if(!connected)return false;
   }
 
-  const valid=await validateTable();
-  if(!valid)return false;
-
+  $('lobby_server_status').innerText='ĐANG MỞ '+tableName(v)+'...';
   try{
     let data;
-    try{
-      data=await jsonFetch(api('/api/table/change'),{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({device_id:deviceId,new_table_id:v})
-      });
-    }catch(changeError){
-      const joined=await jsonFetch(api('/api/table/join'),{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({device_id:deviceId,table_id:v})
-      });
-      data={success:true,state:joined,fallback_join:true};
+    let lastError;
+    for(let attempt=0;attempt<2;attempt++){
+      try{
+        data=await jsonFetch(api('/api/table/enter'),{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({device_id:deviceId,table_id:v,force_repair:attempt===1})
+        });
+        break;
+      }catch(e){
+        lastError=e;
+        await new Promise(r=>setTimeout(r,450));
+      }
     }
-    renderOnlineCount(data.state||{});
-    renderConsensusState(data.state||{});
-    if(data.state && data.state.current_prediction){
+    if(!data)throw lastError||new Error('Không nhận được phản hồi vào bàn.');
+    if(!data.success||!data.entered)throw new Error(data.error||'Server chưa cho vào bàn.');
+
+    TABLE_ID=data.table_id||v;
+    TABLE_VALID=true;
+    localStorage.setItem('TAIXIU_TABLE_ID',TABLE_ID);
+    $('table_input').value=TABLE_ID;
+
+    document.querySelectorAll('.table-pick').forEach(btn=>{
+      btn.classList.toggle('selected',btn.dataset.table===TABLE_ID);
+    });
+
+    $('table_status').innerText='✓ '+tableMode(TABLE_ID)+' • '+tableName(TABLE_ID);
+    $('current_table_badge').innerText=tableMode(TABLE_ID)+' • '+tableName(TABLE_ID);
+    $('room_name_chip').innerText=tableMode(TABLE_ID)+' • '+tableName(TABLE_ID);
+    $('table_status').style.color='#00fff0';
+    $('lobby_server_status').innerText='● ĐÃ KẾT NỐI SERVER AI';
+
+    const state=data.state||{};
+    renderOnlineCount(state);
+    renderConsensusState(state);
+    if(state.current_prediction){
       renderResult(
-        data.state.current_prediction,
-        data.state.current_prediction.tong_da_tinh,
-        data.state.current_prediction.dice_raw
+        state.current_prediction,
+        state.current_prediction.tong_da_tinh,
+        state.current_prediction.dice_raw
       );
     }else{
       $('result').innerText='ĐÃ VÀO BÀN';
-      $('current_table_badge').innerText=tableMode(v)+' • '+tableName(v);
-      $('result').style.color='#00fff0';
-      $('server_info').innerText='Đang chờ kết quả mới của bàn '+tableName(v)+'.';
+      $('result').style.color='#ffe15c';
+      $('server_info').innerText='Đang chờ kết quả mới của bàn '+tableName(TABLE_ID)+'.';
     }
+
     startRealtime();
     return true;
   }catch(e){
-    $('server_info').innerText='Lỗi vào bàn: '+e.message;
-    setStatus(false,'SERVER LỖI');
+    TABLE_VALID=false;
+    $('lobby_server_status').innerText='KHÔNG VÀO ĐƯỢC '+tableName(v);
+    $('server_info').innerText='Lỗi vào bàn '+tableName(v)+': '+e.message;
+    showPopup(
+      '⚠ KHÔNG VÀO ĐƯỢC BÀN',
+      tableName(v)+' đang được server kiểm tra. Hãy thử lại một lần.',
+      [{text:'THỬ LẠI',onClick:()=>enterLobbyTable(v)}],
+      'enter-error-'+v+'-'+Date.now()
+    );
     return false;
   }
 }
@@ -933,7 +947,7 @@ async function loadServerConfig(){
     const requiredTables=VALID_TABLES||[];
     const serverTables=Array.isArray(st.allowed_tables)?st.allowed_tables:[];
     const missing=requiredTables.filter(x=>!serverTables.includes(x));
-    if(st.api_version!=='7.14' || missing.length){
+    if(st.api_version!=='7.15' || missing.length){
       throw new Error('Server đang chạy bản cũ hoặc thiếu bàn: '+(missing.join(', ')||'API '+String(st.api_version||'cũ')));
     }
 
@@ -951,7 +965,7 @@ async function loadServerConfig(){
     setBtn('THỬ KẾT NỐI LẠI', false);
     $('result').innerText = 'LỖI';
     $('result').style.color = '#ff5f87';
-    $('server_info').innerText = 'Lỗi kết nối: ' + e.message + '. Hãy copy server.js V7.14 và khởi động lại server.';
+    $('server_info').innerText = 'Lỗi kết nối: ' + e.message + '. Hãy copy server.js V7.15 và khởi động lại server.';
     updatePreview();
     return false;
   }
