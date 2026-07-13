@@ -265,6 +265,101 @@ body:not(.room-mode) #room_view{display:none}
 }
 </style>
 
+
+<style id="v79-mobile-font-overflow-fix">
+*,*::before,*::after{box-sizing:border-box!important}
+html,body{
+  width:100%!important;
+  max-width:100%!important;
+  overflow-x:hidden!important;
+  overscroll-behavior-x:none;
+}
+body{display:flex!important;justify-content:center!important}
+.app{
+  width:100%!important;
+  max-width:450px!important;
+  min-width:0!important;
+  overflow:hidden!important;
+}
+.top,.content,.card,.brain,.section,.room-hero,.input-row,.bottom-actions{
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+}
+.content{
+  overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch;
+}
+.card,.brain,.section{
+  overflow:hidden!important;
+}
+.input-row{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(92px,28%)!important;
+}
+.input-row input,.sum-box{min-width:0!important;max-width:100%!important}
+
+.result{
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  padding:0 4px!important;
+  font-size:clamp(30px,9vw,48px)!important;
+  line-height:1.08!important;
+  letter-spacing:-.5px!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere!important;
+  word-break:break-word!important;
+  text-align:center!important;
+  overflow:hidden!important;
+}
+.muted,.percent,.accuracy,.info,.label,#table_status,#consensus_status{
+  max-width:100%!important;
+  overflow-wrap:anywhere!important;
+  word-break:break-word!important;
+}
+.room-chip,#current_table_badge{
+  max-width:78vw!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+.room-header{min-width:0!important}
+.room-chip{min-width:0!important;flex:1 1 auto!important}
+.room-live{flex:0 0 auto!important}
+
+.bet-grid,.bottom-row{min-width:0!important}
+.bet,.bottom-btn{min-width:0!important}
+.bottom-btn{
+  padding-left:5px!important;
+  padding-right:5px!important;
+  font-size:clamp(12px,3.4vw,14px)!important;
+}
+.bottom-btn.send{
+  line-height:1.12!important;
+  white-space:normal!important;
+}
+.bottom-change{font-size:14px!important}
+
+@media(max-width:390px){
+  .top{padding-left:10px!important;padding-right:10px!important}
+  .content{padding-left:10px!important;padding-right:10px!important}
+  .title{font-size:clamp(22px,7vw,28px)!important;letter-spacing:1.5px!important}
+  .sub{font-size:11px!important}
+  .result{font-size:clamp(28px,8.6vw,38px)!important}
+  .brain{padding:13px 10px!important}
+  .room-hero{grid-template-columns:minmax(0,1fr) 80px minmax(0,1fr)!important;padding:10px!important}
+  .center-orb{width:76px!important;height:76px!important;font-size:24px!important}
+  .side-title{font-size:25px!important}
+  .side-pct{font-size:19px!important}
+}
+@media(max-width:340px){
+  .result{font-size:27px!important}
+  .bottom-row{grid-template-columns:.9fr .9fr 1.25fr!important;gap:5px!important}
+  .bottom-actions{padding-left:7px!important;padding-right:7px!important}
+}
+</style>
+
 </head>
 <body>
 
@@ -542,10 +637,10 @@ async function selectTable(tableId){
         data.state.current_prediction.dice_raw
       );
     }else{
-      $('result').innerText='ĐÃ VÀO BÀN '+v;
+      $('result').innerText='ĐÃ VÀO '+tableName(v);
       $('current_table_badge').innerText=tableMode(v)+' • '+tableName(v);
       $('result').style.color='#00fff0';
-      $('server_info').innerText='Đang chờ kết quả mới của bàn '+v+'.';
+      $('server_info').innerText='Đang chờ kết quả mới của bàn '+tableName(v)+'.';
     }
     startRealtime();
     return true;
@@ -1067,7 +1162,7 @@ async function resetTable(){
       $('server_info').innerText=data.message;
       return;
     }
-    $('result').innerText='ĐÃ RESET BÀN';
+    $('result').innerText='ĐÃ RESET '+tableName(TABLE_ID);
     $('result').style.color='#ffcc00';
     $('percent').innerText='Tài: 0% | Xỉu: 0%';
     $('accuracy').innerText='Độ đúng bàn này: 0.00%';
