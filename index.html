@@ -505,6 +505,78 @@ body{align-items:stretch!important}
 }
 </style>
 
+
+<style id="v718-room-lobby-state-fix">
+body.room-mode #lobby_view{
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+body.room-mode #room_view{
+  display:flex!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
+}
+body:not(.room-mode) #lobby_view{
+  display:flex!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
+}
+body:not(.room-mode) #room_view{
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+</style>
+
+
+<style id="v719-connection-gate">
+.lobby-status{
+  transition:.2s ease;
+  min-width:230px;
+}
+.lobby-status.server-online{
+  color:#76ff9f!important;
+  border-color:#57ff8f!important;
+  background:rgba(0,55,24,.88)!important;
+  box-shadow:0 0 18px rgba(58,255,125,.34)!important;
+}
+.lobby-status.server-offline{
+  color:#ff8d8d!important;
+  border-color:#ff5d5d!important;
+  background:rgba(70,0,0,.90)!important;
+  box-shadow:0 0 18px rgba(255,45,45,.32)!important;
+}
+.subtable-card.server-locked,
+.subtable-card:disabled{
+  opacity:.48!important;
+  filter:grayscale(.70)!important;
+  cursor:not-allowed!important;
+  pointer-events:none!important;
+  transform:none!important;
+  box-shadow:none!important;
+}
+.mode-section.server-locked .mode-heading{
+  opacity:.72;
+}
+.server-lock-note{
+  margin:10px 0 16px;
+  padding:10px 12px;
+  text-align:center;
+  border-radius:14px;
+  border:1px solid rgba(255,96,96,.55);
+  background:rgba(70,0,0,.58);
+  color:#ffb2b2;
+  font-size:12px;
+  font-weight:900;
+}
+.server-lock-note.online{
+  border-color:rgba(80,255,140,.50);
+  background:rgba(0,55,23,.52);
+  color:#8dffad;
+}
+</style>
+
 </head>
 <body>
 
@@ -512,7 +584,8 @@ body{align-items:stretch!important}
   <div class="lobby-head">
     <div class="lobby-title">AI TÀI XỈU PRO</div>
     <div class="lobby-sub">2 cách chơi • 11 bàn • 11 AI và dữ liệu riêng</div>
-    <div id="lobby_server_status" class="lobby-status">ĐANG KẾT NỐI SERVER...</div>
+    <div id="lobby_server_status" class="lobby-status server-offline">🔴 SERVER CHƯA KẾT NỐI</div>
+    <div id="lobby_connection_note" class="server-lock-note">Các bàn đang khóa. Chờ kết nối server...</div>
   </div>
   
   <div class="lobby-content">
@@ -675,6 +748,15 @@ body{align-items:stretch!important}
 
 const CONFIG_URL = 'https://djmaxqn2017-beep.github.io/toolssssss/config.json';
 let SERVER_URL = '';
+let SERVER_CONNECTED = false;
+let SERVER_API_VERSION = '';
+let CONNECTION_MONITOR = null;
+let CONNECTION_CHECK_BUSY = false;
+const LAST_SERVER_URL_KEY = 'TAIXIU_LAST_WORKING_SERVER_URL';
+const COMPATIBLE_API_VERSIONS = ['7.16','7.17','7.18','7.19'];
+const EMERGENCY_SERVER_URLS = [
+  'https://genetic-hierarchy-char-alpha.trycloudflare.com'
+];
 let TABLE_ID = String(localStorage.getItem('TAIXIU_TABLE_ID') || '').trim().toUpperCase();
 const VALID_TABLES=['MD5_THAN_TAI','MD5_CHU_TUOC','MD5_THANH_LONG','MD5_HUYEN_VU','MD5_KY_LAN','TX_STARSCREAM','TX_BUMBLEBEE','TX_GALVATRON','TX_THUNDERCRACKER','TX_OPTIMUS_PRIME','TX_RODIMUS_PRIME'];
 const TABLE_NAMES={
@@ -716,12 +798,95 @@ if(!deviceId){
 const $ = id => document.getElementById(id);
 
 function setStatus(ok, text){
-  $('status').className = ok ? 'status ok' : 'status';
-  $('status').innerText = text;
+  if($('status')){
+    $('status').className = ok ? 'status ok' : 'status';
+    $('status').innerText = text;
+  }
   if($('lobby_server_status')){
     $('lobby_server_status').innerText=text;
-    $('lobby_server_status').style.color=ok?'#7dff9c':'#ffe99b';
   }
+}
+
+function setTableCardsEnabled(enabled){
+  document.querySelectorAll('.subtable-card,.table-pick').forEach(btn=>{
+    btn.disabled=!enabled;
+    btn.classList.toggle('server-locked',!enabled);
+    btn.setAttribute('aria-disabled',String(!enabled));
+  });
+  document.querySelectorAll('.mode-section').forEach(section=>{
+    section.classList.toggle('server-locked',!enabled);
+  });
+}
+
+function applyConnectionState(connected, detail=''){
+  SERVER_CONNECTED=!!connected;
+
+  const badge=$('lobby_server_status');
+  const note=$('lobby_connection_note');
+
+  if(connected){
+    if(badge){
+      badge.classList.remove('server-offline');
+      badge.classList.add('server-online');
+      badge.innerText='🟢 SERVER ĐÃ KẾT NỐI';
+    }
+    if(note){
+      note.classList.add('online');
+      note.innerText='Đã kết nối server'
+        +(SERVER_API_VERSION?' • API '+SERVER_API_VERSION:'')
+        +'. Bạn có thể chọn bàn.';
+    }
+    setStatus(true,'● ĐÃ KẾT NỐI SERVER AI');
+    setTableCardsEnabled(true);
+    if(TABLE_VALID){
+      setBtn('GỬI DATA & NHẬN GỢI Ý',false);
+    }else{
+      setBtn('CHỌN BÀN ĐỂ MỞ TOOLS',true);
+    }
+  }else{
+    if(badge){
+      badge.classList.remove('server-online');
+      badge.classList.add('server-offline');
+      badge.innerText='🔴 SERVER CHƯA KẾT NỐI';
+    }
+    if(note){
+      note.classList.remove('online');
+      note.innerText=detail
+        ? 'Chưa kết nối: '+detail
+        : 'Các bàn đang khóa. Chờ kết nối server...';
+    }
+    setStatus(false,'SERVER LỖI');
+    setTableCardsEnabled(false);
+    setBtn('THỬ KẾT NỐI LẠI',false);
+  }
+}
+
+function isCompatibleServerStatus(st){
+  if(!st||st.success!==true)return {ok:false,error:'/api/status không hợp lệ'};
+
+  const serverTables=Array.isArray(st.allowed_tables)?st.allowed_tables:[];
+  const missing=VALID_TABLES.filter(id=>!serverTables.includes(id));
+  if(missing.length){
+    return {ok:false,error:'Server thiếu bàn: '+missing.join(', ')};
+  }
+
+  const apiVersion=String(st.api_version||'');
+  if(!COMPATIBLE_API_VERSIONS.includes(apiVersion)){
+    return {ok:false,error:'API '+(apiVersion||'không xác định')+' không tương thích'};
+  }
+
+  return {ok:true,apiVersion};
+}
+
+async function testServerCandidate(candidate){
+  const url=String(candidate||'').trim().replace(/\/$/,'');
+  if(!url||!url.startsWith('https://'))throw new Error('URL server không hợp lệ');
+
+  const st=await jsonFetch(url+'/api/status?t='+Date.now(),{cache:'no-store'});
+  const compatible=isCompatibleServerStatus(st);
+  if(!compatible.ok)throw new Error(compatible.error);
+
+  return {url,status:st,apiVersion:compatible.apiVersion};
 }
 function setBtn(text, disabled){
   $('send_btn').innerText = text;
@@ -735,35 +900,54 @@ function getTableId(){
 async function enterLobbyTable(tableId){
   const v=String(tableId||'').trim().toUpperCase();
 
-  // Mở giao diện bàn ngay, không tự đá khách về sảnh.
-  document.body.classList.add('room-mode');
-  $('room_name_chip').innerText=tableMode(v)+' • '+tableName(v);
-  $('current_table_badge').innerText=tableMode(v)+' • '+tableName(v);
-  $('result').innerText='ĐANG VÀO BÀN';
-  $('server_info').innerText='Đang đồng bộ bàn '+tableName(v)+'...';
-
-  const ok=await selectTable(v);
-  if(ok){
-    requestAnimationFrame(()=>{
-      const content=document.querySelector('#room_view .content');
-      if(content)content.scrollTop=0;
-    });
-    return true;
+  if(!SERVER_CONNECTED){
+    const connected=await loadServerConfig(false);
+    if(!connected){
+      document.body.classList.remove('room-mode');
+      applyConnectionState(false,'Không thể vào bàn khi server chưa kết nối');
+      showPopup(
+        '🔴 CHƯA KẾT NỐI SERVER',
+        'Các bàn đang khóa. Hãy bật server và Cloudflare Tunnel rồi bấm THỬ KẾT NỐI LẠI.',
+        [{text:'THỬ KẾT NỐI LẠI',onClick:async()=>{await loadServerConfig(false);}}],
+        'offline-table-'+Date.now()
+      );
+      return false;
+    }
   }
 
-  // Không quay về sảnh. Giữ khách trong bàn và cho thử lại.
-  $('result').innerText='ĐANG KẾT NỐI';
-  $('server_info').innerText='Đang thử kết nối lại bàn '+tableName(v)+'...';
-  setTimeout(()=>selectTable(v),1000);
-  return false;
+  const ok=await selectTable(v);
+  if(!ok){
+    document.body.classList.remove('room-mode');
+    return false;
+  }
+
+  const lobbyView=document.getElementById('lobby_view');
+  const roomView=document.getElementById('room_view');
+  if(lobbyView){
+    lobbyView.style.removeProperty('display');
+    lobbyView.style.removeProperty('visibility');
+    lobbyView.style.removeProperty('pointer-events');
+  }
+  if(roomView){
+    roomView.style.removeProperty('display');
+    roomView.style.removeProperty('visibility');
+    roomView.style.removeProperty('pointer-events');
+  }
+
+  document.body.classList.add('room-mode');
+  requestAnimationFrame(()=>{
+    const content=document.querySelector('#room_view .content');
+    if(content)content.scrollTop=0;
+  });
+  return true;
 }
 
 async function selectTable(tableId){
   const requested=String(tableId||'').trim().toUpperCase();
   if(!VALID_TABLES.includes(requested))return false;
 
-  if(!SERVER_URL){
-    const connected=await loadServerConfig();
+  if(!SERVER_CONNECTED||!SERVER_URL){
+    const connected=await loadServerConfig(false);
     if(!connected)return false;
   }
 
@@ -988,45 +1172,108 @@ async function unregisterSW(){
   }catch(e){}
 }
 
-async function loadServerConfig(){
-  setStatus(false,'ĐANG KẾT NỐI SERVER...');
-  setBtn('ĐANG KẾT NỐI SERVER...', true);
-  $('server_info').innerText = 'Đang đọc config.json...';
+async function loadServerConfig(silent=false){
+  if(CONNECTION_CHECK_BUSY)return SERVER_CONNECTED;
+  CONNECTION_CHECK_BUSY=true;
+
+  if(!silent){
+    applyConnectionState(false,'Đang kiểm tra config và server...');
+    if($('server_info'))$('server_info').innerText='Đang đọc config.json...';
+  }
+
+  const candidates=[];
+  const addCandidate=value=>{
+    const url=String(value||'').trim().replace(/\/$/,'');
+    if(url&&url.startsWith('https://')&&!candidates.includes(url))candidates.push(url);
+  };
 
   try{
-    const cfg = await jsonFetch(CONFIG_URL + '?t=' + Date.now(), {cache:'no-store'});
-    SERVER_URL = String(cfg.server || '').trim().replace(/\/$/,'');
-    if(!SERVER_URL || !SERVER_URL.startsWith('https://')){
-      throw new Error('config.json chưa có server https hợp lệ');
+    const cfg=await jsonFetch(CONFIG_URL+'?t='+Date.now(),{cache:'no-store'});
+    addCandidate(cfg.server);
+  }catch(e){}
+
+  try{addCandidate(localStorage.getItem(LAST_SERVER_URL_KEY));}catch(e){}
+  for(const fallback of EMERGENCY_SERVER_URLS)addCandidate(fallback);
+  addCandidate(SERVER_URL);
+
+  let lastError='Không tìm thấy URL server hoạt động';
+
+  try{
+    for(const candidate of candidates){
+      try{
+        const connected=await testServerCandidate(candidate);
+        SERVER_URL=connected.url;
+        SERVER_API_VERSION=connected.apiVersion;
+        try{localStorage.setItem(LAST_SERVER_URL_KEY,SERVER_URL);}catch(e){}
+
+        applyConnectionState(true);
+        REQUEST_BUSY=false;
+
+        if($('result')&&!document.body.classList.contains('room-mode')){
+          $('result').innerText='CHỜ DỮ LIỆU...';
+          $('result').style.color='#ffcc00';
+        }
+        if($('server_info')){
+          $('server_info').innerText='Đã kết nối: '+SERVER_URL+' • API '+SERVER_API_VERSION;
+        }
+
+        updatePreview();
+        return true;
+      }catch(e){
+        lastError=e.message||String(e);
+      }
     }
 
-    const st = await jsonFetch(SERVER_URL + '/api/status?t=' + Date.now(), {cache:'no-store'});
-    if(!st.success) throw new Error('/api/status không trả success:true');
-    const requiredTables=VALID_TABLES||[];
-    const serverTables=Array.isArray(st.allowed_tables)?st.allowed_tables:[];
-    const missing=requiredTables.filter(x=>!serverTables.includes(x));
-    if(st.api_version!=='7.17' || missing.length){
-      throw new Error('Server đang chạy bản cũ hoặc thiếu bàn: '+(missing.join(', ')||'API '+String(st.api_version||'cũ')));
+    SERVER_URL='';
+    SERVER_API_VERSION='';
+    applyConnectionState(false,lastError);
+    if($('server_info')){
+      $('server_info').innerText='Lỗi kết nối: '+lastError+'. Kiểm tra config.json và Cloudflare Tunnel.';
     }
-
-    setStatus(true,'● ĐÃ KẾT NỐI SERVER AI');
-    REQUEST_BUSY=false;
-    setBtn('GỬI DATA & NHẬN GỢI Ý', false);
-    $('result').innerText = 'CHỜ DỮ LIỆU...';
-    $('result').style.color = '#ffcc00';
-    $('server_info').innerText = 'Đã kết nối: ' + SERVER_URL;
-    setBtn('CHỌN BÀN ĐỂ MỞ TOOLS',true);
-    updatePreview();
-    return true;
-  }catch(e){
-    setStatus(false,'SERVER LỖI');
-    setBtn('THỬ KẾT NỐI LẠI', false);
-    $('result').innerText = 'LỖI';
-    $('result').style.color = '#ff5f87';
-    $('server_info').innerText = 'Lỗi kết nối: ' + e.message + '. Hãy copy server.js V7.17 và khởi động lại server.';
     updatePreview();
     return false;
+  }finally{
+    CONNECTION_CHECK_BUSY=false;
   }
+}
+
+
+async function monitorServerConnection(){
+  if(CONNECTION_CHECK_BUSY)return;
+
+  if(!SERVER_URL){
+    await loadServerConfig(true);
+    return;
+  }
+
+  CONNECTION_CHECK_BUSY=true;
+  try{
+    const st=await jsonFetch(SERVER_URL+'/api/status?t='+Date.now(),{cache:'no-store'});
+    const compatible=isCompatibleServerStatus(st);
+    if(!compatible.ok)throw new Error(compatible.error);
+
+    SERVER_API_VERSION=compatible.apiVersion;
+    if(!SERVER_CONNECTED)applyConnectionState(true);
+  }catch(e){
+    SERVER_CONNECTED=false;
+    applyConnectionState(false,e.message||'Mất kết nối server');
+
+    // Khi đang ở trong bàn: giữ giao diện nhưng khóa gửi dữ liệu.
+    if(document.body.classList.contains('room-mode')){
+      if($('server_info'))$('server_info').innerText='Mất kết nối server. Dữ liệu đang bị khóa.';
+      setBtn('THỬ KẾT NỐI LẠI',false);
+    }
+
+    // Đọc lại config vì Quick Tunnel có thể đã đổi URL.
+    SERVER_URL='';
+  }finally{
+    CONNECTION_CHECK_BUSY=false;
+  }
+}
+
+function startConnectionMonitor(){
+  if(CONNECTION_MONITOR)clearInterval(CONNECTION_MONITOR);
+  CONNECTION_MONITOR=setInterval(monitorServerConnection,5000);
 }
 
 function percent(n){
@@ -1265,6 +1512,10 @@ function startRealtime(){
 }
 
 async function sendDataToServerAI(autoResubmit=false){
+  if(!SERVER_CONNECTED){
+    await loadServerConfig(false);
+    if(!SERVER_CONNECTED)return;
+  }
   if(REQUEST_BUSY)return;
   REQUEST_BUSY=true;
   if(!SERVER_URL){
@@ -1331,7 +1582,8 @@ async function sendDataToServerAI(autoResubmit=false){
       setStatus(true,'● SERVER ONLINE - BÀN ĐANG KHÓA XUNG ĐỘT');
       setBtn('NHẬP LẠI ĐỂ XÁC NHẬN',false);
     }else{
-      setStatus(false,'SERVER LỖI');
+      SERVER_CONNECTED=false;
+      applyConnectionState(false,e.message||'Mất kết nối server');
       setBtn('THỬ KẾT NỐI LẠI',false);
       $('result').innerText='LỖI';
       $('result').style.color='#ff5f87';
@@ -1342,7 +1594,8 @@ async function sendDataToServerAI(autoResubmit=false){
 }
 
 async function backOne(){
-  if(!SERVER_URL){const ok=await loadServerConfig();if(!ok)return;}
+  if(!SERVER_CONNECTED){const ok=await loadServerConfig(false);if(!ok)return;}
+  if(!SERVER_URL){const ok=await loadServerConfig(false);if(!ok)return;}
   if(!TABLE_VALID){const valid=await validateTable();if(!valid)return;}
   try{
     const data=await jsonFetch(api('/api/table/action'),{
@@ -1367,57 +1620,82 @@ async function backOne(){
 }
 
 async function changeTable(){
-  if(HEARTBEAT_TIMER){
-    clearInterval(HEARTBEAT_TIMER);
-    HEARTBEAT_TIMER=null;
-  }
-  if(SYNC_TIMER){
-    clearInterval(SYNC_TIMER);
-    SYNC_TIMER=null;
-  }
-
-  TABLE_VALID=false;
-  TABLE_ID='';
-  CURRENT_ROUND_TOKEN=1;
-  LAST_SOFT_TOKEN=null;
-  LAST_POPUP_KEY='';
-  REQUEST_BUSY=false;
-  localStorage.removeItem('TAIXIU_TABLE_ID');
-
-  closePopup();
-
-  $('table_input').value='';
-  $('current_table_badge').innerText='BÀN: CHƯA CHỌN';
-  $('room_name_chip').innerText='BÀN: CHƯA CHỌN';
-  $('online_badge').innerText='👥 0 online';
-  if($('room_live_chip'))$('room_live_chip').innerText='● ĐANG ĐỒNG BỘ';
-  $('table_status').innerText='CHƯA CHỌN BÀN';
-  $('table_status').style.color='#ffd8a6';
-  $('result').innerText='CHỜ DỮ LIỆU';
-  $('result').style.color='#ffe15c';
-  $('percent').innerText='Tài: 0% | Xỉu: 0%';
-  $('accuracy').innerText='Độ đúng bàn này: 0.00%';
-  $('server_info').innerText='Hãy chọn bàn mới để tiếp tục.';
-  if($('hero_tai_pct'))$('hero_tai_pct').innerText='0%';
-  if($('hero_xiu_pct'))$('hero_xiu_pct').innerText='0%';
-  if($('hero_center_orb'))$('hero_center_orb').innerText='AI';
-
-  document.querySelectorAll('.table-pick').forEach(btn=>btn.classList.remove('selected'));
-
+  // Chuyển về sảnh ngay lập tức trước mọi thao tác dọn dẹp.
   document.body.classList.remove('room-mode');
 
-  try{await refreshLobbyOnline();}catch(e){}
+  const lobbyView=document.getElementById('lobby_view');
+  const roomView=document.getElementById('room_view');
+  if(lobbyView){
+    lobbyView.style.setProperty('display','flex','important');
+    lobbyView.style.setProperty('visibility','visible','important');
+    lobbyView.style.setProperty('pointer-events','auto','important');
+  }
+  if(roomView){
+    roomView.style.setProperty('display','none','important');
+    roomView.style.setProperty('visibility','hidden','important');
+    roomView.style.setProperty('pointer-events','none','important');
+  }
 
-  requestAnimationFrame(()=>{
-    const lobby=document.querySelector('#lobby_view .lobby-content');
-    if(lobby)lobby.scrollTop=0;
-  });
+  try{
+    if(HEARTBEAT_TIMER){
+      clearInterval(HEARTBEAT_TIMER);
+      HEARTBEAT_TIMER=null;
+    }
+    if(SYNC_TIMER){
+      clearInterval(SYNC_TIMER);
+      SYNC_TIMER=null;
+    }
+
+    TABLE_VALID=false;
+    TABLE_ID='';
+    CURRENT_ROUND_TOKEN=1;
+    LAST_SOFT_TOKEN=null;
+    LAST_POPUP_KEY='';
+    REQUEST_BUSY=false;
+
+    try{localStorage.removeItem('TAIXIU_TABLE_ID');}catch(e){}
+    try{closePopup();}catch(e){}
+
+    if($('table_input'))$('table_input').value='';
+    if($('current_table_badge'))$('current_table_badge').innerText='BÀN: CHƯA CHỌN';
+    if($('room_name_chip'))$('room_name_chip').innerText='BÀN: CHƯA CHỌN';
+    if($('online_badge'))$('online_badge').innerText='👥 0 online';
+    if($('room_live_chip'))$('room_live_chip').innerText='● ĐANG ĐỒNG BỘ';
+    if($('table_status')){
+      $('table_status').innerText='CHƯA CHỌN BÀN';
+      $('table_status').style.color='#ffd8a6';
+    }
+    if($('result')){
+      $('result').innerText='CHỜ DỮ LIỆU';
+      $('result').style.color='#ffe15c';
+    }
+    if($('percent'))$('percent').innerText='Tài: 0% | Xỉu: 0%';
+    if($('accuracy'))$('accuracy').innerText='Độ đúng bàn này: 0.00%';
+    if($('server_info'))$('server_info').innerText='Hãy chọn bàn mới để tiếp tục.';
+    if($('hero_tai_pct'))$('hero_tai_pct').innerText='0%';
+    if($('hero_xiu_pct'))$('hero_xiu_pct').innerText='0%';
+    if($('hero_center_orb'))$('hero_center_orb').innerText='AI';
+
+    document.querySelectorAll('.table-pick').forEach(btn=>{
+      btn.classList.remove('selected');
+    });
+
+    try{await refreshLobbyOnline();}catch(e){}
+
+    requestAnimationFrame(()=>{
+      const lobby=document.querySelector('#lobby_view .lobby-content');
+      if(lobby)lobby.scrollTop=0;
+    });
+  }catch(e){
+    console.error('CHANGE TABLE ERROR',e);
+  }
 
   return true;
 }
 
 async function resetTable(){
-  if(!SERVER_URL){const ok=await loadServerConfig();if(!ok)return;}
+  if(!SERVER_CONNECTED){const ok=await loadServerConfig(false);if(!ok)return;}
+  if(!SERVER_URL){const ok=await loadServerConfig(false);if(!ok)return;}
   if(!TABLE_VALID){const valid=await validateTable();if(!valid)return;}
   if(!confirm('RESET sẽ xóa lịch sử riêng của bàn '+TABLE_ID+' nhưng không xóa BigData chung. Tiếp tục?'))return;
   try{
@@ -1440,7 +1718,14 @@ async function resetTable(){
   }catch(e){$('server_info').innerText='Lỗi RESET: '+e.message;}
 }
 
-window.sendDataToServerAI = async function(){ if(!TABLE_VALID){const ok=await validateTable();if(!ok)return;} return sendDataToServerAI(); };
+window.sendDataToServerAI = async function(){
+  if(!SERVER_CONNECTED){
+    await loadServerConfig(false);
+    return;
+  }
+  if(!TABLE_VALID){const ok=await validateTable();if(!ok)return;}
+  return sendDataToServerAI();
+};
 window.backOne = backOne;
 window.enterLobbyTable = enterLobbyTable;
 window.selectTable = selectTable;
@@ -1454,28 +1739,41 @@ window.addEventListener('error', function(e){
 });
 
 document.addEventListener('DOMContentLoaded', function(){
-  $('table_input').value = TABLE_ID;
-  if(TABLE_ID && VALID_TABLES.includes(TABLE_ID)){
-    document.querySelectorAll('.table-pick').forEach(btn=>{
-      btn.classList.toggle('selected',btn.dataset.table===TABLE_ID);
-    });
-    $('table_status').innerText='✓ '+tableMode(TABLE_ID)+' • '+tableName(TABLE_ID);
-    $('current_table_badge').innerText=tableMode(TABLE_ID)+' • '+tableName(TABLE_ID);
-    $('table_status').style.color='#00fff0';
+  // Luôn bắt đầu ở sảnh. Chỉ được vào bàn sau khi server xác nhận online.
+  document.body.classList.remove('room-mode');
+
+  const lobbyView=document.getElementById('lobby_view');
+  const roomView=document.getElementById('room_view');
+  if(lobbyView){
+    lobbyView.style.removeProperty('display');
+    lobbyView.style.removeProperty('visibility');
+    lobbyView.style.removeProperty('pointer-events');
   }
-  $('total_input').addEventListener('input', updatePreview);
-  $('total_input').addEventListener('keyup', updatePreview);
-  $('total_input').addEventListener('change', updatePreview);
-  $('total_input').addEventListener('keydown', function(e){
-    if(e.key === 'Enter') sendDataToServerAI();
+  if(roomView){
+    roomView.style.removeProperty('display');
+    roomView.style.removeProperty('visibility');
+    roomView.style.removeProperty('pointer-events');
+  }
+
+  SERVER_CONNECTED=false;
+  applyConnectionState(false,'Đang kiểm tra server...');
+
+  $('table_input').value=TABLE_ID;
+  document.querySelectorAll('.table-pick').forEach(btn=>btn.classList.remove('selected'));
+
+  $('total_input').addEventListener('input',updatePreview);
+  $('total_input').addEventListener('keyup',updatePreview);
+  $('total_input').addEventListener('change',updatePreview);
+  $('total_input').addEventListener('keydown',function(e){
+    if(e.key==='Enter'&&SERVER_CONNECTED)sendDataToServerAI();
   });
+
   updatePreview();
-  loadServerConfig().then(ok=>{
-    if(ok){
-      refreshLobbyOnline();
-      setInterval(refreshLobbyOnline,2500);
-    }
+
+  loadServerConfig(false).then(ok=>{
+    if(ok)refreshLobbyOnline();
   });
+  startConnectionMonitor();
 });
 
 window.addEventListener('beforeunload', function(){

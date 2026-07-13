@@ -1,7 +1,7 @@
 {
   "name": "AI Tài Xỉu Pro",
   "short_name": "Tài Xỉu Pro",
-  "start_url": "./?v=7150",
+  "start_url": "./?v=7190",
   "scope": "./",
   "display": "standalone",
   "background_color": "#120403",
