@@ -1,4 +1,4 @@
-const CACHE_VERSION='taixiu-v7150';
+const CACHE_VERSION='taixiu-v7161-than-tai-fix';
 self.addEventListener('install',e=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(Promise.all([
   self.clients.claim(),

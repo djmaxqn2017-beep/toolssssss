@@ -1060,25 +1060,6 @@ function renderResult(data, total, raw){
     '<div class="bet '+(xiu>=tai?'hot':'')+'"><div class="bet-title">XỈU</div><div class="bet-sub">3–10</div><div class="bet-pct">'+xiu.toFixed(2)+'%</div>'+renderBars(xiu)+'</div>' +
     '<div class="bet '+(tai>xiu?'hot':'')+'"><div class="bet-title">TÀI</div><div class="bet-sub">11–18</div><div class="bet-pct">'+tai.toFixed(2)+'%</div>'+renderBars(tai)+'</div>';
 
-  const totalStats = data.phan_tram_tong_4_17 || data.phan_tram_tong || data.total_pct || {};
-  let max = 0;
-  for(let i=4;i<=17;i++) max = Math.max(max, percent(totalStats[i] || totalStats[String(i)] || 0));
-  let th = '';
-  for(let i=4;i<=17;i++){
-    const v = percent(totalStats[i] || totalStats[String(i)] || 0);
-    th += '<div class="total-cell '+(v===max && v>0?'hot':'')+'"><div class="total-n">'+i+'</div><div class="total-p">'+v.toFixed(1)+'%</div></div>';
-  }
-  $('total-bars').innerHTML = th;
-
-  const face = data.phan_tram_mat_xuc_xac || data.face_pct || {};
-  const dbl = data.phan_tram_doi || data.double_pct || {};
-  const tri = data.phan_tram_bo_ba || data.triple_pct || {};
-  let dh = '';
-  for(let i=1;i<=6;i++) dh += '<div class="dice-cell"><div class="dice-face">'+i+'</div><div>Mặt '+percent(face[i]||face[String(i)]||0).toFixed(1)+'%</div></div>';
-  for(let i=1;i<=6;i++) dh += '<div class="dice-cell"><div class="dice-face">'+i+i+'</div><div>Đôi '+percent(dbl[i]||dbl[String(i)]||0).toFixed(1)+'%</div></div>';
-  for(let i=1;i<=6;i++) dh += '<div class="dice-cell"><div class="dice-face">'+i+i+i+'</div><div>Bộ '+percent(tri[i]||tri[String(i)]||0).toFixed(1)+'%</div></div>';
-  $('dice-bars').innerHTML = dh;
-
   const lines = [];
   if(data.table_id) lines.push('Bàn: '+data.table_id);
   if(raw) lines.push('Xúc xắc: ' + raw + ' | Tổng: ' + total);
@@ -1398,8 +1379,6 @@ async function resetTable(){
     $('percent').innerText='Tài: 0% | Xỉu: 0%';
     $('accuracy').innerText='Độ đúng bàn này: 0.00%';
     $('server_info').innerText=data.message||'Đã reset bàn.';
-    $('total-bars').innerHTML='';
-    $('dice-bars').innerHTML='';
   }catch(e){$('server_info').innerText='Lỗi RESET: '+e.message;}
 }
 
