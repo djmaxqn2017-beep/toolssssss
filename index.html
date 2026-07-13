@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta http-equiv="Content-Security-Policy" content="default-src * data: gap: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data: content: blob:; media-src *; connect-src *;">
-<title>AI Tài Xỉu MD5 PRO</title>
+<title>AI Tài Xỉu PRO</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;font-family:'Segoe UI',Arial,sans-serif;color:#fff;background:#030006}
@@ -66,10 +66,10 @@ button{border:none;color:#fff;font-weight:1000;border-radius:16px;cursor:pointer
 
 <style>
 .bottom-actions{
-  position:absolute;
-  left:0;
-  right:0;
-  bottom:0;
+  position:relative;
+  left:auto;
+  right:auto;
+  bottom:auto;
   z-index:20;
   padding:9px 11px calc(9px + env(safe-area-inset-bottom));
   background:linear-gradient(180deg,rgba(18,0,38,.88),rgba(4,0,10,.98));
@@ -450,6 +450,61 @@ body{display:flex!important;justify-content:center!important}
 }
 </style>
 
+
+<style id="v712-no-overlay-layout">
+html,body{
+  width:100%!important;height:100%!important;
+  max-width:100%!important;
+  overflow:hidden!important;
+}
+body{align-items:stretch!important}
+#room_view.app{
+  height:100dvh!important;
+  min-height:100svh!important;
+  display:flex!important;
+  flex-direction:column!important;
+  overflow:hidden!important;
+}
+#room_view .top{flex:0 0 auto!important}
+#room_view .content{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  padding-bottom:18px!important;
+  scroll-padding-bottom:24px!important;
+  -webkit-overflow-scrolling:touch!important;
+}
+#room_view .bottom-actions{
+  position:relative!important;
+  left:auto!important;right:auto!important;bottom:auto!important;
+  flex:0 0 auto!important;
+  width:100%!important;
+  z-index:30!important;
+  padding:8px 10px calc(8px + env(safe-area-inset-bottom))!important;
+  box-shadow:0 -5px 18px rgba(0,0,0,.38)!important;
+}
+#room_view .brain,#room_view .section,#room_view .card{flex-shrink:0!important}
+#room_view .brain{min-height:210px!important}
+#room_view .result{
+  min-height:54px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+}
+#room_view .info{
+  max-height:none!important;
+  overflow:visible!important;
+}
+@media(max-height:700px){
+  #room_view .top{padding-top:9px!important;padding-bottom:7px!important}
+  #room_view .content{padding-top:9px!important;padding-bottom:10px!important}
+  #room_view .card,#room_view .brain,#room_view .section{margin-bottom:9px!important;padding:10px!important}
+  #room_view .room-hero{margin-bottom:9px!important}
+  #room_view .brain{min-height:180px!important}
+}
+</style>
+
 </head>
 <body>
 
@@ -713,11 +768,21 @@ async function selectTable(tableId){
   if(!valid)return false;
 
   try{
-    const data=await jsonFetch(api('/api/table/change'),{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({device_id:deviceId,new_table_id:v})
-    });
+    let data;
+    try{
+      data=await jsonFetch(api('/api/table/change'),{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({device_id:deviceId,new_table_id:v})
+      });
+    }catch(changeError){
+      const joined=await jsonFetch(api('/api/table/join'),{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({device_id:deviceId,table_id:v})
+      });
+      data={success:true,state:joined,fallback_join:true};
+    }
     renderOnlineCount(data.state||{});
     renderConsensusState(data.state||{});
     if(data.state && data.state.current_prediction){
@@ -756,8 +821,8 @@ async function validateTable(){
     });
     if(!data.valid)throw new Error('Số bàn không hợp lệ');
     TABLE_VALID=true;
-    $('table_status').innerText='✓ Số bàn hợp lệ: '+data.table_id;
-    $('current_table_badge').innerText='BÀN: '+data.table_id;
+    $('table_status').innerText='✓ '+tableMode(data.table_id)+' • '+tableName(data.table_id);
+    $('current_table_badge').innerText=tableMode(data.table_id)+' • '+tableName(data.table_id);
     $('table_status').style.color='#00fff0';
     setBtn('GỬI DATA & NHẬN GỢI Ý',false);
     startRealtime();
@@ -857,8 +922,6 @@ async function loadServerConfig(){
   $('server_info').innerText = 'Đang đọc config.json...';
 
   try{
-    await unregisterSW();
-
     const cfg = await jsonFetch(CONFIG_URL + '?t=' + Date.now(), {cache:'no-store'});
     SERVER_URL = String(cfg.server || '').trim().replace(/\/$/,'');
     if(!SERVER_URL || !SERVER_URL.startsWith('https://')){
@@ -867,6 +930,12 @@ async function loadServerConfig(){
 
     const st = await jsonFetch(SERVER_URL + '/api/status?t=' + Date.now(), {cache:'no-store'});
     if(!st.success) throw new Error('/api/status không trả success:true');
+    const requiredTables=VALID_TABLES||[];
+    const serverTables=Array.isArray(st.allowed_tables)?st.allowed_tables:[];
+    const missing=requiredTables.filter(x=>!serverTables.includes(x));
+    if(st.api_version!=='7.14' || missing.length){
+      throw new Error('Server đang chạy bản cũ hoặc thiếu bàn: '+(missing.join(', ')||'API '+String(st.api_version||'cũ')));
+    }
 
     setStatus(true,'● ĐÃ KẾT NỐI SERVER AI');
     REQUEST_BUSY=false;
@@ -882,7 +951,7 @@ async function loadServerConfig(){
     setBtn('THỬ KẾT NỐI LẠI', false);
     $('result').innerText = 'LỖI';
     $('result').style.color = '#ff5f87';
-    $('server_info').innerText = 'Lỗi kết nối: ' + e.message;
+    $('server_info').innerText = 'Lỗi kết nối: ' + e.message + '. Hãy copy server.js V7.14 và khởi động lại server.';
     updatePreview();
     return false;
   }
