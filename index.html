@@ -652,7 +652,7 @@ body{align-items:stretch!important}
     
   </div>
 <div class="bottom-actions">
-    <button class="bottom-change" onclick="changeTable()">🔄 ĐỔI BÀN</button>
+    <button type="button" class="bottom-change" onclick="changeTable()">🔄 ĐỔI BÀN</button>
     <div class="bottom-row">
       <button class="bottom-btn" onclick="backOne()">↩️ BACK</button>
       <button class="bottom-btn reset" onclick="resetTable()">⚠ RESET</button>
@@ -1005,7 +1005,7 @@ async function loadServerConfig(){
     const requiredTables=VALID_TABLES||[];
     const serverTables=Array.isArray(st.allowed_tables)?st.allowed_tables:[];
     const missing=requiredTables.filter(x=>!serverTables.includes(x));
-    if(st.api_version!=='7.16' || missing.length){
+    if(st.api_version!=='7.17' || missing.length){
       throw new Error('Server đang chạy bản cũ hoặc thiếu bàn: '+(missing.join(', ')||'API '+String(st.api_version||'cũ')));
     }
 
@@ -1023,7 +1023,7 @@ async function loadServerConfig(){
     setBtn('THỬ KẾT NỐI LẠI', false);
     $('result').innerText = 'LỖI';
     $('result').style.color = '#ff5f87';
-    $('server_info').innerText = 'Lỗi kết nối: ' + e.message + '. Hãy copy server.js V7.16 và khởi động lại server.';
+    $('server_info').innerText = 'Lỗi kết nối: ' + e.message + '. Hãy copy server.js V7.17 và khởi động lại server.';
     updatePreview();
     return false;
   }
@@ -1059,6 +1059,25 @@ function renderResult(data, total, raw){
   $('tx-bars').innerHTML =
     '<div class="bet '+(xiu>=tai?'hot':'')+'"><div class="bet-title">XỈU</div><div class="bet-sub">3–10</div><div class="bet-pct">'+xiu.toFixed(2)+'%</div>'+renderBars(xiu)+'</div>' +
     '<div class="bet '+(tai>xiu?'hot':'')+'"><div class="bet-title">TÀI</div><div class="bet-sub">11–18</div><div class="bet-pct">'+tai.toFixed(2)+'%</div>'+renderBars(tai)+'</div>';
+
+  const totalStats = data.phan_tram_tong_4_17 || data.phan_tram_tong || data.total_pct || {};
+  let max = 0;
+  for(let i=4;i<=17;i++) max = Math.max(max, percent(totalStats[i] || totalStats[String(i)] || 0));
+  let th = '';
+  for(let i=4;i<=17;i++){
+    const v = percent(totalStats[i] || totalStats[String(i)] || 0);
+    th += '<div class="total-cell '+(v===max && v>0?'hot':'')+'"><div class="total-n">'+i+'</div><div class="total-p">'+v.toFixed(1)+'%</div></div>';
+  }
+  if($('total-bars'))$('total-bars').innerHTML = th;
+
+  const face = data.phan_tram_mat_xuc_xac || data.face_pct || {};
+  const dbl = data.phan_tram_doi || data.double_pct || {};
+  const tri = data.phan_tram_bo_ba || data.triple_pct || {};
+  let dh = '';
+  for(let i=1;i<=6;i++) dh += '<div class="dice-cell"><div class="dice-face">'+i+'</div><div>Mặt '+percent(face[i]||face[String(i)]||0).toFixed(1)+'%</div></div>';
+  for(let i=1;i<=6;i++) dh += '<div class="dice-cell"><div class="dice-face">'+i+i+'</div><div>Đôi '+percent(dbl[i]||dbl[String(i)]||0).toFixed(1)+'%</div></div>';
+  for(let i=1;i<=6;i++) dh += '<div class="dice-cell"><div class="dice-face">'+i+i+i+'</div><div>Bộ '+percent(tri[i]||tri[String(i)]||0).toFixed(1)+'%</div></div>';
+  if($('dice-bars'))$('dice-bars').innerHTML = dh;
 
   const lines = [];
   if(data.table_id) lines.push('Bàn: '+data.table_id);
@@ -1348,16 +1367,53 @@ async function backOne(){
 }
 
 async function changeTable(){
+  if(HEARTBEAT_TIMER){
+    clearInterval(HEARTBEAT_TIMER);
+    HEARTBEAT_TIMER=null;
+  }
+  if(SYNC_TIMER){
+    clearInterval(SYNC_TIMER);
+    SYNC_TIMER=null;
+  }
+
   TABLE_VALID=false;
   TABLE_ID='';
+  CURRENT_ROUND_TOKEN=1;
+  LAST_SOFT_TOKEN=null;
+  LAST_POPUP_KEY='';
+  REQUEST_BUSY=false;
   localStorage.removeItem('TAIXIU_TABLE_ID');
+
+  closePopup();
+
   $('table_input').value='';
   $('current_table_badge').innerText='BÀN: CHƯA CHỌN';
   $('room_name_chip').innerText='BÀN: CHƯA CHỌN';
   $('online_badge').innerText='👥 0 online';
-  clearInterval(HEARTBEAT_TIMER);
-  clearInterval(SYNC_TIMER);
-  
+  if($('room_live_chip'))$('room_live_chip').innerText='● ĐANG ĐỒNG BỘ';
+  $('table_status').innerText='CHƯA CHỌN BÀN';
+  $('table_status').style.color='#ffd8a6';
+  $('result').innerText='CHỜ DỮ LIỆU';
+  $('result').style.color='#ffe15c';
+  $('percent').innerText='Tài: 0% | Xỉu: 0%';
+  $('accuracy').innerText='Độ đúng bàn này: 0.00%';
+  $('server_info').innerText='Hãy chọn bàn mới để tiếp tục.';
+  if($('hero_tai_pct'))$('hero_tai_pct').innerText='0%';
+  if($('hero_xiu_pct'))$('hero_xiu_pct').innerText='0%';
+  if($('hero_center_orb'))$('hero_center_orb').innerText='AI';
+
+  document.querySelectorAll('.table-pick').forEach(btn=>btn.classList.remove('selected'));
+
+  document.body.classList.remove('room-mode');
+
+  try{await refreshLobbyOnline();}catch(e){}
+
+  requestAnimationFrame(()=>{
+    const lobby=document.querySelector('#lobby_view .lobby-content');
+    if(lobby)lobby.scrollTop=0;
+  });
+
+  return true;
 }
 
 async function resetTable(){
@@ -1379,6 +1435,8 @@ async function resetTable(){
     $('percent').innerText='Tài: 0% | Xỉu: 0%';
     $('accuracy').innerText='Độ đúng bàn này: 0.00%';
     $('server_info').innerText=data.message||'Đã reset bàn.';
+    if($('total-bars'))$('total-bars').innerHTML='';
+    if($('dice-bars'))$('dice-bars').innerHTML='';
   }catch(e){$('server_info').innerText='Lỗi RESET: '+e.message;}
 }
 
