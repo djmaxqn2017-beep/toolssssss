@@ -519,27 +519,27 @@ body{align-items:stretch!important}
     <div class="mode-section">
       <div class="mode-heading"><span>🎲 TÀI XỈU MD5</span><small>5 bàn • mỗi bàn một AI riêng</small></div>
       <div class="subtable-grid">
-        <button class="subtable-card" onclick="enterLobbyTable('MD5_THAN_TAI')">
+        <button type="button" class="subtable-card" onclick="enterLobbyTable('MD5_THAN_TAI')">
       <span class="subtable-icon">💰</span>
       <span class="subtable-main"><b>THẦN TÀI</b><small>AI & dữ liệu riêng</small></span>
       <span id="online_md5_than_tai" class="subtable-online">👥 0</span>
     </button>
-<button class="subtable-card" onclick="enterLobbyTable('MD5_CHU_TUOC')">
+<button type="button" class="subtable-card" onclick="enterLobbyTable('MD5_CHU_TUOC')">
       <span class="subtable-icon">🔥</span>
       <span class="subtable-main"><b>CHU TƯỚC</b><small>AI & dữ liệu riêng</small></span>
       <span id="online_md5_chu_tuoc" class="subtable-online">👥 0</span>
     </button>
-<button class="subtable-card" onclick="enterLobbyTable('MD5_THANH_LONG')">
+<button type="button" class="subtable-card" onclick="enterLobbyTable('MD5_THANH_LONG')">
       <span class="subtable-icon">🐉</span>
       <span class="subtable-main"><b>THANH LONG</b><small>AI & dữ liệu riêng</small></span>
       <span id="online_md5_thanh_long" class="subtable-online">👥 0</span>
     </button>
-<button class="subtable-card" onclick="enterLobbyTable('MD5_HUYEN_VU')">
+<button type="button" class="subtable-card" onclick="enterLobbyTable('MD5_HUYEN_VU')">
       <span class="subtable-icon">🐢</span>
       <span class="subtable-main"><b>HUYỀN VŨ</b><small>AI & dữ liệu riêng</small></span>
       <span id="online_md5_huyen_vu" class="subtable-online">👥 0</span>
     </button>
-<button class="subtable-card" onclick="enterLobbyTable('MD5_KY_LAN')">
+<button type="button" class="subtable-card" onclick="enterLobbyTable('MD5_KY_LAN')">
       <span class="subtable-icon">🦄</span>
       <span class="subtable-main"><b>KỲ LÂN</b><small>AI & dữ liệu riêng</small></span>
       <span id="online_md5_ky_lan" class="subtable-online">👥 0</span>
@@ -550,32 +550,32 @@ body{align-items:stretch!important}
     <div class="mode-section">
       <div class="mode-heading"><span>⚄ TÀI XỈU</span><small>6 bàn • mỗi bàn một AI riêng</small></div>
       <div class="subtable-grid">
-        <button class="subtable-card" onclick="enterLobbyTable('TX_STARSCREAM')">
+        <button type="button" class="subtable-card" onclick="enterLobbyTable('TX_STARSCREAM')">
       <span class="subtable-icon">🤖</span>
       <span class="subtable-main"><b>STARSCREAM</b><small>AI & dữ liệu riêng</small></span>
       <span id="online_tx_starscream" class="subtable-online">👥 0</span>
     </button>
-<button class="subtable-card" onclick="enterLobbyTable('TX_BUMBLEBEE')">
+<button type="button" class="subtable-card" onclick="enterLobbyTable('TX_BUMBLEBEE')">
       <span class="subtable-icon">🤖</span>
       <span class="subtable-main"><b>BUMBLEBEE</b><small>AI & dữ liệu riêng</small></span>
       <span id="online_tx_bumblebee" class="subtable-online">👥 0</span>
     </button>
-<button class="subtable-card" onclick="enterLobbyTable('TX_GALVATRON')">
+<button type="button" class="subtable-card" onclick="enterLobbyTable('TX_GALVATRON')">
       <span class="subtable-icon">🤖</span>
       <span class="subtable-main"><b>GALVATRON</b><small>AI & dữ liệu riêng</small></span>
       <span id="online_tx_galvatron" class="subtable-online">👥 0</span>
     </button>
-<button class="subtable-card" onclick="enterLobbyTable('TX_THUNDERCRACKER')">
+<button type="button" class="subtable-card" onclick="enterLobbyTable('TX_THUNDERCRACKER')">
       <span class="subtable-icon">🤖</span>
       <span class="subtable-main"><b>THUNDERCRACKER</b><small>AI & dữ liệu riêng</small></span>
       <span id="online_tx_thundercracker" class="subtable-online">👥 0</span>
     </button>
-<button class="subtable-card" onclick="enterLobbyTable('TX_OPTIMUS_PRIME')">
+<button type="button" class="subtable-card" onclick="enterLobbyTable('TX_OPTIMUS_PRIME')">
       <span class="subtable-icon">🤖</span>
       <span class="subtable-main"><b>OPTIMUS PRIME</b><small>AI & dữ liệu riêng</small></span>
       <span id="online_tx_optimus_prime" class="subtable-online">👥 0</span>
     </button>
-<button class="subtable-card" onclick="enterLobbyTable('TX_RODIMUS_PRIME')">
+<button type="button" class="subtable-card" onclick="enterLobbyTable('TX_RODIMUS_PRIME')">
       <span class="subtable-icon">🤖</span>
       <span class="subtable-main"><b>RODIMUS PRIME</b><small>AI & dữ liệu riêng</small></span>
       <span id="online_tx_rodimus_prime" class="subtable-online">👥 0</span>
@@ -613,17 +613,17 @@ body{align-items:stretch!important}
     <div class="card">
       
 <div class="label" style="display:none">CHỌN BÀN PHÂN TÍCH</div>
-      <div id="table_buttons" style="display:none"><button class="small-btn table-pick" data-table="MD5_THAN_TAI" onclick="selectTable('MD5_THAN_TAI')">THẦN TÀI</button>
-<button class="small-btn table-pick" data-table="MD5_CHU_TUOC" onclick="selectTable('MD5_CHU_TUOC')">CHU TƯỚC</button>
-<button class="small-btn table-pick" data-table="MD5_THANH_LONG" onclick="selectTable('MD5_THANH_LONG')">THANH LONG</button>
-<button class="small-btn table-pick" data-table="MD5_HUYEN_VU" onclick="selectTable('MD5_HUYEN_VU')">HUYỀN VŨ</button>
-<button class="small-btn table-pick" data-table="MD5_KY_LAN" onclick="selectTable('MD5_KY_LAN')">KỲ LÂN</button>
-<button class="small-btn table-pick" data-table="TX_STARSCREAM" onclick="selectTable('TX_STARSCREAM')">STARSCREAM</button>
-<button class="small-btn table-pick" data-table="TX_BUMBLEBEE" onclick="selectTable('TX_BUMBLEBEE')">BUMBLEBEE</button>
-<button class="small-btn table-pick" data-table="TX_GALVATRON" onclick="selectTable('TX_GALVATRON')">GALVATRON</button>
-<button class="small-btn table-pick" data-table="TX_THUNDERCRACKER" onclick="selectTable('TX_THUNDERCRACKER')">THUNDERCRACKER</button>
-<button class="small-btn table-pick" data-table="TX_OPTIMUS_PRIME" onclick="selectTable('TX_OPTIMUS_PRIME')">OPTIMUS PRIME</button>
-<button class="small-btn table-pick" data-table="TX_RODIMUS_PRIME" onclick="selectTable('TX_RODIMUS_PRIME')">RODIMUS PRIME</button></div>
+      <div id="table_buttons" style="display:none"><button type="button" class="small-btn table-pick" data-table="MD5_THAN_TAI" onclick="selectTable('MD5_THAN_TAI')">THẦN TÀI</button>
+<button type="button" class="small-btn table-pick" data-table="MD5_CHU_TUOC" onclick="selectTable('MD5_CHU_TUOC')">CHU TƯỚC</button>
+<button type="button" class="small-btn table-pick" data-table="MD5_THANH_LONG" onclick="selectTable('MD5_THANH_LONG')">THANH LONG</button>
+<button type="button" class="small-btn table-pick" data-table="MD5_HUYEN_VU" onclick="selectTable('MD5_HUYEN_VU')">HUYỀN VŨ</button>
+<button type="button" class="small-btn table-pick" data-table="MD5_KY_LAN" onclick="selectTable('MD5_KY_LAN')">KỲ LÂN</button>
+<button type="button" class="small-btn table-pick" data-table="TX_STARSCREAM" onclick="selectTable('TX_STARSCREAM')">STARSCREAM</button>
+<button type="button" class="small-btn table-pick" data-table="TX_BUMBLEBEE" onclick="selectTable('TX_BUMBLEBEE')">BUMBLEBEE</button>
+<button type="button" class="small-btn table-pick" data-table="TX_GALVATRON" onclick="selectTable('TX_GALVATRON')">GALVATRON</button>
+<button type="button" class="small-btn table-pick" data-table="TX_THUNDERCRACKER" onclick="selectTable('TX_THUNDERCRACKER')">THUNDERCRACKER</button>
+<button type="button" class="small-btn table-pick" data-table="TX_OPTIMUS_PRIME" onclick="selectTable('TX_OPTIMUS_PRIME')">OPTIMUS PRIME</button>
+<button type="button" class="small-btn table-pick" data-table="TX_RODIMUS_PRIME" onclick="selectTable('TX_RODIMUS_PRIME')">RODIMUS PRIME</button></div>
       <input id="table_input" type="hidden" value="">
       <div id="table_status" style="font-size:12px;color:#ff6d91;margin:0 0 5px 2px">Chưa chọn bàn</div>
       <div id="consensus_status" style="font-size:12px;color:#cbbcff;margin:0 0 12px 2px">Chưa có kết quả chờ xác nhận</div>
@@ -733,91 +733,149 @@ function getTableId(){
   return v;
 }
 async function enterLobbyTable(tableId){
-  const ok=await selectTable(tableId);
+  const v=String(tableId||'').trim().toUpperCase();
+
+  // Mở giao diện bàn ngay, không tự đá khách về sảnh.
+  document.body.classList.add('room-mode');
+  $('room_name_chip').innerText=tableMode(v)+' • '+tableName(v);
+  $('current_table_badge').innerText=tableMode(v)+' • '+tableName(v);
+  $('result').innerText='ĐANG VÀO BÀN';
+  $('server_info').innerText='Đang đồng bộ bàn '+tableName(v)+'...';
+
+  const ok=await selectTable(v);
   if(ok){
-    document.body.classList.add('room-mode');
     requestAnimationFrame(()=>{
       const content=document.querySelector('#room_view .content');
       if(content)content.scrollTop=0;
     });
-  }else{
-    document.body.classList.remove('room-mode');
+    return true;
   }
+
+  // Không quay về sảnh. Giữ khách trong bàn và cho thử lại.
+  $('result').innerText='ĐANG KẾT NỐI';
+  $('server_info').innerText='Đang thử kết nối lại bàn '+tableName(v)+'...';
+  setTimeout(()=>selectTable(v),1000);
+  return false;
 }
 
 async function selectTable(tableId){
-  const v=String(tableId||'').trim().toUpperCase();
-  if(!VALID_TABLES.includes(v))return false;
+  const requested=String(tableId||'').trim().toUpperCase();
+  if(!VALID_TABLES.includes(requested))return false;
 
   if(!SERVER_URL){
     const connected=await loadServerConfig();
     if(!connected)return false;
   }
 
-  $('lobby_server_status').innerText='ĐANG MỞ '+tableName(v)+'...';
-  try{
-    let data;
-    let lastError;
-    for(let attempt=0;attempt<2;attempt++){
-      try{
-        data=await jsonFetch(api('/api/table/enter'),{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({device_id:deviceId,table_id:v,force_repair:attempt===1})
-        });
-        break;
-      }catch(e){
-        lastError=e;
-        await new Promise(r=>setTimeout(r,450));
-      }
-    }
-    if(!data)throw lastError||new Error('Không nhận được phản hồi vào bàn.');
-    if(!data.success||!data.entered)throw new Error(data.error||'Server chưa cho vào bàn.');
+  $('lobby_server_status').innerText='ĐANG MỞ '+tableName(requested)+'...';
 
-    TABLE_ID=data.table_id||v;
-    TABLE_VALID=true;
-    localStorage.setItem('TAIXIU_TABLE_ID',TABLE_ID);
-    $('table_input').value=TABLE_ID;
+  const aliases=requested==='MD5_THAN_TAI'
+    ? ['MD5_THAN_TAI','THAN_TAI','THANTAI','MD5_THANTAI']
+    : [requested];
 
-    document.querySelectorAll('.table-pick').forEach(btn=>{
-      btn.classList.toggle('selected',btn.dataset.table===TABLE_ID);
+  const attempts=[];
+
+  // Endpoint riêng cho THẦN TÀI trên server mới.
+  if(requested==='MD5_THAN_TAI'){
+    attempts.push({
+      url:'/api/table/enter-than-tai',
+      body:{device_id:deviceId,table_id:'MD5_THAN_TAI'}
     });
+  }
 
-    $('table_status').innerText='✓ '+tableMode(TABLE_ID)+' • '+tableName(TABLE_ID);
-    $('current_table_badge').innerText=tableMode(TABLE_ID)+' • '+tableName(TABLE_ID);
-    $('room_name_chip').innerText=tableMode(TABLE_ID)+' • '+tableName(TABLE_ID);
-    $('table_status').style.color='#00fff0';
-    $('lobby_server_status').innerText='● ĐÃ KẾT NỐI SERVER AI';
+  // Server mới.
+  for(const id of aliases){
+    attempts.push({
+      url:'/api/table/enter',
+      body:{device_id:deviceId,table_id:id}
+    });
+  }
 
-    const state=data.state||{};
-    renderOnlineCount(state);
-    renderConsensusState(state);
-    if(state.current_prediction){
-      renderResult(
-        state.current_prediction,
-        state.current_prediction.tong_da_tinh,
-        state.current_prediction.dice_raw
-      );
-    }else{
-      $('result').innerText='ĐÃ VÀO BÀN';
-      $('result').style.color='#ffe15c';
-      $('server_info').innerText='Đang chờ kết quả mới của bàn '+tableName(TABLE_ID)+'.';
+  // Tương thích các server cũ.
+  for(const id of aliases){
+    attempts.push({
+      url:'/api/table/join',
+      body:{device_id:deviceId,table_id:id}
+    });
+    attempts.push({
+      url:'/api/table/change',
+      body:{device_id:deviceId,new_table_id:id,table_id:id}
+    });
+  }
+
+  let response=null;
+  let lastError=null;
+
+  for(const attempt of attempts){
+    try{
+      const data=await jsonFetch(api(attempt.url),{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(attempt.body)
+      });
+
+      if(data?.success===false)throw new Error(data.error||'Server từ chối.');
+
+      // Chuẩn hóa phản hồi từ enter/join/change.
+      const state=data?.state||data;
+      const returnedId=String(
+        data?.table_id||
+        state?.table_id||
+        requested
+      ).toUpperCase();
+
+      if(returnedId==='MD5_THAN_TAI' || requested!=='MD5_THAN_TAI'){
+        response={data,state,table_id:requested};
+        break;
+      }
+    }catch(e){
+      lastError=e;
     }
+  }
 
-    startRealtime();
-    return true;
-  }catch(e){
+  if(!response){
+    TABLE_ID=requested;
     TABLE_VALID=false;
-    $('lobby_server_status').innerText='KHÔNG VÀO ĐƯỢC '+tableName(v);
-    $('server_info').innerText='Lỗi vào bàn '+tableName(v)+': '+e.message;
-    showPopup(
-      '⚠ KHÔNG VÀO ĐƯỢC BÀN',
-      tableName(v)+' đang được server kiểm tra. Hãy thử lại một lần.',
-      [{text:'THỬ LẠI',onClick:()=>enterLobbyTable(v)}],
-      'enter-error-'+v+'-'+Date.now()
-    );
+    $('lobby_server_status').innerText='ĐANG THỬ LẠI '+tableName(requested);
+    $('table_status').innerText='Đang kết nối lại '+tableName(requested)+'...';
+    $('table_status').style.color='#ffcc00';
+    $('server_info').innerText='Chưa nhận được xác nhận từ server: '+(lastError?.message||'không rõ lỗi');
     return false;
   }
+
+  TABLE_ID=requested;
+  TABLE_VALID=true;
+  localStorage.setItem('TAIXIU_TABLE_ID',TABLE_ID);
+  $('table_input').value=TABLE_ID;
+
+  document.querySelectorAll('.table-pick').forEach(btn=>{
+    btn.classList.toggle('selected',btn.dataset.table===TABLE_ID);
+  });
+
+  $('table_status').innerText='✓ '+tableMode(TABLE_ID)+' • '+tableName(TABLE_ID);
+  $('current_table_badge').innerText=tableMode(TABLE_ID)+' • '+tableName(TABLE_ID);
+  $('room_name_chip').innerText=tableMode(TABLE_ID)+' • '+tableName(TABLE_ID);
+  $('table_status').style.color='#00fff0';
+  $('lobby_server_status').innerText='● ĐÃ KẾT NỐI SERVER AI';
+
+  const state=response.state||{};
+  renderOnlineCount(state);
+  renderConsensusState(state);
+
+  if(state.current_prediction){
+    renderResult(
+      state.current_prediction,
+      state.current_prediction.tong_da_tinh,
+      state.current_prediction.dice_raw
+    );
+  }else{
+    $('result').innerText='ĐÃ VÀO BÀN';
+    $('result').style.color='#ffe15c';
+    $('server_info').innerText='Đang chờ kết quả mới của bàn '+tableName(TABLE_ID)+'.';
+  }
+
+  startRealtime();
+  return true;
 }
 
 async function validateTable(){
@@ -947,7 +1005,7 @@ async function loadServerConfig(){
     const requiredTables=VALID_TABLES||[];
     const serverTables=Array.isArray(st.allowed_tables)?st.allowed_tables:[];
     const missing=requiredTables.filter(x=>!serverTables.includes(x));
-    if(st.api_version!=='7.15' || missing.length){
+    if(st.api_version!=='7.16' || missing.length){
       throw new Error('Server đang chạy bản cũ hoặc thiếu bàn: '+(missing.join(', ')||'API '+String(st.api_version||'cũ')));
     }
 
@@ -965,7 +1023,7 @@ async function loadServerConfig(){
     setBtn('THỬ KẾT NỐI LẠI', false);
     $('result').innerText = 'LỖI';
     $('result').style.color = '#ff5f87';
-    $('server_info').innerText = 'Lỗi kết nối: ' + e.message + '. Hãy copy server.js V7.15 và khởi động lại server.';
+    $('server_info').innerText = 'Lỗi kết nối: ' + e.message + '. Hãy copy server.js V7.16 và khởi động lại server.';
     updatePreview();
     return false;
   }
@@ -1318,7 +1376,7 @@ async function changeTable(){
   $('online_badge').innerText='👥 0 online';
   clearInterval(HEARTBEAT_TIMER);
   clearInterval(SYNC_TIMER);
-  document.body.classList.remove('room-mode');
+  
 }
 
 async function resetTable(){
