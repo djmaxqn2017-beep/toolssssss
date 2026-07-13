@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta http-equiv="Content-Security-Policy" content="default-src * data: gap: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data: content: blob:; media-src *; connect-src *;">
-<title>AI Tài Xỉu Cloud V2</title>
+<title>AI Tài Xỉu MD5 PRO</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;font-family:'Segoe UI',Arial,sans-serif;color:#fff;background:#030006}
@@ -119,24 +119,196 @@ button{border:none;color:#fff;font-weight:1000;border-radius:16px;cursor:pointer
 }
 </style>
 
+
+<style id="txmd5-theme">
+html,body{background:#080503!important}
+.app{max-width:520px!important;background:radial-gradient(circle at 50% 8%,rgba(255,180,0,.20),transparent 24%),radial-gradient(circle at 18% 82%,rgba(170,0,0,.24),transparent 34%),linear-gradient(180deg,#1b0905,#090403 58%,#030202)!important;border-color:rgba(255,186,45,.45)!important}
+.top{background:linear-gradient(180deg,rgba(94,14,5,.98),rgba(34,6,3,.95))!important;border-bottom:2px solid rgba(255,186,45,.55)!important}
+.title{background:linear-gradient(180deg,#fff7c8,#ffd65b,#ff9700)!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;text-shadow:0 0 18px rgba(255,150,0,.45)!important}
+.status,.status.ok,#current_table_badge,#online_badge{background:rgba(40,8,4,.94)!important;border-color:#ffbf31!important;color:#ffe99b!important;box-shadow:0 0 16px rgba(255,180,0,.28)!important}
+.card,.brain,.section{background:linear-gradient(180deg,rgba(67,10,6,.92),rgba(17,5,3,.94))!important;border:1px solid rgba(255,185,55,.40)!important}
+.table-card{height:118px!important;display:flex!important;flex-direction:column!important;justify-content:center!important;gap:5px!important;border:1px solid rgba(255,190,58,.55)!important;background:radial-gradient(circle at 50% 20%,rgba(255,210,80,.18),transparent 38%),linear-gradient(180deg,#711809,#2d0704)!important}
+.table-card.selected{border-color:#fff0a5!important;box-shadow:0 0 22px rgba(255,184,0,.58),0 0 18px rgba(255,80,0,.22) inset!important;background:linear-gradient(180deg,#a72d0d,#4b0d06)!important}
+.table-icon{font-size:30px}.table-name{font-size:20px;font-weight:1000;color:#ffe67a}.table-desc{font-size:11px;color:#ffd8b0;font-weight:700}
+input{border-color:rgba(255,191,54,.55)!important;background:#140403!important}.sum-box{border-color:#ffbf31!important;background:rgba(69,18,2,.65)!important}.sum-box .big,.result,.bet-pct{color:#ffe15c!important}.percent{color:#ffd58a!important}
+.bet,.total-cell,.dice-cell{background:#160503!important;border-color:rgba(255,185,55,.30)!important}
+.bottom-actions{background:linear-gradient(180deg,rgba(50,8,4,.92),rgba(10,3,2,.99))!important;border-top-color:rgba(255,185,55,.45)!important}
+.bottom-change,.bottom-btn{border-color:rgba(255,185,55,.45)!important;background:linear-gradient(180deg,#5c1309,#250604)!important}
+.bottom-btn.reset{background:linear-gradient(180deg,#780d14,#33040a)!important}.bottom-btn.send{background:linear-gradient(180deg,#ffd95c,#ff9a00,#b84400)!important;color:#2c0900!important}
+</style>
+
+
+<style id="lobby-v71">
+#lobby_view{
+  position:absolute; inset:0; z-index:60;
+  display:flex; flex-direction:column;
+  background:
+    radial-gradient(circle at 50% 18%,rgba(255,180,0,.18),transparent 25%),
+    linear-gradient(180deg,#150805,#070302 70%,#020101);
+}
+.lobby-head{
+  padding:24px 16px 16px;
+  text-align:center;
+  border-bottom:1px solid rgba(255,195,70,.35);
+  background:linear-gradient(180deg,rgba(103,17,6,.94),rgba(40,7,3,.92));
+}
+.lobby-title{
+  font-size:28px;font-weight:1000;letter-spacing:2px;
+  background:linear-gradient(180deg,#fff3bf,#ffd65c,#ff9800);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  text-shadow:0 0 18px rgba(255,160,0,.35);
+}
+.lobby-sub{font-size:12px;color:#ffd8a6;margin-top:5px}
+.lobby-status{
+  margin:12px auto 0;width:max-content;padding:7px 16px;border-radius:20px;
+  border:1px solid #ffbf31;color:#ffeaa0;background:rgba(34,8,4,.88);font-size:12px;font-weight:900;
+}
+.lobby-content{flex:1;overflow:auto;padding:18px 14px 28px}
+.lobby-label{font-size:15px;font-weight:900;color:#fff0b7;margin:0 0 12px 2px}
+.game-card{
+  width:100%;min-height:165px;margin-bottom:16px;padding:0;border-radius:24px;
+  overflow:hidden;position:relative;border:1px solid rgba(255,190,58,.62);
+  background:linear-gradient(135deg,#7b1708,#2a0704);
+  box-shadow:0 16px 30px rgba(0,0,0,.52),0 0 20px rgba(255,142,0,.13) inset;
+}
+.game-card:before{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(circle at 72% 26%,rgba(255,222,103,.24),transparent 26%),
+    linear-gradient(120deg,transparent 35%,rgba(255,255,255,.06),transparent 62%);
+}
+.game-card-inner{
+  position:relative;z-index:1;display:grid;grid-template-columns:110px 1fr;gap:14px;align-items:center;
+  min-height:165px;padding:16px;
+}
+.game-art{
+  width:96px;height:128px;border-radius:18px;border:1px solid rgba(255,223,122,.65);
+  display:flex;align-items:center;justify-content:center;font-size:54px;
+  background:radial-gradient(circle,#ffcf5c 0%,#c53b11 45%,#3a0905 100%);
+  box-shadow:0 0 22px rgba(255,172,0,.28);
+}
+.game-meta{text-align:left}
+.game-name{font-size:29px;font-weight:1000;color:#fff2b0;line-height:1}
+.game-desc{font-size:12px;color:#ffd4af;margin-top:8px;line-height:1.35}
+.game-stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.game-pill{
+  padding:5px 9px;border-radius:12px;background:rgba(30,5,2,.72);
+  border:1px solid rgba(255,190,58,.35);font-size:11px;color:#ffe19a;font-weight:900;
+}
+.enter-btn{
+  width:100%;height:42px;margin-top:13px;border-radius:14px;
+  background:linear-gradient(180deg,#ffd95c,#ff9c00,#bd4500);
+  color:#300900;font-size:15px;font-weight:1000;border:1px solid #fff0a0;
+  box-shadow:0 0 16px rgba(255,160,0,.30);
+}
+.room-header{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;
+}
+.room-chip{
+  padding:8px 12px;border-radius:14px;border:1px solid rgba(255,190,58,.48);
+  background:linear-gradient(180deg,#6c1609,#2e0704);color:#ffe68a;font-weight:1000;font-size:14px;
+}
+.room-live{
+  padding:7px 10px;border-radius:14px;border:1px solid #63ff9c;color:#63ff9c;background:rgba(0,45,20,.55);
+  font-size:11px;font-weight:900;
+}
+.room-hero{
+  display:grid;grid-template-columns:1fr 94px 1fr;gap:8px;align-items:center;
+  margin-bottom:14px;padding:14px;border-radius:22px;
+  background:linear-gradient(180deg,#7a160a,#320804);
+  border:1px solid rgba(255,190,58,.52);
+  box-shadow:0 10px 24px rgba(0,0,0,.42);
+}
+.side-panel{text-align:center}
+.side-title{font-size:30px;font-weight:1000;color:#fff3c0;text-shadow:0 0 12px rgba(255,255,255,.20)}
+.side-pct{font-size:21px;font-weight:1000;color:#ffe15c;margin-top:6px}
+.center-orb{
+  width:88px;height:88px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  border:5px solid #ffd85a;background:radial-gradient(circle,#fff8d9,#ffc83c 55%,#9d2f00 100%);
+  color:#761800;font-size:28px;font-weight:1000;box-shadow:0 0 22px rgba(255,190,0,.45);
+}
+#room_view{display:none}
+body.room-mode #lobby_view{display:none}
+body.room-mode #room_view{display:flex}
+body:not(.room-mode) #room_view{display:none}
+</style>
+
 </head>
 <body>
-<div class="app">
+
+<div id="lobby_view">
+  <div class="lobby-head">
+    <div class="lobby-title">AI TÀI XỈU PRO</div>
+    <div class="lobby-sub">2 bàn • 2 dữ liệu • 2 AI phân tích riêng</div>
+    <div id="lobby_server_status" class="lobby-status">ĐANG KẾT NỐI SERVER...</div>
+  </div>
+  <div class="lobby-content">
+    <div class="lobby-label">CHỌN BÀN PHÂN TÍCH</div>
+
+    <div class="game-card">
+      <div class="game-card-inner">
+        <div class="game-art">🎲</div>
+        <div class="game-meta">
+          <div class="game-name">TXMD5</div>
+          <div class="game-desc">AI riêng cho bàn Tài Xỉu MD5. Lịch sử, BigData, độ đúng và khóa cầu hoàn toàn độc lập.</div>
+          <div class="game-stats">
+            <span class="game-pill">🧠 Data riêng</span>
+            <span class="game-pill">🔒 Cầu riêng</span>
+            <span class="game-pill" id="lobby_txmd5_online">👥 0 online</span>
+          </div>
+          <button class="enter-btn" onclick="enterLobbyTable('TXMD5')">VÀO BÀN TXMD5</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="game-card">
+      <div class="game-card-inner">
+        <div class="game-art">⚄</div>
+        <div class="game-meta">
+          <div class="game-name">TX</div>
+          <div class="game-desc">AI riêng cho bàn Tài Xỉu thường. Không trộn dữ liệu với TXMD5.</div>
+          <div class="game-stats">
+            <span class="game-pill">📊 Model riêng</span>
+            <span class="game-pill">↩ BACK riêng</span>
+            <span class="game-pill" id="lobby_tx_online">👥 0 online</span>
+          </div>
+          <button class="enter-btn" onclick="enterLobbyTable('TX')">VÀO BÀN TX</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="room_view" class="app">
   <div class="top">
-    <div class="title">AI TÀI XỈU CLOUD</div>
-    <div class="sub">Nhập 3 mặt xúc xắc, ví dụ 345 → tự cộng = 12</div>
+    <div class="title">AI TÀI XỈU MD5 PRO</div>
+    <div class="sub">TXMD5 & TX • Phân tích dữ liệu riêng từng bàn</div>
     <div id="status" class="status">ĐANG KẾT NỐI SERVER...</div>
     <div id="current_table_badge" style="margin:8px auto 0;width:max-content;max-width:94%;padding:6px 14px;border-radius:18px;border:1px solid rgba(0,255,240,.55);color:#00fff0;background:rgba(7,0,20,.72);font-size:13px;font-weight:1000;box-shadow:0 0 14px rgba(0,255,240,.18)">BÀN: CHƯA CHỌN</div>
     <div id="online_badge" style="position:absolute;right:12px;top:12px;padding:5px 9px;border-radius:12px;border:1px solid #00fff0;color:#00fff0;background:rgba(0,0,0,.35);font-size:11px;font-weight:900">👥 0 online</div>
   </div>
   <div class="content">
+    <div class="room-header">
+      <div id="room_name_chip" class="room-chip">BÀN: CHƯA CHỌN</div>
+      <div id="room_live_chip" class="room-live">● ĐANG ĐỒNG BỘ</div>
+    </div>
+    <div class="room-hero">
+      <div class="side-panel">
+        <div class="side-title">TÀI</div>
+        <div id="hero_tai_pct" class="side-pct">0%</div>
+      </div>
+      <div id="hero_center_orb" class="center-orb">AI</div>
+      <div class="side-panel">
+        <div class="side-title">XỈU</div>
+        <div id="hero_xiu_pct" class="side-pct">0%</div>
+      </div>
+    </div>
     <div class="card">
       
-<div class="label">Chọn bàn đang chơi:</div>
-      <div id="table_buttons" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">
-        <button class="small-btn table-pick" data-table="C132" onclick="selectTable('C132')">C132</button>
-        <button class="small-btn table-pick" data-table="132" onclick="selectTable('132')">132</button>
-        <button class="small-btn table-pick" data-table="131" onclick="selectTable('131')">131</button>
+<div class="label" style="display:none">CHỌN BÀN PHÂN TÍCH</div>
+      <div id="table_buttons" style="display:none" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:8px">
+        <button class="small-btn table-pick table-card" data-table="TXMD5" onclick="selectTable('TXMD5')"><span class="table-icon">🎲</span><span class="table-name">TXMD5</span><span class="table-desc">AI dữ liệu MD5 riêng</span></button>
+        <button class="small-btn table-pick table-card" data-table="TX" onclick="selectTable('TX')"><span class="table-icon">⚄</span><span class="table-name">TX</span><span class="table-desc">AI Tài Xỉu riêng</span></button>
       </div>
       <input id="table_input" type="hidden" value="">
       <div id="table_status" style="font-size:12px;color:#ff6d91;margin:0 0 5px 2px">Chưa chọn bàn</div>
@@ -149,21 +321,21 @@ button{border:none;color:#fff;font-weight:1000;border-radius:16px;cursor:pointer
       </div>
 </div>
     <div class="brain">
-      <div class="muted">KẾT QUẢ TỪ SERVER AI</div>
+      <div class="muted">AI PHÂN TÍCH RIÊNG THEO BÀN</div>
       <div id="result" class="result">CHỜ DỮ LIỆU...</div>
       <div id="percent" class="percent">Tài: 0% | Xỉu: 0%</div>
       <div id="accuracy" class="accuracy">Độ đúng máy này: 0.00%</div>
       <div id="server_info" class="info">Trạng thái: JavaScript đang khởi động...</div>
     </div>
     <div class="section">
-      <h3>Tài / Xỉu</h3>
+      <h3>TỶ LỆ TÀI / XỈU</h3>
       <div class="bet-grid" id="tx-bars">
         <div class="bet"><div class="bet-title">XỈU</div><div class="bet-sub">3–10</div><div class="bet-pct">0%</div></div>
         <div class="bet"><div class="bet-title">TÀI</div><div class="bet-sub">11–18</div><div class="bet-pct">0%</div></div>
       </div>
     </div>
-    <div class="section"><h3>Tổng điểm 4–17</h3><div class="total-grid" id="total-bars"></div></div>
-    <div class="section"><h3>Mặt xúc xắc / Đôi / Bộ ba</h3><div class="dice-grid" id="dice-bars"></div></div>
+    <div class="section"><h3>XÁC SUẤT TỔNG ĐIỂM</h3><div class="total-grid" id="total-bars"></div></div>
+    <div class="section"><h3>XÚC XẮC / ĐÔI / BỘ BA</h3><div class="dice-grid" id="dice-bars"></div></div>
   </div>
 <div class="bottom-actions">
     <button class="bottom-change" onclick="changeTable()">🔄 ĐỔI BÀN</button>
@@ -212,6 +384,10 @@ const $ = id => document.getElementById(id);
 function setStatus(ok, text){
   $('status').className = ok ? 'status ok' : 'status';
   $('status').innerText = text;
+  if($('lobby_server_status')){
+    $('lobby_server_status').innerText=text;
+    $('lobby_server_status').style.color=ok?'#7dff9c':'#ffe99b';
+  }
 }
 function setBtn(text, disabled){
   $('send_btn').innerText = text;
@@ -219,12 +395,18 @@ function setBtn(text, disabled){
 }
 function getTableId(){
   const v=String(TABLE_ID||$('table_input').value||'').trim().toUpperCase();
-  if(!v){alert('Vui lòng bấm chọn một bàn: C132, 132 hoặc 131.');return '';}
+  if(!v){alert('Vui lòng bấm chọn một bàn: TXMD5 hoặc TX.');return '';}
   return v;
 }
+async function enterLobbyTable(tableId){
+  document.body.classList.add('room-mode');
+  $('room_name_chip').innerText='BÀN: '+tableId;
+  await selectTable(tableId);
+}
+
 async function selectTable(tableId){
   const v=String(tableId||'').trim().toUpperCase();
-  if(!['C132','132','131'].includes(v))return;
+  if(!['TXMD5','TX'].includes(v))return;
 
   TABLE_ID=v;
   TABLE_VALID=false;
@@ -237,6 +419,7 @@ async function selectTable(tableId){
 
   $('table_status').innerText='Đang vào bàn '+v+'...';
   $('current_table_badge').innerText='BÀN: '+v;
+  if($('room_name_chip'))$('room_name_chip').innerText='BÀN: '+v;
   $('table_status').style.color='#ffcc00';
 
   if(!SERVER_URL){
@@ -583,6 +766,17 @@ async function syncTable(){
     renderTableState(data);
   }catch(e){}
 }
+async function refreshLobbyOnline(){
+  if(!SERVER_URL)return;
+  for(const id of ['TXMD5','TX']){
+    try{
+      const data=await jsonFetch(api('/api/table/state?table_id='+id+'&device_id='+encodeURIComponent(deviceId)+'&t='+Date.now()),{cache:'no-store'});
+      const target=id==='TXMD5'?'lobby_txmd5_online':'lobby_tx_online';
+      if($(target))$(target).innerText='👥 '+Number(data.online_count||0)+' online';
+    }catch(e){}
+  }
+}
+
 function startRealtime(){
   clearInterval(HEARTBEAT_TIMER);clearInterval(SYNC_TIMER);
   HEARTBEAT_TIMER=setInterval(heartbeat,900);
@@ -697,16 +891,12 @@ async function changeTable(){
   TABLE_ID='';
   localStorage.removeItem('TAIXIU_TABLE_ID');
   $('table_input').value='';
-  document.querySelectorAll('.table-pick').forEach(btn=>btn.classList.remove('selected'));
-  $('table_status').innerText='Hãy bấm chọn bàn C132, 132 hoặc 131';
   $('current_table_badge').innerText='BÀN: CHƯA CHỌN';
-  $('table_status').style.color='#ffcc00';
+  $('room_name_chip').innerText='BÀN: CHƯA CHỌN';
   $('online_badge').innerText='👥 0 online';
-  $('result').innerText='CHỌN BÀN';
-  $('result').style.color='#ffcc00';
-  $('server_info').innerText='Bấm một trong ba nút bàn phía trên để vào bàn.';
   clearInterval(HEARTBEAT_TIMER);
   clearInterval(SYNC_TIMER);
+  document.body.classList.remove('room-mode');
 }
 
 async function resetTable(){
@@ -735,6 +925,7 @@ async function resetTable(){
 
 window.sendDataToServerAI = async function(){ if(!TABLE_VALID){const ok=await validateTable();if(!ok)return;} return sendDataToServerAI(); };
 window.backOne = backOne;
+window.enterLobbyTable = enterLobbyTable;
 window.selectTable = selectTable;
 window.changeTable = changeTable;
 window.resetTable = resetTable;
@@ -747,7 +938,7 @@ window.addEventListener('error', function(e){
 
 document.addEventListener('DOMContentLoaded', function(){
   $('table_input').value = TABLE_ID;
-  if(TABLE_ID && ['C132','132','131'].includes(TABLE_ID)){
+  if(TABLE_ID && ['TXMD5','TX'].includes(TABLE_ID)){
     document.querySelectorAll('.table-pick').forEach(btn=>{
       btn.classList.toggle('selected',btn.dataset.table===TABLE_ID);
     });
@@ -763,8 +954,9 @@ document.addEventListener('DOMContentLoaded', function(){
   });
   updatePreview();
   loadServerConfig().then(ok=>{
-    if(ok && TABLE_ID && ['C132','132','131'].includes(TABLE_ID)){
-      selectTable(TABLE_ID);
+    if(ok){
+      refreshLobbyOnline();
+      setInterval(refreshLobbyOnline,2500);
     }
   });
 });
