@@ -360,6 +360,96 @@ body{display:flex!important;justify-content:center!important}
 }
 </style>
 
+
+<style id="remove-legacy-analysis-panels">
+[id="total_grid"],[id="dice_grid"]{display:none!important}
+.section:has(.section-title:nth-child(1)){max-width:100%}
+</style>
+
+
+<style id="v711-final-mobile-layout">
+html,body{
+  width:100%!important;
+  max-width:100%!important;
+  overflow-x:hidden!important;
+  margin:0!important;
+}
+body{display:flex!important;justify-content:center!important}
+.app{
+  width:100%!important;
+  max-width:450px!important;
+  min-width:0!important;
+  overflow:hidden!important;
+}
+.top,.content,.card,.brain,.section,.room-hero,.input-row,.bet-grid,.bottom-actions{
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+}
+.content,.card,.brain,.section{overflow:hidden!important}
+
+.result{
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin:0 auto!important;
+  padding:4px 8px!important;
+  font-size:clamp(28px,8.4vw,44px)!important;
+  line-height:1.06!important;
+  letter-spacing:-.6px!important;
+  white-space:normal!important;
+  overflow:hidden!important;
+  overflow-wrap:anywhere!important;
+  word-break:break-word!important;
+  text-align:center!important;
+}
+#server_info,.muted,.percent,.accuracy,#table_status,#consensus_status{
+  width:100%!important;
+  max-width:100%!important;
+  overflow-wrap:anywhere!important;
+  word-break:break-word!important;
+}
+#current_table_badge,.room-chip{
+  max-width:78vw!important;
+  min-width:0!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+.room-header{display:flex!important;min-width:0!important}
+.room-chip{flex:1 1 auto!important}
+.room-live{flex:0 0 auto!important}
+
+.input-row{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(90px,28%)!important;
+}
+.input-row>*{min-width:0!important;max-width:100%!important}
+
+.bottom-actions{overflow:hidden!important}
+.bottom-row{
+  display:grid!important;
+  grid-template-columns:minmax(0,.9fr) minmax(0,.9fr) minmax(0,1.28fr)!important;
+  gap:7px!important;
+}
+.bottom-btn{
+  min-width:0!important;
+  padding:5px!important;
+  font-size:clamp(12px,3.4vw,15px)!important;
+  white-space:normal!important;
+  line-height:1.12!important;
+}
+
+@media(max-width:380px){
+  .top{padding-left:9px!important;padding-right:9px!important}
+  .content{padding-left:9px!important;padding-right:9px!important}
+  .title{font-size:clamp(21px,7vw,27px)!important}
+  .result{font-size:clamp(27px,8vw,36px)!important}
+  .brain{padding:12px 9px!important}
+}
+</style>
+
 </head>
 <body>
 
@@ -503,8 +593,8 @@ body{display:flex!important;justify-content:center!important}
         <div class="bet"><div class="bet-title">TÀI</div><div class="bet-sub">11–18</div><div class="bet-pct">0%</div></div>
       </div>
     </div>
-    <div class="section"><h3>XÁC SUẤT TỔNG ĐIỂM 3–18</h3><div class="total-grid" id="total-bars"></div></div>
-    <div class="section"><h3>XÚC XẮC / ĐÔI / BỘ BA</h3><div class="dice-grid" id="dice-bars"></div></div>
+    
+    
   </div>
 <div class="bottom-actions">
     <button class="bottom-change" onclick="changeTable()">🔄 ĐỔI BÀN</button>
@@ -637,7 +727,7 @@ async function selectTable(tableId){
         data.state.current_prediction.dice_raw
       );
     }else{
-      $('result').innerText='ĐÃ VÀO '+tableName(v);
+      $('result').innerText='ĐÃ VÀO BÀN';
       $('current_table_badge').innerText=tableMode(v)+' • '+tableName(v);
       $('result').style.color='#00fff0';
       $('server_info').innerText='Đang chờ kết quả mới của bàn '+tableName(v)+'.';
@@ -674,7 +764,7 @@ async function validateTable(){
     return true;
   }catch(e){
     TABLE_VALID=false;
-    $('table_status').innerText='✕ SERVER CHƯA NHẬN BÀN '+tableId;
+    $('table_status').innerText='✕ Bàn chưa được server chấp nhận';
     $('table_status').style.color='#ff5f87';
     setBtn('TOOLS ĐÃ KHÓA',true);
     $('server_info').innerText='Hãy cập nhật server.js mới và khởi động lại server. Chi tiết: '+e.message;
@@ -1162,7 +1252,7 @@ async function resetTable(){
       $('server_info').innerText=data.message;
       return;
     }
-    $('result').innerText='ĐÃ RESET '+tableName(TABLE_ID);
+    $('result').innerText='ĐÃ RESET BÀN';
     $('result').style.color='#ffcc00';
     $('percent').innerText='Tài: 0% | Xỉu: 0%';
     $('accuracy').innerText='Độ đúng bàn này: 0.00%';
@@ -1191,7 +1281,7 @@ document.addEventListener('DOMContentLoaded', function(){
     document.querySelectorAll('.table-pick').forEach(btn=>{
       btn.classList.toggle('selected',btn.dataset.table===TABLE_ID);
     });
-    $('table_status').innerText='Bàn đã chọn: '+tableMode(TABLE_ID)+' • '+tableName(TABLE_ID);
+    $('table_status').innerText='✓ '+tableMode(TABLE_ID)+' • '+tableName(TABLE_ID);
     $('current_table_badge').innerText=tableMode(TABLE_ID)+' • '+tableName(TABLE_ID);
     $('table_status').style.color='#00fff0';
   }
@@ -1222,5 +1312,4 @@ window.addEventListener('beforeunload', function(){
 </body>
 </html>
 <style id="binary-only-final">
-#total_grid,#dice_grid{display:none!important}
 </style>
