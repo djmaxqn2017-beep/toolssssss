@@ -334,7 +334,7 @@ body:not(.room-mode) #room_view{display:none}
         <div class="bet"><div class="bet-title">TÀI</div><div class="bet-sub">11–18</div><div class="bet-pct">0%</div></div>
       </div>
     </div>
-    <div class="section"><h3>XÁC SUẤT TỔNG ĐIỂM</h3><div class="total-grid" id="total-bars"></div></div>
+    <div class="section"><h3>XÁC SUẤT TỔNG ĐIỂM 3–18</h3><div class="total-grid" id="total-bars"></div></div>
     <div class="section"><h3>XÚC XẮC / ĐÔI / BỘ BA</h3><div class="dice-grid" id="dice-bars"></div></div>
   </div>
 <div class="bottom-actions">
@@ -361,7 +361,11 @@ body:not(.room-mode) #room_view{display:none}
 
 const CONFIG_URL = 'https://djmaxqn2017-beep.github.io/toolssssss/config.json';
 let SERVER_URL = '';
-let TABLE_ID = localStorage.getItem('TAIXIU_TABLE_ID') || '';
+let TABLE_ID = String(localStorage.getItem('TAIXIU_TABLE_ID') || '').trim().toUpperCase();
+if(!['TXMD5','TX'].includes(TABLE_ID)){
+  TABLE_ID='';
+  localStorage.removeItem('TAIXIU_TABLE_ID');
+}
 let TABLE_VALID = false;
 let LAST_SUBMISSION = null;
 let LAST_RENDER_SIGNATURE = '';
@@ -401,12 +405,15 @@ function getTableId(){
 async function enterLobbyTable(tableId){
   document.body.classList.add('room-mode');
   $('room_name_chip').innerText='BÀN: '+tableId;
-  await selectTable(tableId);
+  const ok=await selectTable(tableId);
+  if(!ok){
+    document.body.classList.remove('room-mode');
+  }
 }
 
 async function selectTable(tableId){
   const v=String(tableId||'').trim().toUpperCase();
-  if(!['TXMD5','TX'].includes(v))return;
+  if(!['TXMD5','TX'].includes(v))return false;
 
   TABLE_ID=v;
   TABLE_VALID=false;
@@ -424,11 +431,11 @@ async function selectTable(tableId){
 
   if(!SERVER_URL){
     const ok=await loadServerConfig();
-    if(!ok)return;
+    if(!ok)return false;
   }
 
   const valid=await validateTable();
-  if(!valid)return;
+  if(!valid)return false;
 
   try{
     const data=await jsonFetch(api('/api/table/change'),{
@@ -451,8 +458,11 @@ async function selectTable(tableId){
       $('server_info').innerText='Đang chờ kết quả mới của bàn '+v+'.';
     }
     startRealtime();
+    return true;
   }catch(e){
     $('server_info').innerText='Lỗi vào bàn: '+e.message;
+    setStatus(false,'SERVER LỖI');
+    return false;
   }
 }
 
@@ -479,10 +489,10 @@ async function validateTable(){
     return true;
   }catch(e){
     TABLE_VALID=false;
-    $('table_status').innerText='✕ SỐ BÀN KHÔNG HỢP LỆ';
+    $('table_status').innerText='✕ SERVER CHƯA NHẬN BÀN '+tableId;
     $('table_status').style.color='#ff5f87';
     setBtn('TOOLS ĐÃ KHÓA',true);
-    $('server_info').innerText=e.message;
+    $('server_info').innerText='Hãy cập nhật server.js mới và khởi động lại server. Chi tiết: '+e.message;
     return false;
   }
 }
@@ -589,17 +599,7 @@ async function loadServerConfig(){
     $('result').innerText = 'CHỜ DỮ LIỆU...';
     $('result').style.color = '#ffcc00';
     $('server_info').innerText = 'Đã kết nối: ' + SERVER_URL;
-    if(TABLE_ID){
-      const valid=await validateTable();
-      if(valid){
-        try{
-          const sync=await jsonFetch(api('/api/table/join'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_id:deviceId,table_id:TABLE_ID})});
-          if(sync.current_prediction)renderResult(sync.current_prediction,sync.current_prediction.tong_da_tinh,sync.current_prediction.dice_raw);
-        }catch(e){}
-      }
-    }else{
-      setBtn('NHẬP SỐ BÀN ĐỂ MỞ TOOLS',true);
-    }
+    setBtn('CHỌN BÀN ĐỂ MỞ TOOLS',true);
     updatePreview();
     return true;
   }catch(e){
@@ -622,6 +622,13 @@ function renderBars(p){
   return '<div style="height:6px;background:#140027;border-radius:20px;overflow:hidden;margin-top:8px"><div style="height:100%;width:'+p+'%;background:linear-gradient(90deg,#7b2cff,#00fff0,#ff4dff)"></div></div>';
 }
 function renderResult(data, total, raw){
+  const recommendation=data?.recommendation||{};
+  const walk=data?.walk_forward||{};
+  const quality=data?.data_quality||{};
+
+  const signalLevel=String(data?.signal_level||'');
+  const randomScore=Number(data?.randomness_score);
+  const driftLevel=String(data?.drift_level||'');
   const pred = data.ket_qua_du_doan || data.prediction || 'CHỜ';
   const tai = percent(data.phan_tram_tai);
   const xiu = percent(data.phan_tram_xiu);
@@ -664,6 +671,26 @@ function renderResult(data, total, raw){
   if(data.panel_text) lines.push(data.panel_text);
   if(data.xu_huong_text) lines.push(data.xu_huong_text);
   $('server_info').innerText = lines.join(' | ') || 'Đã nhận dữ liệu.';
+
+  if(signalLevel){
+    const diagnostic=`Tín hiệu: ${signalLevel}`+(Number.isFinite(randomScore)?` • Nhiễu: ${randomScore}/100`:'')+(driftLevel?` • Drift: ${driftLevel}`:'');
+    const current=$('server_info').innerText||'';
+    if(!current.includes('Tín hiệu:'))$('server_info').innerText=current+'\n'+diagnostic;
+    if(signalLevel==='LOW')$('result').style.color='#ffcc00';
+  }
+
+  if(recommendation.action==='ANALYZING'){
+    $('result').innerText='AI ĐANG XÁC NHẬN XU HƯỚNG';
+    $('result').style.color='#ffcc00';
+    $('percent').innerText='Đang đối chiếu nhiều mô hình...';
+  }
+  if(recommendation.action){
+    const ev=Number(recommendation.ev||0);
+    const wfAcc=Number(walk.accuracy||0);
+    const wfLow=Number(walk.accuracy_low||0);
+    const q=Number(quality.score||0);
+    
+  }
 }
 
 
