@@ -1,4 +1,4 @@
-const CACHE_VERSION='taixiu-v7190';
+const CACHE_VERSION='taixiu-v7210';
 self.addEventListener('install',event=>self.skipWaiting());
 self.addEventListener('activate',event=>{
   event.waitUntil(Promise.all([
@@ -9,7 +9,7 @@ self.addEventListener('activate',event=>{
 self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET')return;
   const url=new URL(event.request.url);
-  if(url.pathname.endsWith('/config.json')||url.pathname.includes('/api/')){
+  if(url.pathname.endsWith('/config.json')||url.pathname.endsWith('/index.html')||url.pathname.includes('/api/')){
     event.respondWith(fetch(event.request,{cache:'no-store'}));
     return;
   }

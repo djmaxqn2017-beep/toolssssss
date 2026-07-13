@@ -753,7 +753,7 @@ let SERVER_API_VERSION = '';
 let CONNECTION_MONITOR = null;
 let CONNECTION_CHECK_BUSY = false;
 const LAST_SERVER_URL_KEY = 'TAIXIU_LAST_WORKING_SERVER_URL';
-const COMPATIBLE_API_VERSIONS = ['7.16','7.17','7.18','7.19'];
+const COMPATIBLE_API_VERSIONS = ['7.16','7.17','7.18','7.19','7.20'];
 const EMERGENCY_SERVER_URLS = [
   'https://genetic-hierarchy-char-alpha.trycloudflare.com'
 ];
@@ -838,11 +838,7 @@ function applyConnectionState(connected, detail=''){
     }
     setStatus(true,'● ĐÃ KẾT NỐI SERVER AI');
     setTableCardsEnabled(true);
-    if(TABLE_VALID){
-      setBtn('GỬI DATA & NHẬN GỢI Ý',false);
-    }else{
-      setBtn('CHỌN BÀN ĐỂ MỞ TOOLS',true);
-    }
+    syncMainActionButton();
   }else{
     if(badge){
       badge.classList.remove('server-online');
@@ -889,8 +885,26 @@ async function testServerCandidate(candidate){
   return {url,status:st,apiVersion:compatible.apiVersion};
 }
 function setBtn(text, disabled){
-  $('send_btn').innerText = text;
-  $('send_btn').disabled = !!disabled;
+  const btn=$('send_btn');
+  if(!btn)return;
+  btn.innerText=text;
+  btn.disabled=!!disabled;
+}
+
+function syncMainActionButton(){
+  if(REQUEST_BUSY){
+    setBtn('ĐANG PHÂN TÍCH...',true);
+    return;
+  }
+  if(!SERVER_CONNECTED||!SERVER_URL){
+    setBtn('THỬ KẾT NỐI LẠI',false);
+    return;
+  }
+  if(!TABLE_VALID||!TABLE_ID||!VALID_TABLES.includes(TABLE_ID)){
+    setBtn('CHỌN BÀN ĐỂ MỞ TOOLS',true);
+    return;
+  }
+  setBtn('GỬI DATA & NHẬN GỢI Ý',false);
 }
 function getTableId(){
   const v=String(TABLE_ID||$('table_input').value||'').trim().toUpperCase();
@@ -934,6 +948,8 @@ async function enterLobbyTable(tableId){
     roomView.style.removeProperty('pointer-events');
   }
 
+  TABLE_VALID=true;
+  syncMainActionButton();
   document.body.classList.add('room-mode');
   requestAnimationFrame(()=>{
     const content=document.querySelector('#room_view .content');
@@ -1059,6 +1075,7 @@ async function selectTable(tableId){
   }
 
   startRealtime();
+  syncMainActionButton();
   return true;
 }
 
@@ -1080,8 +1097,8 @@ async function validateTable(){
     $('table_status').innerText='✓ '+tableMode(data.table_id)+' • '+tableName(data.table_id);
     $('current_table_badge').innerText=tableMode(data.table_id)+' • '+tableName(data.table_id);
     $('table_status').style.color='#00fff0';
-    setBtn('GỬI DATA & NHẬN GỢI Ý',false);
     startRealtime();
+    syncMainActionButton();
     return true;
   }catch(e){
     TABLE_VALID=false;
@@ -1218,6 +1235,7 @@ async function loadServerConfig(silent=false){
         }
 
         updatePreview();
+        syncMainActionButton();
         return true;
       }catch(e){
         lastError=e.message||String(e);
@@ -1254,6 +1272,7 @@ async function monitorServerConnection(){
 
     SERVER_API_VERSION=compatible.apiVersion;
     if(!SERVER_CONNECTED)applyConnectionState(true);
+    else syncMainActionButton();
   }catch(e){
     SERVER_CONNECTED=false;
     applyConnectionState(false,e.message||'Mất kết nối server');
@@ -1270,6 +1289,18 @@ async function monitorServerConnection(){
     CONNECTION_CHECK_BUSY=false;
   }
 }
+
+
+function repairStaleActionButton(){
+  const btn=$('send_btn');
+  if(!btn)return;
+  const insideRoom=document.body.classList.contains('room-mode');
+  const stale=String(btn.innerText||'').includes('CHỌN BÀN');
+  if(insideRoom&&SERVER_CONNECTED&&TABLE_VALID&&TABLE_ID&&stale){
+    syncMainActionButton();
+  }
+}
+setInterval(repairStaleActionButton,1000);
 
 function startConnectionMonitor(){
   if(CONNECTION_MONITOR)clearInterval(CONNECTION_MONITOR);
@@ -1354,6 +1385,10 @@ function renderResult(data, total, raw){
     const q=Number(quality.score||0);
     
   }
+
+  if(TABLE_VALID&&SERVER_CONNECTED&&!REQUEST_BUSY){
+    syncMainActionButton();
+  }
 }
 
 
@@ -1386,6 +1421,7 @@ function renderConsensusState(data){
   }
   el.innerText='✓ Không có xung đột';
   el.style.color='#00fff0';
+  syncMainActionButton();
 }
 
 function renderTableState(data){
@@ -1517,7 +1553,6 @@ async function sendDataToServerAI(autoResubmit=false){
     if(!SERVER_CONNECTED)return;
   }
   if(REQUEST_BUSY)return;
-  REQUEST_BUSY=true;
   if(!SERVER_URL){
     const ok = await loadServerConfig();
     if(!ok) return;
@@ -1533,7 +1568,8 @@ async function sendDataToServerAI(autoResubmit=false){
     return;
   }
 
-  setBtn('ĐANG PHÂN TÍCH...', true);
+  REQUEST_BUSY=true;
+  syncMainActionButton();
   $('result').innerText = 'ĐANG PHÂN TÍCH...';
   $('result').style.color = '#ffcc00';
   $('server_info').innerText = p.note + ' | Đang gửi lên server...';
@@ -1590,7 +1626,10 @@ async function sendDataToServerAI(autoResubmit=false){
       $('server_info').innerText='Lỗi /api/predict: '+e.message;
     }
   }
-  finally{REQUEST_BUSY=false;}
+  finally{
+    REQUEST_BUSY=false;
+    syncMainActionButton();
+  }
 }
 
 async function backOne(){
@@ -1648,6 +1687,7 @@ async function changeTable(){
 
     TABLE_VALID=false;
     TABLE_ID='';
+    syncMainActionButton();
     CURRENT_ROUND_TOKEN=1;
     LAST_SOFT_TOKEN=null;
     LAST_POPUP_KEY='';
@@ -1713,17 +1753,26 @@ async function resetTable(){
     $('percent').innerText='Tài: 0% | Xỉu: 0%';
     $('accuracy').innerText='Độ đúng bàn này: 0.00%';
     $('server_info').innerText=data.message||'Đã reset bàn.';
+    TABLE_VALID=true;
     if($('total-bars'))$('total-bars').innerHTML='';
     if($('dice-bars'))$('dice-bars').innerHTML='';
+    syncMainActionButton();
   }catch(e){$('server_info').innerText='Lỗi RESET: '+e.message;}
 }
 
 window.sendDataToServerAI = async function(){
   if(!SERVER_CONNECTED){
     await loadServerConfig(false);
+    syncMainActionButton();
     return;
   }
-  if(!TABLE_VALID){const ok=await validateTable();if(!ok)return;}
+  if(!TABLE_VALID){
+    const ok=await validateTable();
+    if(!ok){
+      syncMainActionButton();
+      return;
+    }
+  }
   return sendDataToServerAI();
 };
 window.backOne = backOne;
