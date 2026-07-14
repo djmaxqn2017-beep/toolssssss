@@ -1,4 +1,4 @@
-const CACHE_VERSION='taixiu-v7250';
+const CACHE_VERSION='taixiu-v7260';
 
 self.addEventListener('install',event=>self.skipWaiting());
 

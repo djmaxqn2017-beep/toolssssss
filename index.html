@@ -754,9 +754,7 @@ let CONNECTION_MONITOR = null;
 let CONNECTION_CHECK_BUSY = false;
 const LAST_SERVER_URL_KEY = 'TAIXIU_LAST_WORKING_SERVER_URL';
 const COMPATIBLE_API_VERSIONS = ['7.20','7.21','7.22','7.24'];
-const EMERGENCY_SERVER_URLS = [
-  'https://sulk-polo-alto.ngrok-free.dev'
-];
+const EMERGENCY_SERVER_URLS = [];
 let TABLE_ID = String(localStorage.getItem('TAIXIU_TABLE_ID') || '').trim().toUpperCase();
 const VALID_TABLES=['MD5_THAN_TAI','MD5_CHU_TUOC','MD5_THANH_LONG','MD5_HUYEN_VU','MD5_KY_LAN','TX_STARSCREAM','TX_BUMBLEBEE','TX_GALVATRON','TX_THUNDERCRACKER','TX_OPTIMUS_PRIME','TX_RODIMUS_PRIME'];
 const TABLE_NAMES={
@@ -1309,7 +1307,7 @@ async function loadServerConfig(silent=false){
     SERVER_API_VERSION='';
     applyConnectionState(false,lastError);
     if($('server_info')){
-      $('server_info').innerText='Lỗi kết nối: '+lastError+'. Kiểm tra config.json và ngrok.';
+      $('server_info').innerText='Lỗi kết nối: '+lastError+'. Kiểm tra ngrok, AUTO_UPDATE_TUNNEL.js và config.json.';
     }
     updatePreview();
     return false;
