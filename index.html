@@ -753,7 +753,7 @@ let SERVER_API_VERSION = '';
 let CONNECTION_MONITOR = null;
 let CONNECTION_CHECK_BUSY = false;
 const LAST_SERVER_URL_KEY = 'TAIXIU_LAST_WORKING_SERVER_URL';
-const COMPATIBLE_API_VERSIONS = ['7.16','7.17','7.18','7.19','7.20'];
+const COMPATIBLE_API_VERSIONS = ['7.20','7.21','7.22','7.24'];
 const EMERGENCY_SERVER_URLS = [
   'https://genetic-hierarchy-char-alpha.trycloudflare.com'
 ];
@@ -785,6 +785,9 @@ let HEARTBEAT_TIMER = null;
 let SYNC_TIMER = null;
 let AUTO_RESUBMIT_BUSY = false;
 let CURRENT_ROUND_TOKEN = 1;
+let CURRENT_SOFT_ROUND = null;
+let CURRENT_VIEWER_ROLE = 'VIEWER';
+let LAST_COMMITTED_TOKEN = 0;
 let LAST_SOFT_TOKEN = null;
 let LAST_POPUP_KEY = '';
 let REQUEST_BUSY = false;
@@ -903,6 +906,27 @@ function syncMainActionButton(){
   if(!TABLE_VALID||!TABLE_ID||!VALID_TABLES.includes(TABLE_ID)){
     setBtn('CHỌN BÀN ĐỂ MỞ TOOLS',true);
     return;
+  }
+
+  const sr=CURRENT_SOFT_ROUND;
+  if(sr){
+    if(sr.status==='WAIT_CONFIRM'){
+      setBtn(CURRENT_VIEWER_ROLE==='SUBMITTER'?'ĐANG CHỜ XÁC NHẬN':'XÁC NHẬN TRÊN POPUP',true);
+      return;
+    }
+    if(sr.status==='WAIT_CORRECTION_INPUT'){
+      if(CURRENT_VIEWER_ROLE==='CORRECTOR')setBtn('NHẬP KẾT QUẢ ĐÚNG',false);
+      else setBtn('ĐANG CHỜ MÁY KHÁC NHẬP SỬA',true);
+      return;
+    }
+    if(sr.status==='WAIT_CORRECTION_CONFIRM'){
+      setBtn(CURRENT_VIEWER_ROLE==='SUBMITTER'?'XÁC NHẬN KẾT QUẢ SỬA TRÊN POPUP':'ĐANG CHỜ MÁY ĐẦU XÁC NHẬN',true);
+      return;
+    }
+    if(sr.status==='CONFLICT_LOCKED'){
+      setBtn('NHẬP KẾT QUẢ ĐỂ ĐỒNG THUẬN',false);
+      return;
+    }
   }
   setBtn('GỬI DATA & NHẬN GỢI Ý',false);
 }
@@ -1138,8 +1162,20 @@ async function confirmRound(decision){
       body:JSON.stringify({device_id:deviceId,table_id:TABLE_ID,decision})
     });
     renderTableState(data);
-    if(data.confirmed)showPopup('✅ ĐÃ XÁC NHẬN','Kết quả đã được chốt và đồng bộ.',[],`confirmed-${data.round_token}`);
+    if(data.reported_wrong||data.correction_required){
+      $('total_input').value='';updatePreview();
+      showPopup(
+        '❌ HÃY NHẬP KẾT QUẢ ĐÚNG',
+        'Bạn đã báo kết quả máy đầu tiên là sai. Hãy nhập đúng 3 xúc xắc rồi bấm NHẬP KẾT QUẢ ĐÚNG trong 5 giây.',
+        [{text:'NHẬP NGAY',onClick:async()=>{$('total_input').focus();}}],
+        `correct-input-${TABLE_ID}-${CURRENT_ROUND_TOKEN}`
+      );
+    }
+    if(data.confirmed){
+      showPopup('✅ ĐÃ XÁC NHẬN','Kết quả đã được chốt một lần và đồng bộ cho tất cả máy.',[],`confirmed-${data.round_token}`);
+    }
   }catch(e){
+    if(e.data)renderTableState(e.data);
     $('server_info').innerText=e.message;
   }
 }
@@ -1346,7 +1382,6 @@ function renderResult(data, total, raw){
     const v = percent(totalStats[i] || totalStats[String(i)] || 0);
     th += '<div class="total-cell '+(v===max && v>0?'hot':'')+'"><div class="total-n">'+i+'</div><div class="total-p">'+v.toFixed(1)+'%</div></div>';
   }
-  if($('total-bars'))$('total-bars').innerHTML = th;
 
   const face = data.phan_tram_mat_xuc_xac || data.face_pct || {};
   const dbl = data.phan_tram_doi || data.double_pct || {};
@@ -1355,7 +1390,6 @@ function renderResult(data, total, raw){
   for(let i=1;i<=6;i++) dh += '<div class="dice-cell"><div class="dice-face">'+i+'</div><div>Mặt '+percent(face[i]||face[String(i)]||0).toFixed(1)+'%</div></div>';
   for(let i=1;i<=6;i++) dh += '<div class="dice-cell"><div class="dice-face">'+i+i+'</div><div>Đôi '+percent(dbl[i]||dbl[String(i)]||0).toFixed(1)+'%</div></div>';
   for(let i=1;i<=6;i++) dh += '<div class="dice-cell"><div class="dice-face">'+i+i+i+'</div><div>Bộ '+percent(tri[i]||tri[String(i)]||0).toFixed(1)+'%</div></div>';
-  if($('dice-bars'))$('dice-bars').innerHTML = dh;
 
   const lines = [];
   if(data.table_id) lines.push('Bàn: '+data.table_id);
@@ -1401,26 +1435,36 @@ function renderConsensusState(data){
   renderOnlineCount(data);
   if(!data)return;
   const el=$('consensus_status');
+  const sr=data.soft_round;
+
   if(data.pending_action){
     const a=data.pending_action.action||data.action||'THAO TÁC';
     el.innerText='⏳ Đang chờ máy thứ hai xác nhận '+a+' trong 5 giây';
     el.style.color='#ffcc00';
-  }
-  if(data.conflict || data.conflict_locked){
-    el.innerText='🔒 XUNG ĐỘT: Hai máy phải nhập trùng. Nếu một máy thoát, máy còn lại được lấy.';
-    el.style.color='#ff5f87';
-    setBtn('NHẬP LẠI ĐỂ XÁC NHẬN',false);
     return;
   }
-  if(data.pending || data.pending_round){
-    const votes=data.pending_round?.votes||[];
-    el.innerText='⏳ Đang xác nhận nhanh: '+votes.length+' máy đã nhập';
+  if(!sr){
+    el.innerText='✓ Không có xung đột';
+    el.style.color='#00fff0';
+    syncMainActionButton();
+    return;
+  }
+
+  const now=Date.now();
+  const seconds=end=>Math.max(0,Math.ceil((Number(end||0)-now)/1000));
+  if(sr.status==='WAIT_CONFIRM'){
+    el.innerText=`⏳ Máy đầu nhập ${sr.original_dice_raw||sr.dice_raw}. Chờ xác nhận ${seconds(sr.expires_at)}s`;
     el.style.color='#ffcc00';
-    setBtn('SỬA / XÁC NHẬN KẾT QUẢ',false);
-    return;
+  }else if(sr.status==='WAIT_CORRECTION_INPUT'){
+    el.innerText=`❌ Có máy báo SAI. Chờ máy đó nhập kết quả đúng ${seconds(sr.correction_input_expires_at)}s`;
+    el.style.color='#ff9b52';
+  }else if(sr.status==='WAIT_CORRECTION_CONFIRM'){
+    el.innerText=`🔁 Kết quả sửa ${sr.correction_dice_raw}. Chờ máy đầu xác nhận`;
+    el.style.color='#ffcc00';
+  }else if(sr.status==='CONFLICT_LOCKED'){
+    el.innerText='🔒 XUNG ĐỘT: Các máy phải nhập cùng một kết quả. Hai phiếu trùng sẽ chốt.';
+    el.style.color='#ff5f87';
   }
-  el.innerText='✓ Không có xung đột';
-  el.style.color='#00fff0';
   syncMainActionButton();
 }
 
@@ -1428,6 +1472,8 @@ function renderTableState(data){
   if(!data)return;
   renderOnlineCount(data);
   if(data.round_token)CURRENT_ROUND_TOKEN=data.round_token;
+  CURRENT_SOFT_ROUND=data.soft_round||null;
+  CURRENT_VIEWER_ROLE=data.viewer_role||'VIEWER';
   renderConsensusState(data);
 
   const sr=data.soft_round;
@@ -1438,11 +1484,11 @@ function renderTableState(data){
   }
 
   if(sr){
-    const key=`${TABLE_ID}-${sr.token}-${sr.status}-${data.viewer_role}`;
+    const key=`${TABLE_ID}-${sr.token}-${sr.status}-${data.viewer_role}-${sr.correction_dice_raw||''}`;
     if(sr.status==='WAIT_CONFIRM' && data.viewer_role==='CONFIRMER'){
       showPopup(
         'XÁC NHẬN KẾT QUẢ',
-        `Máy cùng bàn vừa nhập ${sr.dice_raw}. Kết quả này có đúng không?`,
+        `Máy cùng bàn vừa nhập ${sr.original_dice_raw||sr.dice_raw} (tổng ${sr.original_total||sr.total}). Kết quả này đúng hay sai? Nếu không phản hồi trong 5 giây, server lấy kết quả máy đầu.`,
         [
           {text:'✅ ĐÚNG',onClick:()=>confirmRound('CORRECT')},
           {text:'❌ SAI',onClick:()=>confirmRound('WRONG')}
@@ -1450,24 +1496,64 @@ function renderTableState(data){
         key
       );
     }
-    if(sr.status==='WAIT_FIX' && data.must_fix){
+    if(sr.status==='WAIT_CORRECTION_INPUT'){
+      if(data.viewer_role==='CORRECTOR'){
+        showPopup(
+          '❌ BẠN ĐÃ BẤM SAI',
+          'Hãy nhập 3 xúc xắc đúng rồi bấm NHẬP KẾT QUẢ ĐÚNG. Nếu không nhập trong 5 giây, server giữ kết quả máy đầu.',
+          [{text:'NHẬP KẾT QUẢ ĐÚNG',onClick:async()=>{$('total_input').value='';updatePreview();$('total_input').focus();}}],
+          key
+        );
+      }else if(data.viewer_role==='SUBMITTER'){
+        showPopup(
+          '⚠ KẾT QUẢ ĐANG ĐƯỢC KIỂM TRA',
+          'Máy khác đã bấm SAI. Đang chờ máy đó nhập kết quả đúng. Dữ liệu của bạn chưa được ghi vào BigData.',
+          [{text:'ĐÃ HIỂU',onClick:async()=>{}}],
+          key
+        );
+      }
+    }
+    if(sr.status==='WAIT_CORRECTION_CONFIRM'){
+      if(data.viewer_role==='SUBMITTER'){
+        showPopup(
+          'XÁC NHẬN KẾT QUẢ SỬA',
+          `Máy báo sai đề xuất kết quả ${sr.correction_dice_raw} (tổng ${sr.correction_total}). Kết quả sửa này có đúng không?`,
+          [
+            {text:'✅ ĐÚNG',onClick:()=>confirmRound('CORRECT')},
+            {text:'❌ SAI',onClick:()=>confirmRound('WRONG')}
+          ],
+          key
+        );
+      }else if(data.viewer_role==='CORRECTOR'){
+        showPopup(
+          '⏳ ĐÃ GỬI KẾT QUẢ SỬA',
+          `Bạn đã gửi ${sr.correction_dice_raw}. Đang chờ máy đầu tiên xác nhận để cả hai cùng đúng.`,
+          [{text:'ĐÓNG',onClick:async()=>{}}],
+          key
+        );
+      }
+    }
+    if(sr.status==='CONFLICT_LOCKED'){
       showPopup(
-        '⚠ BẠN ĐÃ NHẬP SAI',
-        'Máy cùng bàn báo kết quả bạn nhập không đúng. Hãy bấm BACK hoặc sửa số rồi GỬI DATA ngay.',
-        [
-          {text:'↩ BACK & SỬA',onClick:async()=>{await backOne();$('total_input').focus();}}
-        ],
+        '🔒 KHÓA XUNG ĐỘT',
+        'Hai bên chưa thống nhất. Mỗi máy hãy nhập lại đúng 3 xúc xắc. Khi có hai máy nhập trùng, server chỉ chốt một lần.',
+        [{text:'NHẬP LẠI',onClick:async()=>{$('total_input').value='';updatePreview();$('total_input').focus();}}],
         key
       );
     }
-    if(sr.status==='WAIT_FIX' && data.viewer_role==='CONFIRMER'){
+  }else{
+    CURRENT_SOFT_ROUND=null;
+    if(data.last_committed_round&&Number(data.last_committed_round.token)>LAST_COMMITTED_TOKEN){
+      LAST_COMMITTED_TOKEN=Number(data.last_committed_round.token);
+      const r=data.last_committed_round;
       showPopup(
-        '⏳ ĐANG CHỜ SỬA',
-        'Máy nhập đang được yêu cầu sửa kết quả. Nếu máy đó mất kết nối, bạn sẽ được quyền nhập thay.',
-        [{text:'ĐÓNG',onClick:async()=>{}}],
-        key
+        '✅ ĐÃ CHỐT KẾT QUẢ',
+        `Ván ${r.token}: ${r.dice_raw} đã được ghi một lần. Tất cả máy đã đồng bộ dự đoán ván sau.`,
+        [{text:'TIẾP TỤC',onClick:async()=>{}}],
+        `commit-${TABLE_ID}-${r.token}`
       );
     }
+    syncMainActionButton();
   }
 }
 
@@ -1553,80 +1639,56 @@ async function sendDataToServerAI(autoResubmit=false){
     if(!SERVER_CONNECTED)return;
   }
   if(REQUEST_BUSY)return;
-  if(!SERVER_URL){
-    const ok = await loadServerConfig();
-    if(!ok) return;
-  }
+  if(!SERVER_URL){const ok=await loadServerConfig(false);if(!ok)return;}
 
   const tableId=getTableId();
   if(!tableId)return;
   if(!TABLE_VALID){const valid=await validateTable();if(!valid)return;}
-  const p = parseInputValue();
+  const p=parseInputValue();
   updatePreview();
-  if(!p.ok){
-    alert(p.note);
-    return;
-  }
+  if(!p.ok){alert(p.note);return;}
 
   REQUEST_BUSY=true;
   syncMainActionButton();
-  $('result').innerText = 'ĐANG PHÂN TÍCH...';
-  $('result').style.color = '#ffcc00';
-  $('server_info').innerText = p.note + ' | Đang gửi lên server...';
+  $('server_info').innerText=p.note+' | Đang gửi lên server...';
 
   try{
     LAST_SUBMISSION={table_id:tableId,dice:p.raw,total:p.total,at:Date.now()};
-    const payload = {
-      device_id: deviceId,
-      table_id: getTableId(),
-      round_token: CURRENT_ROUND_TOKEN,
-      dice: p.raw,
-      xuc_xac: p.raw,
-      dice_array: p.dice,
-      tong: p.total,
-      ket_qua_truoc: p.total,
-      tong_3_xuc_xac: p.total
-    };
-    const data = await jsonFetch(api('/api/predict'), {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(payload)
+    const data=await jsonFetch(api('/api/predict'),{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        device_id:deviceId,table_id:tableId,round_token:CURRENT_ROUND_TOKEN,
+        dice:p.raw,xuc_xac:p.raw,dice_array:p.dice,tong:p.total,
+        ket_qua_truoc:p.total,tong_3_xuc_xac:p.total
+      })
     });
     renderTableState(data);
-    if(data.provisional_prediction){
-      renderResult(data.provisional_prediction,p.total,p.raw);
-      $('server_info').innerText=data.message||'Dự đoán tạm đã sẵn sàng.';
-      setBtn('GỬI DATA & NHẬN GỢI Ý',false);
-    }else if(data.confirmed || data.ket_qua_du_doan){
-      LAST_RENDER_SIGNATURE=JSON.stringify([data.tong_so_van_da_choi,data.dice_raw,data.ket_qua_du_doan,data.panel_text]);
+
+    if(data.confirmed||data.ket_qua_du_doan){
       renderResult(data,p.total,p.raw);
       $('total_input').value='';updatePreview();
-      setBtn('GỬI DATA & NHẬN GỢI Ý',false);
+      $('server_info').innerText=data.message||'Kết quả đã chốt và đồng bộ.';
+    }else if(data.correction_submitted){
+      $('total_input').value='';updatePreview();
+      $('server_info').innerText=data.message||'Đã gửi kết quả sửa.';
+    }else if(data.provisional_prediction){
+      renderResult(data.provisional_prediction,p.total,p.raw);
+      $('server_info').innerText=data.message||'Đang chờ xác nhận.';
     }else if(data.pending){
-      $('result').innerText='ĐANG XÁC NHẬN...';
-      $('result').style.color='#ffcc00';
-      $('server_info').innerText=data.message||'Đang chờ máy cùng bàn.';
-      setBtn('SỬA / XÁC NHẬN KẾT QUẢ',false);
+      $('server_info').innerText=data.message||'Đang xử lý đồng thuận.';
     }
     setStatus(true,'● ĐÃ KẾT NỐI SERVER AI');
   }catch(e){
-    if(e.status===409 && e.data){
-      renderConsensusState(e.data);
-      $('result').innerText='XUNG ĐỘT';
-      $('result').style.color='#ff5f87';
-      $('server_info').innerText=e.data.message||'Hai máy nhập khác nhau.';
-      setStatus(true,'● SERVER ONLINE - BÀN ĐANG KHÓA XUNG ĐỘT');
-      setBtn('NHẬP LẠI ĐỂ XÁC NHẬN',false);
+    if(e.data){
+      renderTableState(e.data);
+      $('server_info').innerText=e.data.message||e.data.error||e.message;
+      setStatus(true,'● SERVER ONLINE - ĐANG XỬ LÝ ĐỒNG THUẬN');
     }else{
       SERVER_CONNECTED=false;
       applyConnectionState(false,e.message||'Mất kết nối server');
-      setBtn('THỬ KẾT NỐI LẠI',false);
-      $('result').innerText='LỖI';
-      $('result').style.color='#ff5f87';
       $('server_info').innerText='Lỗi /api/predict: '+e.message;
     }
-  }
-  finally{
+  }finally{
     REQUEST_BUSY=false;
     syncMainActionButton();
   }
@@ -1689,6 +1751,8 @@ async function changeTable(){
     TABLE_ID='';
     syncMainActionButton();
     CURRENT_ROUND_TOKEN=1;
+    CURRENT_SOFT_ROUND=null;
+    CURRENT_VIEWER_ROLE='VIEWER';
     LAST_SOFT_TOKEN=null;
     LAST_POPUP_KEY='';
     REQUEST_BUSY=false;
@@ -1754,8 +1818,6 @@ async function resetTable(){
     $('accuracy').innerText='Độ đúng bàn này: 0.00%';
     $('server_info').innerText=data.message||'Đã reset bàn.';
     TABLE_VALID=true;
-    if($('total-bars'))$('total-bars').innerHTML='';
-    if($('dice-bars'))$('dice-bars').innerHTML='';
     syncMainActionButton();
   }catch(e){$('server_info').innerText='Lỗi RESET: '+e.message;}
 }

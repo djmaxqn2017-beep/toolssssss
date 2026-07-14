@@ -1,11 +1,9 @@
-const CACHE_VERSION='taixiu-v7210';
+const CACHE_VERSION='taixiu-v7240';
 self.addEventListener('install',event=>self.skipWaiting());
-self.addEventListener('activate',event=>{
-  event.waitUntil(Promise.all([
-    self.clients.claim(),
-    caches.keys().then(keys=>Promise.all(keys.map(key=>caches.delete(key))))
-  ]));
-});
+self.addEventListener('activate',event=>event.waitUntil(Promise.all([
+  self.clients.claim(),
+  caches.keys().then(keys=>Promise.all(keys.map(key=>caches.delete(key))))
+])));
 self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET')return;
   const url=new URL(event.request.url);
