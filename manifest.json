@@ -1,18 +1,10 @@
 {
   "name": "AI Tài Xỉu Pro",
   "short_name": "Tài Xỉu Pro",
-  "start_url": "./?v=7190",
+  "start_url": "./?v=7250",
   "scope": "./",
   "display": "standalone",
   "background_color": "#120403",
   "theme_color": "#681307",
-  "description": "AI phân tích Tài Xỉu riêng theo từng bàn",
-  "icons": [
-    {
-      "src": "icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
-  ]
+  "description": "AI phân tích Tài Xỉu riêng từng bàn qua NGROK"
 }

@@ -755,7 +755,7 @@ let CONNECTION_CHECK_BUSY = false;
 const LAST_SERVER_URL_KEY = 'TAIXIU_LAST_WORKING_SERVER_URL';
 const COMPATIBLE_API_VERSIONS = ['7.20','7.21','7.22','7.24'];
 const EMERGENCY_SERVER_URLS = [
-  'https://genetic-hierarchy-char-alpha.trycloudflare.com'
+  'https://sulk-polo-alto.ngrok-free.dev'
 ];
 let TABLE_ID = String(localStorage.getItem('TAIXIU_TABLE_ID') || '').trim().toUpperCase();
 const VALID_TABLES=['MD5_THAN_TAI','MD5_CHU_TUOC','MD5_THANH_LONG','MD5_HUYEN_VU','MD5_KY_LAN','TX_STARSCREAM','TX_BUMBLEBEE','TX_GALVATRON','TX_THUNDERCRACKER','TX_OPTIMUS_PRIME','TX_RODIMUS_PRIME'];
@@ -835,7 +835,7 @@ function applyConnectionState(connected, detail=''){
     }
     if(note){
       note.classList.add('online');
-      note.innerText='Đã kết nối server'
+      note.innerText='Đã kết nối server qua NGROK'
         +(SERVER_API_VERSION?' • API '+SERVER_API_VERSION:'')
         +'. Bạn có thể chọn bàn.';
     }
@@ -945,7 +945,7 @@ async function enterLobbyTable(tableId){
       applyConnectionState(false,'Không thể vào bàn khi server chưa kết nối');
       showPopup(
         '🔴 CHƯA KẾT NỐI SERVER',
-        'Các bàn đang khóa. Hãy bật server và Cloudflare Tunnel rồi bấm THỬ KẾT NỐI LẠI.',
+        'Các bàn đang khóa. Hãy bật server và ngrok rồi bấm THỬ KẾT NỐI LẠI.',
         [{text:'THỬ KẾT NỐI LẠI',onClick:async()=>{await loadServerConfig(false);}}],
         'offline-table-'+Date.now()
       );
@@ -1203,27 +1203,54 @@ function fetchWithTimeout(url, options, ms){
     new Promise((_, reject) => setTimeout(() => reject(new Error('Kết nối quá thời gian')), ms || 12000))
   ]);
 }
+function isNgrokApiUrl(url){
+  try{
+    const host=new URL(String(url||''),location.href).hostname.toLowerCase();
+    return host.endsWith('.ngrok-free.app')
+      || host.endsWith('.ngrok-free.dev')
+      || host.endsWith('.ngrok.app')
+      || host.endsWith('.ngrok.io');
+  }catch(e){
+    return false;
+  }
+}
+
 async function jsonFetch(url, options){
-  const r = await fetchWithTimeout(url, options || {}, 12000);
+  const opts={...(options||{})};
+  const headers=new Headers(opts.headers||{});
+  headers.set('Accept','application/json');
+  if(isNgrokApiUrl(url)){
+    headers.set('ngrok-skip-browser-warning','1');
+  }
+  opts.headers=headers;
+
+  const r = await fetchWithTimeout(url, opts, 12000);
   const text = await r.text();
   let data = {};
-  try{ data = text ? JSON.parse(text) : {}; }catch(e){ data = {raw:text}; }
+  try{
+    data = text ? JSON.parse(text) : {};
+  }catch(e){
+    const looksLikeNgrokWarning=/ngrok|ERR_NGROK|Visit Site/i.test(text);
+    data = {
+      raw:text,
+      error:looksLikeNgrokWarning
+        ? 'Ngrok trả trang cảnh báo thay vì API JSON.'
+        : 'Server không trả JSON hợp lệ.'
+    };
+  }
   if(!r.ok){
     const err=new Error('HTTP ' + r.status + ' - ' + (data.error || data.message || text.slice(0,120)));
-    err.data=data;err.status=r.status;throw err;
+    err.data=data;
+    err.status=r.status;
+    throw err;
+  }
+  if(data && data.raw && !data.success){
+    throw new Error(data.error||'Phản hồi server không hợp lệ.');
   }
   return data;
 }
 function api(path){ return SERVER_URL.replace(/\/$/,'') + path; }
 
-async function unregisterSW(){
-  try{
-    if('serviceWorker' in navigator){
-      const regs = await navigator.serviceWorker.getRegistrations();
-      for(const reg of regs) await reg.unregister();
-    }
-  }catch(e){}
-}
 
 async function loadServerConfig(silent=false){
   if(CONNECTION_CHECK_BUSY)return SERVER_CONNECTED;
@@ -1267,7 +1294,7 @@ async function loadServerConfig(silent=false){
           $('result').style.color='#ffcc00';
         }
         if($('server_info')){
-          $('server_info').innerText='Đã kết nối: '+SERVER_URL+' • API '+SERVER_API_VERSION;
+          $('server_info').innerText='Đã kết nối NGROK: '+SERVER_URL+' • API '+SERVER_API_VERSION;
         }
 
         updatePreview();
@@ -1282,7 +1309,7 @@ async function loadServerConfig(silent=false){
     SERVER_API_VERSION='';
     applyConnectionState(false,lastError);
     if($('server_info')){
-      $('server_info').innerText='Lỗi kết nối: '+lastError+'. Kiểm tra config.json và Cloudflare Tunnel.';
+      $('server_info').innerText='Lỗi kết nối: '+lastError+'. Kiểm tra config.json và ngrok.';
     }
     updatePreview();
     return false;
