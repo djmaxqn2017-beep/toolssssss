@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld('tb', {
   loadProject: () => ipcRenderer.invoke('project:load'),
   chooseExportFolder: () => ipcRenderer.invoke('export:choose-folder'),
   writeExport: (payload) => ipcRenderer.invoke('export:write', payload),
+  writeExportBuffer: (payload) => ipcRenderer.invoke('export:write-buffer', payload),
+  performanceInfo: () => ipcRenderer.invoke('system:performance'),
   aiStatus: () => ipcRenderer.invoke('ai:status'),
   aiWarmup: () => ipcRenderer.invoke('ai:warmup'),
   aiSegmentSubject: (imagePath) => ipcRenderer.invoke('ai:segment-subject', imagePath),
