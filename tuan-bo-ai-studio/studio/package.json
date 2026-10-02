@@ -31,14 +31,16 @@
       "node_modules/sharp/**/*",
       "node_modules/@img/**/*"
     ],
-    "win": { "target": ["nsis"] },
+    "win": { "target": ["nsis"], "icon": "resources/tb-icon.png" },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "TBRetoch",
-      "uninstallDisplayName": "TBRetoch"
+      "uninstallDisplayName": "TBRetoch",
+      "installerIcon": "resources/tb-icon.ico",
+      "uninstallerIcon": "resources/tb-icon.ico"
     }
   }
 }
