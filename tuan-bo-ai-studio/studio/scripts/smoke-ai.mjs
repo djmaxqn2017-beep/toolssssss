@@ -1,19 +1,22 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { env, pipeline, RawImage } from '@huggingface/transformers';
+import ort from 'onnxruntime-node';
 
 const here=path.dirname(fileURLToPath(import.meta.url));
-const modelRoot=path.resolve(here,'..','resources','models');
-env.allowRemoteModels=false;
-env.allowLocalModels=true;
-env.localModelPath=modelRoot;
-env.useBrowserCache=false;
-console.log('AI smoke: loading local BiRefNet from',modelRoot);
-const pipe=await pipeline('image-segmentation','onnx-community/BiRefNet_lite-ONNX',{device:'cpu',dtype:'fp32'});
-const w=64,h=64,data=new Uint8ClampedArray(w*h*3);
-for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*3;const subject=(x>18&&x<46&&y>8&&y<58);data[i]=subject?220:30;data[i+1]=subject?170:35;data[i+2]=subject?145:45;}
-const image=new RawImage(data,w,h,3);
-const out=await pipe(image,{mask_threshold:.2});
-const items=Array.isArray(out)?out:[out];
-if(!items.length||!items[0]?.mask)throw new Error('BiRefNet smoke test returned no mask');
-console.log('AI smoke OK:',items[0].mask.width,'x',items[0].mask.height);
+const model=path.resolve(here,'..','resources','models','onnx-community','BiRefNet_lite-ONNX','onnx','model.onnx');
+console.log('AI smoke: loading',model);
+const session=await ort.InferenceSession.create(model,{executionProviders:['cpu'],graphOptimizationLevel:'all',intraOpNumThreads:4});
+const pixels=1024*1024;
+const input=new Float32Array(3*pixels);
+for(let i=0;i<pixels;i++){
+  const x=i%1024,y=Math.floor(i/1024),subject=x>310&&x<714&&y>130&&y<930;
+  const rgb=subject?[220,170,145]:[30,35,45];
+  input[i]=(rgb[0]/255-.485)/.229;
+  input[pixels+i]=(rgb[1]/255-.456)/.224;
+  input[pixels*2+i]=(rgb[2]/255-.406)/.225;
+}
+const tensor=new ort.Tensor('float32',input,[1,3,1024,1024]);
+const outputs=await session.run({[session.inputNames[0]]:tensor});
+const out=outputs[session.outputNames[0]];
+if(!out?.data||out.data.length<1024*1024)throw new Error('BiRefNet smoke test returned invalid tensor');
+console.log('AI smoke OK:',session.inputNames[0],'->',session.outputNames[0],out.dims.join('x'));
