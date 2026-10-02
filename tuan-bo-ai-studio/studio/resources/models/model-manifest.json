@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "policy": "Only bundle a model after both code license and exact checkpoint/weight license are verified for commercial redistribution.",
+  "models": [
+    {
+      "id": "yunet-face",
+      "module": "face_detection",
+      "project": "OpenCV Zoo / YuNet",
+      "runtime": "onnxruntime",
+      "status": "candidate",
+      "purpose": "Face detection for portrait tools"
+    },
+    {
+      "id": "sam2-smart-mask",
+      "module": "smart_mask",
+      "project": "Meta SAM 2.1",
+      "runtime": "native-or-onnx-adapter",
+      "status": "candidate",
+      "purpose": "Interactive and automatic smart masks"
+    },
+    {
+      "id": "birefnet-portrait",
+      "module": "matting",
+      "project": "BiRefNet",
+      "runtime": "onnxruntime-or-pytorch-adapter",
+      "status": "candidate",
+      "purpose": "Subject/background/portrait matting"
+    },
+    {
+      "id": "rtmpose-body",
+      "module": "body_landmarks",
+      "project": "MMPose / RTMPose",
+      "runtime": "onnxruntime",
+      "status": "candidate",
+      "purpose": "Body landmarks for protected reshape"
+    },
+    {
+      "id": "iclight-relight",
+      "module": "relight",
+      "project": "IC-Light",
+      "runtime": "local-diffusion-adapter",
+      "status": "candidate",
+      "purpose": "Local subject-aware relighting"
+    },
+    {
+      "id": "realesrgan-upscale",
+      "module": "upscale",
+      "project": "Real-ESRGAN",
+      "runtime": "onnxruntime-or-ncnn-adapter",
+      "status": "candidate",
+      "purpose": "Offline super resolution"
+    }
+  ]
+}
