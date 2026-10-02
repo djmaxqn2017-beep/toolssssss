@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld('tb', {
   loadProject: () => ipcRenderer.invoke('project:load'),
   chooseExportFolder: () => ipcRenderer.invoke('export:choose-folder'),
   writeExport: (payload) => ipcRenderer.invoke('export:write', payload),
+  aiStatus: () => ipcRenderer.invoke('ai:status'),
+  aiSegmentSubject: (imagePath) => ipcRenderer.invoke('ai:segment-subject', imagePath),
   licenseStatus: () => ipcRenderer.invoke('license:status'),
   machineId: () => ipcRenderer.invoke('license:machine-id'),
   importPublicKey: () => ipcRenderer.invoke('license:import-key'),
