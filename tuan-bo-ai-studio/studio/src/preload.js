@@ -9,13 +9,8 @@ contextBridge.exposeInMainWorld('tb', {
   writeExportBuffer: (payload) => ipcRenderer.invoke('export:write-buffer', payload),
   exportFull: (payload) => ipcRenderer.invoke('export:full', payload),
   performanceInfo: () => ipcRenderer.invoke('system:performance'),
+  processingDiagnostics: () => ipcRenderer.invoke('processing:diagnostics'),
   aiStatus: () => ipcRenderer.invoke('ai:status'),
   aiWarmup: () => ipcRenderer.invoke('ai:warmup'),
-  aiSegmentSubject: (imagePath) => ipcRenderer.invoke('ai:segment-subject', imagePath),
-  licenseStatus: () => ipcRenderer.invoke('license:status'),
-  machineId: () => ipcRenderer.invoke('license:machine-id'),
-  copyMachineId: () => ipcRenderer.invoke('license:copy-machine-id'),
-  resetLicenseTrust: () => ipcRenderer.invoke('license:reset-trust'),
-  importPublicKey: () => ipcRenderer.invoke('license:import-key'),
-  importLicense: () => ipcRenderer.invoke('license:import-license')
+  aiSegmentSubject: (imagePath) => ipcRenderer.invoke('ai:segment-subject', imagePath)
 });
