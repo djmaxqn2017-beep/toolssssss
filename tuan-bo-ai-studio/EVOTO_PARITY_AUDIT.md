@@ -1,425 +1,526 @@
 # TBRetoch V0.5 — Evoto Desktop parity audit
 
-Audit date: 2026-10-02
+Audit date: 2026-10-03
 
-Goal: rebuild the editing workflow and feature surface for internal/offline use without copying Evoto proprietary code, assets, model weights, branding, or exact visual assets. TBRetoch keeps its own TB branding and purple palette, while matching the workflow depth and control coverage users expect from Evoto.
+## Scope and evidence rule
 
-## Official-version baseline used for this audit
-- Evoto official Download page currently exposes a Windows stable build in the 7.3.x line depending on locale/cache.
-- Evoto official Release Notes list **V8.0.0 (2026-09-22)** as the current key release.
-- Therefore TBRetoch parity target is **Evoto 8.0 feature surface**, not only the older 7.3 desktop feature set.
-- Official sources used: Evoto Download, Release Notes, Edit Workspace Overview, Library Workspace Overview, Color Adjustment Feature Modules, AI Color Match, Masking, Portrait Retouching, Facial Reshape, Full Body Reshape, AI Lab, Culling & Organization, Workflow Templates, Import & Export.
+This document is the implementation baseline for TBRetoch. It is based on Evoto's public first-party Download page, Release Notes, Features catalog, and Support documentation. It does **not** copy Evoto source code, proprietary model weights, private assets, or internal configuration.
 
-## Product shell / workspace
-- Project/library workspace, import, file management, recent projects.
-- Edit toolbar: Back to Project, Add Images, Undo, Redo, Manual Tools, Search.
-- Floating widget: Presets, Masking, History.
-- Preview: zoom, pan, fit, synchronized pan/zoom in compare view.
-- View modes: single preview, Reference View, Before/After comparison, real-time color vs all-effects comparison, full screen.
-- Canvas background choices: Default / Black / White / Dark Gray / Medium Gray / Light Gray.
-- Filmstrip/gallery, multi-select, ratings/labels/filtering, virtual copies.
-- Bottom gallery is resizable and indicators collapse when compressed.
-- Copy/Paste/Sync effects with selectable effect groups.
-- Global history and separate tool history for Liquify/Healing.
-- Preview configuration: sRGB/Adobe RGB, preview size up to 4000 px, optional full-size real-time color preview, thumbnail mode, effect preloading.
-- Favorites panel: user can pin top-level modules, submodules and individual sliders; drag/drop reorder; favorites mirror the original control values.
+A feature is only listed as an Evoto-parity target when it is documented by Evoto publicly. If a behavior is not documented, it is marked as unknown rather than guessed.
 
-## Library / project workspace
-- Projects list and sorting.
-- Related Folders, subfolders, move/rename/delete.
-- Collections without duplicating source files.
+## Current official baseline
+
+- Latest stable Windows version on Evoto's official Download page: **7.3.0-512**.
+- Download page update date: **2026-08-06**.
+- Supported Windows versions listed by Evoto: **Windows 7 / 10 / 11**.
+- Official Release Notes currently list **V7.3.0** as the newest desktop release, dated **2026-07-10**.
+- V7.3.0 headline additions: Batch AI Set Design, Matte Refinement, Strong Glare Removal, Glow Effect, Post-Crop Vignetting.
+- The public Features catalog currently exposes **97 named feature pages** across: Portrait 45, Background 18, Color 12, Clothing 5, Editing Toolkit 16, Pet Retouching 1.
+
+TBRetoch V0.5 therefore targets the **documented Evoto 7.3 feature surface**, not an invented future version.
+
+---
+
+# 1. Product shell and editing workspace
+
+Evoto documents six editing-workspace regions:
+
+1. Top toolbar.
+2. Floating widget on the left.
+3. Central picture preview.
+4. Bottom gallery / filmstrip.
+5. Right control panel.
+6. Feature modules / favorites behavior.
+
+### Top toolbar
+- Return to project/library.
+- Add images.
+- Undo / Redo.
+- Manual tools.
+- Feature search.
+- Export and export-history access where appropriate.
+
+### Floating widget
+- Presets.
+- Masking.
+- History.
+
+### Picture preview
+- Live edited preview.
+- Spacebar Before/After.
+- Pan and zoom.
+- Canvas background choices: default, dark, white, dark gray, medium gray, light gray.
+- Preview size is independent from export resolution.
+- Preferences allow configurable preview size, up to 4000 px according to Evoto support documentation.
+- Optional full-size real-time color preview.
+- Synced preview position and zoom setting.
+
+### Bottom gallery
+- Resizable filmstrip/gallery.
+- Rating, color-label and flag indicators.
+- Filtering by rating, color label, flag, version type, edit status, export status, file format, orientation, filename, camera and lens.
+- Detail/Quick filter modes.
+- Sorting and quick actions.
+
+### Right control panel
+Official desktop editing modules:
+1. **Color Adjustments**
+2. **Portrait Retouching**
+3. **Background Adjustments**
+4. **Clothing & Accessories Adjustments**
+5. **Crop & Rotate**
+
+Panel behavior:
+- Slider + numeric input.
+- Solo Mode.
+- Collapse All.
+- Expand All.
+- Hold group eye icon to temporarily bypass a feature group.
+- Hold a single slider/effect to compare only that effect.
+
+### Favorites
+- Top-level modules, submodules and individual sliders can be favorited.
+- Drag/drop reorder.
+- Favorites reference the original controls rather than copying state.
+- Favorites stay fixed while image-specific values update.
+
+---
+
+# 2. Library and project workspace
+
+### Project management
+- Projects list.
+- Related folders.
+- Folder/subfolder management.
+- Collections without duplicating original files.
 - Bin / restore / permanent delete.
-- Thumbnail gallery with tagging/filtering.
-- Filters: star rating, color label, flag, version type, edit status, export status, file format, orientation/aspect, filename, camera, lens.
-- Sort: capture time, edit time, rating, file type, size, name.
-- View modes: Single, Comparison, Reference.
-- Quick Access panel: Culling, Presets, Sync, Metadata.
-- Sync groups: AI Color, Color, Portrait, Background, Clothing & Accessories, Crop & Rotate.
 
-## Color
-### Histogram
-- RGB histogram.
+### Gallery views
+- Grid.
+- Edit.
+- Loupe / large image.
+- Survey mode, up to 12 images side-by-side.
+- Reference/comparison workflows.
 
-### Profiles / AI Looks
-- Standard profile and LUT-based custom profiles.
-- B&W profile mode with B&W-specific controls.
-- AI Color Looks with categories such as Camera Simulation, Gentle, Tone, Film, Vibe, Trendy and B&W.
-- Camera Simulation examples documented by Evoto include Fuji NC, Fuji NN, Ricoh+, Kodak Ultramax 400.
-- Look intensity slider and preset support.
+### Metadata
+- EXIF and IPTC viewing/editing.
+- Batch metadata edit.
+- XMP sidecar compatibility.
+- Folder refresh reads changes made by other software.
 
-### Basic
-- White Balance: Temperature, Tint.
-- Exposure / Contrast / Highlights / Shadows / Whites / Blacks.
-- Vibrance / Saturation.
-- AI Auto White Balance and AI Auto Exposure.
-- Auto Color Corrections one-click action.
+### Culling / organization
+- Manual culling.
+- AI-assisted culling where available.
+- Ratings, flags and color labels.
+- Photo clustering / face-oriented organization documented in recent releases.
 
-### Curve
-- Parametric curve.
-- RGB/Luma/R/G/B curves.
-- Multiple control points; on-image targeted curve adjustment.
+### Presets and sync
+- Recommended presets.
+- Team presets.
+- My Presets.
+- Sync selectable groups:
+  - AI Color Adjustment
+  - Color Adjustment
+  - Portrait Adjustment
+  - Background Adjustment
+  - Clothing & Accessories
+  - Crop & Rotate
 
-### HSL
-8 bands: Red, Orange, Yellow, Green, Aqua/Cyan, Blue, Purple, Magenta.
-- Hue
-- Saturation
-- Luminance
-- On-image HSL picker.
+### Slideshow
+- Background music.
+- Background image/color.
+- Intro/title page.
+- Preview and export.
 
-### Color Grading / Calibration
-- Shadow / Midtone / Highlight grading.
-- RGB primary hue/saturation calibration.
+---
 
-### Detail
-- Sharpen: Amount, Radius, Detail.
-- Noise Reduction: Amount, Detail, Contrast.
-- Detail Enhance.
+# 3. Color Adjustments
 
-### Creative effects
-- Glow Effect: White Mist, Black Mist, Halation.
-- Post-Crop Vignetting.
-- Grain.
-- Lens Correction.
-- Transform Correction.
+## AI Style / AI color
+
+### AI Color Looks
+- One-click AI-generated looks.
+- Public categories documented by Evoto include Camera Simulation, Gentle, Tone, Film, Vibe, Trendy and B&W.
 
 ### AI Color Match
-- Reference image selection from local JPG/TIFF/PNG or current preview.
-- Recommended references and reusable My Looks/reference management.
-- Quick Mode and Control Mode.
-- Full-image controls: Amount, Tone, Color.
-- Semantic recognition for Face/Body Skin, Hair, Eyes, Lips, Teeth, Clothes, Background/local regions.
-- Per-mask tone/color intensity.
-- Linked/unlinked mask adjustments.
-- Control Mode exposes generated adjustments back onto normal sliders and creates local masks for transparent fine tuning.
-- Batch sync and preset save.
-- Multi-Image Color Consistency for same-scene batches.
-- Background Color Consistency for studio/headshot/school workflows.
+- Reference-image based style transfer.
+- Harmonizes exposure, temperature, tone and local details.
+- Semantic recognition is documented for local regions including skin, hair, clothing and environmental regions.
+- Designed for batch/set consistency.
+
+### Multi-Image Color Consistency
+- Applies AI consistency across selected images in the same scene.
+- Evoto recommends applying AI Style first, Auto Color Corrections next, and Multi-Image Color Consistency afterward.
+
+### Background Color Consistency
+- Documented in V7.1.5 release notes for matching background colors across selected images.
 
 ## Masking
-- Person mask with per-person selection.
-- Pet mask.
-- Background mask.
-- Custom mask.
-- Person subregions: facial skin / body skin / neck / all skin, hair, eyes, lips, teeth, clothes and other local regions.
-- Manual brush add/subtract/refine.
-- Local Basic / Curve / HSL / Color Grading / Detail adjustments applied nondestructively.
-- Masks appear in the floating Quick Access widget.
+Mask types documented by Evoto:
+- Person Mask.
+- Pet Mask.
+- Background Mask.
+- Custom Mask.
 
-## Portrait — person detection
-- Multi-face recognition.
-- Character/person tags and per-person edits.
-- Face frame visualization.
-- Add Face and Delete Face manually when automatic detection fails.
-- Attribute correction when age/gender classification is wrong.
-- Gender/age category handling including Male, Female, Child, Senior/Infant where supported.
-- Batch sync per person across project images.
+Local adjustment families:
+- Basic.
+- Curves.
+- HSL.
+- Color Grading.
+- Detail / sharpening where documented.
 
-## Portrait — blemish removal / cleanup
-- Freckle & Acne Removal.
-- Eye Bags with Lower Eyelid Protection.
-- Dark Circles.
-- Reduce Face Shine.
-- Remove Glasses Glare and Strong Glare Removal.
+Mask workflow:
+- AI/manual masks appear in Quick Access.
+- Brush add/remove refinement.
+- Visibility toggle excludes hidden masks from export.
+- Sync can Replace Existing Masks or Add to Existing Masks.
+
+## Conventional color controls
+TBRetoch must provide a complete non-destructive color stack rather than a few approximate sliders:
+- Temperature / Tint.
+- Exposure / Contrast.
+- Highlights / Shadows.
+- Whites / Blacks.
+- Vibrance / Saturation.
+- Curves.
+- 8-band HSL: Red, Orange, Yellow, Green, Cyan/Aqua, Blue, Purple, Magenta.
+- Color Grading.
+- Sharpen/detail.
+- Noise reduction / AI Denoise where applicable.
+- Grain.
+- Lens/transform corrections.
+- Glow Effect: White Mist, Black Mist, Halation.
+- Post-Crop Vignetting.
+
+---
+
+# 4. Portrait Retouching
+
+TBRetoch must use semantic face/skin/body analysis. Approximate ellipses painted over eyes, lips or cheeks do not count as parity.
+
+## Blemish / cleanup targets documented by Evoto
+- Freckle & acne / blemish removal.
+- Eye bags and lower-eyelid protection.
+- Dark circles.
+- Face shine reduction.
+- Glasses glare removal + Strong Glare Removal.
 - Nostril Cleanup.
-- Lip Wrinkles & Flakes.
-- Double Chin / Jawline cleanup.
-- Beard Protection.
-- Wrinkle zones: Forehead, Eleven Lines, Eye Wrinkles, Nasal Wrinkle, Cheek Wrinkle, Marionette Lines, Perioral Wrinkle, Neck Wrinkle.
-- Body Blemish.
-- Infant Body Blemish.
-- Remove Tan Lines.
-- Hand/body vein cleanup.
-- Armpit Touch-up.
-- Stomach Stretch Marks + Pregnancy Line.
-- Stretch Marks.
-- Tattoos via manual masking.
-- Manual tuning pen add/erase and original/mask view.
-- Face Shadow Removal (Evoto 8.0).
+- Lip wrinkle/flakes cleanup.
+- Double chin / jawline cleanup.
+- Multiple wrinkle zones.
+- Body blemish cleanup.
+- Stretch marks.
+- Tan-line removal.
+- Hand retouching.
+- Manual tuning / refinement brush.
 
-## Portrait — skin retouching
-### Facial skin
+## Skin retouching
+
+Facial skin:
 - Even with Dodge & Burn.
-- Sculpt with Dodge & Burn: Facial Features, Facial Contours.
-- Textured Smoothing.
-- Frequency Separation: High Frequency, Low Frequency.
-- Skin Softening.
-- Fullness/radiance style controls for face zones.
+- Sculpt with Dodge & Burn: facial features and facial contours.
+- Textured smoothing.
+- Frequency separation.
+- Skin softening.
+- Skin texture controls.
+- Face fullness/radiance controls documented in current skin-retouching documentation.
 
-### Body skin
-- Smooth/moist body skin.
-- Frequency Separation for body.
-- AI Body Complexion / complexion unification and eyedropper-based target.
+Body skin:
+- Body-skin smoothing/evening.
+- Frequency separation.
+- Body complexion unification.
 - Collarbone enhancement.
+- Skin-tone selection and harmonization.
 
 ## Facial reshape
-### Head pose / symmetry
-- Up/Down [-100,+100]
-- Left/Right [-100,+100]
-- Tilt [-100,+100]
-- Facial Symmetry [0,100]
-- Upper Body Symmetry [0,100]
+TBRetoch target controls include the documented face geometry families:
+- Head pose and symmetry.
+- Face / temple / cheekbone / jaw.
+- Face size, V-shape, jaw length, face width.
+- Hairline / forehead.
+- Philtrum / middle / lower facial sections.
+- Chin geometry.
+- Eyebrow geometry.
+- Eye geometry.
+- Nose geometry.
+- Mouth geometry.
+- Linked/unlinked left/right behavior where Evoto provides it.
 
-### Face shape
-- Face
-- Temple
-- Cheekbone
-- Jaw
-- Face Size
-- V-Shape, linked/unlinked sides
-- Jaw Length
-- Face Width
-- Hairline
-- Forehead Height L/R
-- Forehead Width L/R
-- Philtrum
-- Middle Section
-- Lower Section
-- Facial Fullness
-- Taper Chin
-- Chin Length
-- Chin Shape
-
-### Eyebrows
-- Thickness
-- Distance
-- Tilt
-- Arch Height
-- Position
-- linked/unlinked left/right
-
-### Eyes geometry
-- Full Eye Size
-- Eyeball Size
-- Height
-- Width
-- Distance
-- Inner Corner
-- Outer Corner
-- Tilt
-- Position
-- linked/unlinked left/right
-
-### Nose
-- Size
-- Length/Height
-- Horizontal position
-- Nose Bridge
-- Width / Ala
-- Nose Tip
-
-### Mouth
-- Size
-- Width
-- Vertical
-- Horizontal
-- Tilt
-- M-shaped/Cupid lips
-- Upper Lip
-- Lower Lip
-
-## Eyes — appearance
-- Eye Brightness.
-- Iris / Eye Whites / Eye Reflection / Iris Flare.
-- Remove Glasses Glare / Strong Glare Removal.
-- Red Vein Removal.
-- Eye White Cleanse.
-- Red Eye Removal.
-- Eye Symmetry, Eye Level, Eye Balance.
-- Catchlights: multiple styles, intensity and movable placement.
-- AI Iris Correction / Direct Gaze with per-eye horizontal/vertical position and size where supported.
-- Manual tuning pen.
-
-## Facial expression
-- Gummy Smile / gum exposure adjustment.
-- Gentle Smile.
-- Smile generation/management.
-- Smirk/asymmetry correction where supported.
+## Eyes
+- Eye brightness.
+- Iris and eye-white controls.
+- Reflection / iris flare.
+- Red-vein cleanup.
+- Eye-white cleanse.
+- Red-eye removal.
+- Eye symmetry correction.
+- Catchlights.
+- Direct-gaze / iris-correction family where documented.
 
 ## Teeth
-- Teeth Flaws Removal: braces, stains, gaps.
-- Fix Teeth Edge.
-- Teeth Whitening: Brightness, Desaturation.
-- Teeth Alignment.
-- Pretty Teeth / generated corrective set where appropriate.
+- Teeth whitening/brightness.
+- Teeth flaw cleanup.
+- Edge/alignment correction where supported.
 
 ## Makeup
-### Basic
 - Highlight.
 - Contour.
-- Eyebrow Makeup.
-- Eye Makeup: Amount, Saturation, Brightness, Dimensionality.
-- Lip Makeup: Amount, Saturation, Brightness, Dimensionality.
-
-### Makeup suites / components
-- Preset makeup suites with Amount.
-- Eyebrow styles.
-- Eyeshadow styles.
-- Eyelash styles, linked/unlinked.
-- Eyeliner styles.
-- Contacts.
-- Blush styles.
-- Lipstick colors + texture.
-- Contour styles.
-- Face decorations/freckle styles.
+- Eyebrow makeup.
+- Eye makeup amount/saturation/brightness/dimensionality.
+- Lip makeup amount/saturation/brightness/dimensionality.
+- Makeup presets/components.
 
 ## Hair
-- Hair Part Line / sparse-area fill.
-- Top Hair Volume.
-- Side Hair Volume.
-- Hairline refinement.
-- Stray Hairs Removal with zone controls.
 - Smooth Hair.
 - Hair Shine.
-- Hair color consistency / color changes.
-- Manual refinement where needed.
+- Hair color consistency/change.
+- Part-line/sparse-area correction.
+- Stray-hair removal.
+- White-hair correction.
+- Manual refinement.
 
-## Hands / clothing / accessories / pets
-- Hand beautification and vein cleanup.
-- Clothing wrinkle removal.
-- Clothing beautification options by subject attributes where supported.
-- Clothing & Accessories must be a first-class feature module, not hidden under Portrait.
-- Pet retouching module and Pet Masks.
-- Pet leash removal / stray fur cleanup where supported.
+## Full Body Reshape
+Evoto documents AI reshape based on 3D skeleton/posture recognition. TBRetoch parity therefore requires landmarks/skeleton-based deformation, not rectangle scaling.
 
-## Full body reshape
-- AI Reshape [-100,+100 class behavior].
+Target controls:
+- AI Reshape.
 - Smooth Physique.
-- Head size.
-- Body width/shape.
+- Head.
+- Overall Body.
 - Belly Slimming.
 - Height.
-- Upper Body Length.
-- Neck Width L/R and linked.
-- Neck Length [-100,+100].
+- Upper-body length.
+- Neck width/length.
 - Arms.
-- Breasts/chest size.
-- Waist Width L/R and linked.
-- Waist Length.
-- Hips L/R and linked.
-- Leg Width: thighs/calves separate or linked.
-- Leg Length with thigh/calf subcontrols.
-- 3D skeleton/posture-aware protection and group-photo safety rules.
-- Liquify Background Repair after geometry editing (Evoto 8.0 / AI Lab).
+- Chest/breast area where supported.
+- Waist.
+- Hips.
+- Thigh/calf width.
+- Leg length.
+- Group-photo safety behavior.
 
-## Background
-### Background cleanup
+---
+
+# 5. Background Adjustments
+
+## Solid backdrop refinement
 - Distractions Removal.
 - Clean Backdrop.
 - Smart Removal.
 - Unify Lighting.
 - Color Banding Removal.
 - Background Enhancement.
-- Matte Refinement / Black & White Edge Removal.
 
-### Background replacement / AI Set Design / Fusion
-- Subject Only vs Subject + Connected Objects.
-- Official/custom background assets.
-- Foreground layers and order.
-- Subject reposition / scale / rotate / flip H/V.
-- Character Lighting to blend subject with scene.
-- Manual cutout refinement.
+## Matte Refinement
+V7.3 adds Black & White Edge Removal to reduce black/white fringes at subject edges.
+
+## Background replacement / set design
+- Background removal/cutout.
+- Transparent/white/black/custom backgrounds.
 - AI Background Fusion.
-- AI Set Design with batch processing.
-- Floor Reflection / Ground Reflection.
-- Grass Fill.
+- AI Set Design.
+- **Batch AI Set Design** in V7.3.
+- Floor Reflection.
+- Subject placement / scaling / scene blending as required by the replacement workflow.
 
-### Sky replacement
-- AI Sky Replacement.
-- Sky selection/replacement.
-- Rotate/Flip, Angle, Sky Gradient.
+## Sky Replacement
+Documented controls:
+- Sky selection/custom sky.
+- Vertical/horizontal position.
+- Flip.
 - Edge Transition.
-- Temperature, Tint, Saturation, Brightness.
-- Sky Blur, Opacity.
-- Scenery Color match.
-- Human Color match.
-- Water Reflection and Water Blur.
+- Temperature.
+- Tint.
+- Saturation.
+- Brightness.
+- Sky Blur.
+- Opacity.
+- Scenery Color matching.
+- Human Color matching.
+- Water Reflection.
+- Water Blur.
 
-### Lens blur / depth
-- Subject-aware focus.
+## Depth / blur
 - Lens Blur.
-- Blur/bokeh controls and manual refinement.
+- Background blur with subject-aware masking.
 
-## AI Lab / generative / restore / manual tools
-- People Removal.
-- Smart Removal.
-- Healing/repair brush.
-- Spot Healing / Patch / Clone Stamp.
-- Liquify with dedicated history.
-- Liquify Background Repair.
-- Old Photo Restoration, optional colorization, 2K/4K output.
-- Generative Expand (Evoto 8.0).
-- Perfect Shot where available.
-- Search tool / unified search.
-- Crop with AI face positioning.
-- Rotate with AI horizontal correction and angle slider.
+---
 
-## Presets / Asset Hub / batch workflow
-- Recommended, Personal and Team presets.
-- Save, import, group and manage presets.
-- Asset Hub (Evoto 8.0): presets, backgrounds and creator/community assets.
-- Batch sync selected effect groups.
-- Sync popup frequency preference.
-- Workflow templates for repeated import → culling → apply effect → export → deliver sequences.
-- Workflow templates documented for wedding, portrait, headshot, school, family, baby, fashion and general workflows.
-- Workflow run state/progress retained separately from reusable recipe.
-- Import source options should include local folder/project; Lightroom Classic compatibility can be a later optional integration.
+# 6. Clothing & Accessories
 
-## Culling / organization
-- Smart Culling at project level.
-- Smart Photo Analysis for blur, closed eyes, exposure, face clusters and other attributes.
-- Quick vs Custom culling preferences.
-- Event-type-aware culling configuration.
-- Faces and Photo Cluster views.
-- Story Groups / Stories and Segments (Evoto 8.0).
-- Ratings, flags, color labels, filters and sorting.
-- Metadata panel.
-- Virtual copies.
-- Slideshow and Full Screen View.
-- Hot Folder import safeguards.
-- Tethered shooting / wired and wireless import are later optional modules.
+This must be a first-class module because Evoto exposes it as a first-class edit module.
 
-## Export — must be full-resolution, never preview-canvas export
-- Export Quick / Custom / Previous Settings.
-- Multiple export presets simultaneously.
-- Effect Preset at export; support separate outputs for multiple effect presets.
-- Original Filename / Preset Name / Custom Text naming tokens.
-- Export destination: desktop / folder / original folder and optional integrations.
-- Size modes: Percentage, Width & Height, Dimensions, Long Edge, Short Edge.
-- Resolution: PPI / PPC.
-- Formats: Original, JPEG 8-bit, TIFF 8/16-bit, PNG.
-- RAW original-format request resolves to JPEG once edits are applied; alpha images resolve to PNG.
-- JPEG quality presets + 0–100 slider.
-- Optional file-size target/limit.
-- Output sharpening: Screen Low/Standard/High, Print Low/Standard/High, None.
-- Watermark: rotation, size, opacity, position.
-- Metadata retention choices.
-- Configurable max simultaneous exports based on hardware.
-- Export must reprocess original pixels at source resolution.
+Documented public feature pages include:
+- Clothing wrinkle removal.
+- Shoe editing.
+- Clothing extraction.
+- Clothing color change.
+- Lint/pilling removal.
 
-## TBRetoch internal/offline architecture requirements
-- No license/credit system for this internal/team build.
-- No network required after installation/model deployment.
-- Preview render graph separate from export render graph.
-- Preview: proxy pyramid / mip levels up to configurable 4000px, GPU-first rendering, progressive quality while slider is moving, full-quality settle after release.
-- Pan/zoom must be matrix-based, independent of image pixels; mouse drag / wheel / keyboard shortcuts.
-- Original pixels remain immutable; edits stored as nondestructive recipe.
-- Export: original resolution, ICC-aware, metadata-preserving, batch queue.
-- CPU: multithreaded RAW decode, JPEG/TIFF/PNG encode, preprocessing, model fallback inference.
-- GPU: DirectML on broad Windows GPUs; CUDA/TensorRT where NVIDIA runtime permits; CPU fallback.
-- Separate semantic models: face detection + landmarks/mesh; human pose/3D skeleton; portrait parsing; hair/skin/clothes/background parsing; matting; eye/iris landmarks; blemish/skin restoration; background/depth/relight.
-- Cache masks/landmarks/features per image and invalidate only dependent stages.
-- Async worker pool; UI thread never runs pixel loops or model inference.
-- Do not automatically analyze every newly selected photo at full resolution; analysis is queued/cached and preview stays interactive.
+---
 
-## Definition of parity acceptance
-A control is not considered implemented because a slider exists. It only counts when:
-1. The intended target region is detected correctly.
-2. Slider response is continuous and reversible.
-3. Background/neighboring geometry is protected where applicable.
-4. Preview remains interactive while dragging.
-5. Export reproduces the full-resolution edit rather than exporting the preview.
-6. Batch sync re-detects semantics for each image rather than reusing coordinates.
-7. Multi-person images allow independent person targeting where the feature supports it.
-8. Left/right linked controls actually unlink into independent semantic regions.
-9. Offline mode is tested with networking disabled after model deployment.
-10. GPU path and CPU fallback are both validated in automated smoke tests.
+# 7. Editing toolkit / manual tools
+
+Public features include:
+- Deblur / blur removal.
+- Shadow removal.
+- AI Magic Eraser / object removal.
+- AI lighting effects.
+- Resize.
+- Rotate.
+- Brighten / darken.
+- Flip.
+- RAW editing.
+- AI enhancer.
+- Old-photo restoration.
+- RAW converter.
+- Distortion correction.
+- Crop.
+- Healing / repair style tools where documented in Support.
+
+---
+
+# 8. Pet Retouching
+
+- Pet masks.
+- Pet-specific color adjustment through masking.
+- Stray-fur cleanup is publicly listed as a pet-retouch feature.
+
+---
+
+# 9. Import, RAW and Lightroom workflow
+
+Evoto documents:
+- JPEG, TIFF, PNG and most camera RAW formats.
+- Max 15,000 images in one import session.
+- No stated project-total image limit.
+- Current hard input limits: image file <= 1 GB and dimensions <= 12,000 x 12,000 px.
+- Lightroom Classic round-trip support and basic color-parameter synchronization.
+- Auto Import & Export / Hot Folder workflows.
+- Integrity wait/check behavior for hot folders.
+
+TBRetoch internal target:
+- libraw/rawspeed-class RAW decode path.
+- ICC/color-managed preview/export.
+- Hot-folder watcher.
+- No destructive overwrite of original source pixels.
+
+---
+
+# 10. Export
+
+A previous TBRetoch build incorrectly exported the reduced preview canvas. This is prohibited by the V0.5 architecture.
+
+Evoto documents:
+- Original-format behavior.
+- JPG 8-bit.
+- TIFF 8-bit / 16-bit.
+- PNG.
+- JPG quality percentage plus Low / Medium / High / Best presets.
+- Optional target file-size limit.
+- Resize modes including percentage, width/height and long/short edge families.
+- Resolution in PPI / PPC.
+- Output sharpening:
+  - Screen Low / Standard / High
+  - Print Low / Standard / High
+  - None
+- Watermark controls.
+- Metadata options.
+- Max simultaneous exports automatically selected by hardware with user adjustment.
+
+**Required TBRetoch behavior:** export always re-renders from the original-resolution source with the non-destructive recipe. Preview pixels are never used as final output.
+
+---
+
+# 11. Performance behavior to reproduce
+
+Evoto explicitly documents separate controls for preview and export performance:
+
+### Preview
+- Portrait Effect Rendering Acceleration.
+- Color Effect Rendering Acceleration.
+- Preview memory optimization.
+- Configurable preview size.
+- Edited vs original thumbnails.
+- Preview effect preloading for adjacent images.
+
+### Export
+- Portrait Effect Rendering Acceleration for export.
+- Export memory optimization.
+- Max simultaneous exports based on hardware.
+- Effects are applied again during export for maximum quality.
+
+### Group portrait optimization
+- Optional faster processing for approximately 15+ subjects, with a documented speed/precision trade-off.
+
+### TBRetoch implementation requirement
+- UI thread does not run image-pixel loops or neural inference.
+- GPU preview renderer.
+- Asynchronous AI workers.
+- CPU worker pool for RAW decode, preprocessing and encode.
+- Cached masks, landmarks and semantic features.
+- Progressive preview quality while dragging; full-quality settle after release.
+- Original-resolution export pipeline.
+
+GPU path target:
+- DirectML for broad Windows GPU support.
+- CUDA/TensorRT where a supported NVIDIA configuration is present.
+- CPU fallback.
+
+The app should display the active backend truthfully.
+
+---
+
+# 12. TBRetoch branding and internal-use decisions
+
+- Product name: **TBRetoch**.
+- Logo: **TB**.
+- Theme: dark UI with TB purple accents.
+- Internal/team build: **no credits, no export quota, no License Center**.
+- Offline editing after local model installation.
+- No Evoto logos, icons, artwork or proprietary visual assets.
+- No Evoto model extraction or proprietary weight reuse.
+
+---
+
+# 13. Definition of parity acceptance
+
+A feature does not count because a label or slider exists. It counts only if:
+
+1. Correct semantic target is detected.
+2. Adjustment is reversible and non-destructive.
+3. Neighboring/background areas are protected.
+4. Preview remains interactive while the control is dragged.
+5. Full-resolution export reproduces the edit from original pixels.
+6. Batch sync re-detects semantic regions independently per photo.
+7. Multi-person edits can target the correct person where the Evoto feature supports it.
+8. Left/right linked controls become independent when unlinked.
+9. Offline behavior is tested with networking disabled after models are installed.
+10. GPU and CPU fallback paths are both smoke-tested.
+11. Before/After works at image, feature-group and single-effect level where applicable.
+12. Image quality is evaluated at 100% and export file dimensions are verified against the original.
+
+---
+
+# 14. Source baseline
+
+Primary Evoto pages used in this audit:
+- Official Download page.
+- Official Release Notes.
+- Official Features catalog.
+- Support: Edit Workspace Overview.
+- Support: Library Workspace Overview.
+- Support: System Settings / Performance.
+- Support: Import & Export.
+- Support: Export Quality.
+- Support: Color Adjustments.
+- Support: AI Color Match.
+- Support: Masking.
+- Support: Skin Retouching.
+- Support: Facial Reshape.
+- Support: Eyes / Makeup / Hair / Teeth.
+- Support: Full Body Reshape.
+- Support: Background Adjustments / Sky Replacement.
+- Support: Auto Import & Export.
+
+This document supersedes earlier TBRetoch parity notes that incorrectly treated an unverified future version as the current Evoto release.
