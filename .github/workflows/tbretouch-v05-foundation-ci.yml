@@ -1,0 +1,84 @@
+name: TBRetoch V0.5 foundation CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - tbretouch-v0.5-evoto-parity-audit
+    paths:
+      - 'tuan-bo-ai-studio/studio/**'
+      - '.github/workflows/tbretouch-v05-foundation-ci.yml'
+
+jobs:
+  windows-foundation:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download offline BiRefNet Lite model
+        shell: pwsh
+        run: |
+          $root = 'tuan-bo-ai-studio/studio/resources/models/onnx-community/BiRefNet_lite-ONNX'
+          New-Item -ItemType Directory -Force -Path "$root/onnx" | Out-Null
+          curl.exe -L --retry 4 --retry-delay 3 -o "$root/onnx/model.onnx" "https://huggingface.co/onnx-community/BiRefNet_lite-ONNX/resolve/main/onnx/model.onnx?download=true"
+          if ((Get-Item "$root/onnx/model.onnx").Length -lt 100MB) { throw 'BiRefNet model download incomplete' }
+
+      - name: Syntax check main and worker architecture
+        shell: pwsh
+        run: |
+          node --check tuan-bo-ai-studio/studio/src/main.js
+          node --check tuan-bo-ai-studio/studio/src/preload.js
+          node --check tuan-bo-ai-studio/studio/src/aiService.js
+          node --check tuan-bo-ai-studio/studio/src/exportService.js
+          node --check tuan-bo-ai-studio/studio/src/processingWorker.js
+          node --check tuan-bo-ai-studio/studio/src/workerManager.js
+          node --check tuan-bo-ai-studio/studio/src/renderer/renderer.js
+
+      - name: Install dependencies
+        working-directory: tuan-bo-ai-studio/studio
+        run: npm install
+
+      - name: Worker process and offline AI smoke test
+        working-directory: tuan-bo-ai-studio/studio
+        run: node scripts/smoke-worker.mjs
+
+      - name: Generate TB icon if missing
+        shell: pwsh
+        run: |
+          if (-not (Test-Path 'tuan-bo-ai-studio/studio/resources/tb-icon.png')) {
+            Add-Type -AssemblyName System.Drawing
+            $bmp = New-Object System.Drawing.Bitmap 512,512
+            $g = [System.Drawing.Graphics]::FromImage($bmp)
+            $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+            $g.Clear([System.Drawing.Color]::FromArgb(24,14,30))
+            $brush = New-Object System.Drawing.Drawing2D.LinearGradientBrush ([System.Drawing.Rectangle]::new(0,0,512,512)), ([System.Drawing.Color]::FromArgb(92,25,180)), ([System.Drawing.Color]::FromArgb(190,86,255)), 45
+            $g.FillRoundedRectangle = $null
+            $g.FillRectangle($brush,28,28,456,456)
+            $font = New-Object System.Drawing.Font 'Arial',190,[System.Drawing.FontStyle]::Bold,[System.Drawing.GraphicsUnit]::Pixel
+            $sf = New-Object System.Drawing.StringFormat
+            $sf.Alignment = 'Center'; $sf.LineAlignment = 'Center'
+            $g.DrawString('TB',$font,[System.Drawing.Brushes]::White,[System.Drawing.RectangleF]::new(0,0,512,512),$sf)
+            New-Item -ItemType Directory -Force -Path 'tuan-bo-ai-studio/studio/resources' | Out-Null
+            $bmp.Save((Resolve-Path 'tuan-bo-ai-studio/studio/resources').Path + '\tb-icon.png',[System.Drawing.Imaging.ImageFormat]::Png)
+            $g.Dispose();$bmp.Dispose();$brush.Dispose();$font.Dispose()
+          }
+
+      - name: Build V0.5 installer candidate
+        working-directory: tuan-bo-ai-studio/studio
+        run: npm run dist
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Upload candidate only - no public release
+        uses: actions/upload-artifact@v4
+        with:
+          name: TBRetoch-V0.5-foundation-candidate
+          path: tuan-bo-ai-studio/studio/dist/*.exe
+          retention-days: 7
