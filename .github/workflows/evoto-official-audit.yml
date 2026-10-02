@@ -1,0 +1,52 @@
+name: Audit official Evoto Windows build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - tbretouch-v0.5-evoto-parity-audit
+    paths:
+      - 'tuan-bo-ai-studio/scripts/evoto-download-audit.mjs'
+      - 'tuan-bo-ai-studio/scripts/evoto-installed-audit.ps1'
+      - '.github/workflows/evoto-official-audit.yml'
+
+jobs:
+  audit-evoto:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install browser audit dependency
+        shell: pwsh
+        run: npm install --no-save playwright-core@1.55.0
+
+      - name: Resolve official Windows download and download installer
+        shell: pwsh
+        run: node tuan-bo-ai-studio/scripts/evoto-download-audit.mjs evoto-audit
+
+      - name: Inspect signature, package, install and public UI metadata
+        shell: pwsh
+        run: ./tuan-bo-ai-studio/scripts/evoto-installed-audit.ps1 -AuditDir evoto-audit | Tee-Object -FilePath evoto-audit/audit-console.txt
+
+      - name: Remove copyrighted installer before artifact upload
+        if: always()
+        shell: pwsh
+        run: |
+          Remove-Item 'evoto-audit/Evoto-Official-Setup.exe' -Force -ErrorAction SilentlyContinue
+          Get-ChildItem evoto-audit -File | Select-Object Name,Length | Format-Table -AutoSize
+
+      - name: Upload audit evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evoto-official-audit
+          path: evoto-audit/*
+          if-no-files-found: warn
+          retention-days: 7
