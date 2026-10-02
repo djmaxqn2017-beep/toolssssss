@@ -1,24 +1,145 @@
 <!doctype html>
-<html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tuấn Bồ AI Studio</title><link rel="stylesheet" href="styles.css"></head>
-<body><div class="app-shell">
-<header class="topbar"><div class="top-left"><button class="icon-btn ghost" title="Quay lại">‹</button><div class="brand-mark">TB</div><div class="brand-name">Tuấn Bồ AI Studio</div><button id="btnOpen" class="toolbar-btn"><span>＋</span> Thêm ảnh</button><button id="btnLoadProject" class="icon-btn" title="Mở Project">▣</button><button id="btnSaveProject" class="icon-btn" title="Lưu Project">⌁</button></div><div class="top-center"><button id="btnUndo" class="icon-btn" title="Undo">↶</button><button id="btnRedo" class="icon-btn" title="Redo">↷</button><button id="btnResetTop" class="toolbar-btn"><span>✦</span> Reset ảnh</button><div class="feature-search">⌕ <span>Color • Portrait • Background • Lighting</span></div></div><div class="top-right"><span id="aiTopStatus" class="ai-top-status">AI Offline</span><button id="btnExport" class="primary export-btn">Xuất ảnh</button></div></header>
-<main class="workspace"><div id="library" class="library-hidden"></div><aside class="floating-tools"><button id="btnPresetPanel" class="float-tool active"><span class="float-icon">✦</span><span>Cài sẵn</span></button><button id="btnMaskPreview" class="float-tool"><span class="float-icon">◐</span><span>Mặt nạ</span></button><button id="btnHistory" class="float-tool"><span class="float-icon">↺</span><span>Lịch sử</span></button></aside>
-<section class="preview-area"><div class="viewer-toolbar"><div id="imageInfo" class="image-info">Chưa chọn ảnh</div><div class="viewer-tools"><div class="segmented compact"><button class="active" data-view="after">After</button><button data-view="before">Before</button><button data-view="split">A/B</button></div><button id="btnZoom" class="zoom-pill">100%</button></div></div><div class="viewer" id="viewer"><canvas id="canvas"></canvas><div id="emptyState" class="empty-state"><div class="empty-logo">TB</div><h2>Tuấn Bồ AI Studio</h2><p>Nhập ảnh để bắt đầu chỉnh sửa.</p><button class="primary" id="btnOpenCenter">Nhập ảnh</button></div></div></section>
-<section class="gallery-area"><div class="gallery-toolbar"><div class="gallery-left"><button class="icon-btn mini">☰</button><span class="gallery-count" id="galleryCount">Thư viện ảnh</span></div><div class="gallery-right"><button id="btnCopy" class="toolbar-btn small">Copy</button><button id="btnPaste" class="toolbar-btn small">Paste</button><button id="btnPrev" class="icon-btn mini">‹</button><button id="btnNext" class="icon-btn mini">›</button></div></div><div id="filmstrip" class="filmstrip"></div></section></main>
-<aside class="rightbar"><div class="right-tabs"><button class="active" data-panel="color"><span>◉</span><em>Màu</em></button><button data-panel="portrait"><span>♙</span><em>Chân dung</em></button><button data-panel="background"><span>▧</span><em>Phông nền</em></button><button data-panel="lighting"><span>☼</span><em>Ánh sáng</em></button></div><div class="right-scroll">
-<section class="panel active" data-panel-content="color"><div class="histogram-card"><canvas id="histogramCanvas"></canvas><div class="histogram-title">HISTOGRAM</div></div>
-<details class="ev-section" open><summary>AI Bắt chước màu <span>⌄</span></summary><div class="section-body"><p class="muted">Chọn ảnh tham chiếu, app sẽ cân exposure, WB, contrast và saturation theo ảnh mẫu.</p><div class="row two"><button id="btnSetReference">Đặt ảnh mẫu</button><button class="primary" id="btnColorMatch">Bắt chước màu</button></div><div id="referenceName" class="reference-name">Chưa có ảnh mẫu</div></div></details>
-<details class="ev-section" open><summary>Điều chỉnh cơ bản <span>⌄</span></summary><div id="sliders" class="section-body sliders-host"></div></details>
-<details class="ev-section"><summary>HSL <span>⌄</span></summary><div id="hslSliders" class="section-body"></div></details>
-<details class="ev-section"><summary>Đường cong / Tone <span>⌄</span></summary><div id="toneSliders" class="section-body"></div></details>
-<details class="ev-section"><summary>Phân cấp màu <span>⌄</span></summary><div id="gradingSliders" class="section-body"></div></details>
-<div class="panel-actions"><button id="btnLoadPreset">Áp cài sẵn</button><button id="btnPreset" class="primary">Lưu cài sẵn</button><button id="btnReset">Khôi phục</button></div></section>
-<section class="panel" data-panel-content="portrait"><details class="ev-section" open><summary>Chỉnh sửa chân dung AI <span>⌄</span></summary><div class="section-body"><div class="ai-card"><div><b>TB Portrait AI</b><span id="portraitAiStatus">Chờ ảnh</span></div><button id="btnAnalyzePortrait" class="primary small-ai-btn">Phân tích AI</button></div><div id="portraitSliders"></div></div></details>
-<details class="ev-section" open><summary>Chỉnh hình khuôn mặt <span>⌄</span></summary><div id="faceSliders" class="section-body"></div></details>
-<details class="ev-section"><summary>Trang điểm <span>⌄</span></summary><div id="makeupSliders" class="section-body"></div></details>
-<details class="ev-section"><summary>Body <span>⌄</span></summary><div id="bodySliders" class="section-body"></div></details>
-<details class="ev-section"><summary>Tóc <span>⌄</span></summary><div id="hairSliders" class="section-body"></div></details></section>
-<section class="panel" data-panel-content="background"><details class="ev-section" open><summary>Phông nền AI <span>⌄</span></summary><div class="section-body"><div class="ai-card"><div><b>BiRefNet Offline</b><span id="backgroundAiStatus">Chờ ảnh</span></div><button id="btnAnalyzeBackground" class="primary small-ai-btn">Tách chủ thể</button></div><div id="backgroundSliders"></div></div></details><details class="ev-section"><summary>Tinh chỉnh hậu cảnh <span>⌄</span></summary><div class="section-body"><p class="muted">Blur, sáng/tối, bão hòa và chiều sâu nền dùng AI mask để giữ chủ thể.</p></div></details></section>
-<section class="panel" data-panel-content="lighting"><details class="ev-section" open><summary>AI Relight <span>⌄</span></summary><div class="section-body"><div class="ai-card"><div><b>Subject-aware Relight</b><span id="lightingAiStatus">Chờ ảnh</span></div><button id="btnAnalyzeLighting" class="primary small-ai-btn">Phân tích AI</button></div><div id="lightingSliders"></div></div></details><details class="ev-section"><summary>Ánh sáng chân dung <span>⌄</span></summary><div class="section-body"><p class="muted">Điều chỉnh sáng chủ thể, nhiệt độ, glow/rim và độ sâu hậu cảnh.</p></div></details></section>
-</div><footer class="license-card"><div><strong>LICENSE</strong><span id="licenseText">Đang kiểm tra…</span></div><div class="license-actions"><button id="btnCopyMachine">Mã máy</button><button id="btnLicense">Nhập license</button></div></footer></aside>
-</div><script src="renderer.js"></script></body></html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TBRetoch</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <div class="top-left">
+      <div class="brand-mark">TB</div><div class="brand-name">TBRetoch</div>
+      <button id="btnOpen" class="toolbar-btn">＋ Thêm ảnh</button>
+      <button id="btnLoadProject" class="icon-btn" title="Mở Project">▣</button>
+      <button id="btnSaveProject" class="icon-btn" title="Lưu Project">⌁</button>
+    </div>
+    <div class="top-center">
+      <button id="btnUndo" class="icon-btn" title="Undo">↶</button>
+      <button id="btnRedo" class="icon-btn" title="Redo">↷</button>
+      <button id="btnResetTop" class="toolbar-btn">Reset</button>
+      <button id="btnFit" class="toolbar-btn">Vừa màn hình</button>
+      <div class="feature-search">Offline • CPU + GPU • Portrait Workflow</div>
+    </div>
+    <div class="top-right">
+      <span id="perfText" class="perf-text">Đang kiểm tra phần cứng…</span>
+      <span id="aiTopStatus" class="ai-top-status">AI Offline</span>
+      <button id="btnExport" class="primary export-btn">Xuất ảnh</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="floating-tools">
+      <button id="btnPresetPanel" class="float-tool active"><span class="float-icon">✦</span><span>Cài sẵn</span></button>
+      <button id="btnMaskPreview" class="float-tool"><span class="float-icon">◐</span><span>Mặt nạ</span></button>
+      <button id="btnHistory" class="float-tool"><span class="float-icon">↺</span><span>Lịch sử</span></button>
+    </aside>
+
+    <section class="preview-area">
+      <div class="viewer-toolbar">
+        <div id="imageInfo" class="image-info">Chưa chọn ảnh</div>
+        <div class="viewer-tools">
+          <div class="segmented compact">
+            <button class="active" data-view="after">After</button>
+            <button data-view="before">Before</button>
+            <button data-view="split">A/B</button>
+          </div>
+          <button id="btnZoomOut" class="icon-btn mini">−</button>
+          <button id="btnZoom" class="zoom-pill">100%</button>
+          <button id="btnZoomIn" class="icon-btn mini">＋</button>
+        </div>
+      </div>
+      <div class="viewer" id="viewer">
+        <div id="stage" class="stage"><canvas id="canvas"></canvas></div>
+        <div id="emptyState" class="empty-state">
+          <div class="empty-logo">TB</div>
+          <h2>TBRetoch</h2>
+          <p>Chỉnh ảnh chân dung offline bằng CPU + GPU của máy.</p>
+          <button class="primary" id="btnOpenCenter">Nhập ảnh</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="gallery-area">
+      <div class="gallery-toolbar">
+        <div class="gallery-left"><span class="gallery-count" id="galleryCount">Thư viện ảnh</span></div>
+        <div class="gallery-right">
+          <button id="btnCopy" class="toolbar-btn small">Copy</button>
+          <button id="btnPaste" class="toolbar-btn small">Paste</button>
+          <button id="btnPrev" class="icon-btn mini">‹</button><button id="btnNext" class="icon-btn mini">›</button>
+        </div>
+      </div>
+      <div id="filmstrip" class="filmstrip"></div>
+    </section>
+  </main>
+
+  <aside class="rightbar">
+    <div class="right-tabs">
+      <button class="active" data-panel="color"><span>◉</span><em>Màu</em></button>
+      <button data-panel="portrait"><span>♙</span><em>Chân dung</em></button>
+      <button data-panel="background"><span>▧</span><em>Phông nền</em></button>
+      <button data-panel="lighting"><span>☼</span><em>Ánh sáng</em></button>
+      <button data-panel="tools"><span>⌖</span><em>Công cụ</em></button>
+    </div>
+    <div class="right-scroll">
+      <section class="panel active" data-panel-content="color">
+        <div class="histogram-card"><canvas id="histogramCanvas"></canvas><div class="histogram-title">HISTOGRAM</div></div>
+        <details class="ev-section" open><summary>AI Bắt chước màu <span>⌄</span></summary><div class="section-body">
+          <p class="muted">Ảnh mẫu → cân sáng, WB, contrast, saturation và tone tổng thể.</p>
+          <div class="row two"><button id="btnSetReference">Đặt ảnh mẫu</button><button class="primary" id="btnColorMatch">Bắt chước màu</button></div>
+          <div class="row two top-gap"><button id="btnAutoColor">Auto màu</button><button id="btnReset">Khôi phục màu</button></div>
+          <div id="referenceName" class="reference-name">Chưa có ảnh mẫu</div>
+        </div></details>
+        <details class="ev-section" open><summary>Điều chỉnh cơ bản <span>⌄</span></summary><div id="sliders" class="section-body"></div></details>
+        <details class="ev-section"><summary>HSL <span>⌄</span></summary><div id="hslSliders" class="section-body"></div></details>
+        <details class="ev-section"><summary>Tone / Curve <span>⌄</span></summary><div id="toneSliders" class="section-body"></div></details>
+        <details class="ev-section"><summary>Color Grading <span>⌄</span></summary><div id="gradingSliders" class="section-body"></div></details>
+        <div class="panel-actions"><button id="btnLoadPreset">Áp cài sẵn</button><button id="btnPreset" class="primary">Lưu cài sẵn</button></div>
+      </section>
+
+      <section class="panel" data-panel-content="portrait">
+        <details class="ev-section" open><summary>Portrait AI <span>⌄</span></summary><div class="section-body"><div class="ai-card"><div><b>TB Portrait AI</b><span id="portraitAiStatus">Chờ ảnh</span></div><button id="btnAnalyzePortrait" class="primary small-ai-btn">Phân tích AI</button></div><div id="portraitSliders"></div></div></details>
+        <details class="ev-section" open><summary>Khuôn mặt <span>⌄</span></summary><div id="faceSliders" class="section-body"></div></details>
+        <details class="ev-section"><summary>Trang điểm <span>⌄</span></summary><div id="makeupSliders" class="section-body"></div></details>
+        <details class="ev-section"><summary>Body Reshape <span>⌄</span></summary><div id="bodySliders" class="section-body"></div></details>
+        <details class="ev-section"><summary>Tóc <span>⌄</span></summary><div id="hairSliders" class="section-body"></div></details>
+      </section>
+
+      <section class="panel" data-panel-content="background">
+        <details class="ev-section" open><summary>Phông nền AI <span>⌄</span></summary><div class="section-body"><div class="ai-card"><div><b>BiRefNet Offline</b><span id="backgroundAiStatus">Chờ ảnh</span></div><button id="btnAnalyzeBackground" class="primary small-ai-btn">Tách chủ thể</button></div><div id="backgroundSliders"></div></div></details>
+      </section>
+
+      <section class="panel" data-panel-content="lighting">
+        <details class="ev-section" open><summary>AI Relight <span>⌄</span></summary><div class="section-body"><div class="ai-card"><div><b>Subject-aware Relight</b><span id="lightingAiStatus">Chờ ảnh</span></div><button id="btnAnalyzeLighting" class="primary small-ai-btn">Phân tích AI</button></div><div id="lightingSliders"></div></div></details>
+      </section>
+
+      <section class="panel" data-panel-content="tools">
+        <details class="ev-section" open><summary>Transform <span>⌄</span></summary><div class="section-body tool-grid">
+          <button id="btnRotateLeft">↶ Xoay trái</button><button id="btnRotateRight">↷ Xoay phải</button>
+          <button id="btnFlipH">⇋ Lật ngang</button><button id="btnFlipV">⇅ Lật dọc</button>
+        </div></details>
+        <details class="ev-section"><summary>Workflow <span>⌄</span></summary><div class="section-body"><p class="muted">Kéo ảnh trực tiếp để pan, lăn chuột để zoom, double-click để fit. Ctrl+Z / Ctrl+Y để undo/redo.</p></div></details>
+      </section>
+    </div>
+    <footer class="team-card"><div><strong>TB TEAM MODE</strong><span id="teamText">Offline • Không giới hạn xuất ảnh</span></div><span class="engine-badge" id="engineBadge">CPU/GPU AUTO</span></footer>
+  </aside>
+</div>
+
+<div id="exportModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head"><b>Xuất ảnh TBRetoch</b><button id="btnCloseExport">×</button></div>
+    <div class="export-grid">
+      <label>Định dạng<select id="exportFormat"><option value="jpeg">JPEG</option><option value="png">PNG</option><option value="webp">WEBP</option></select></label>
+      <label>Chất lượng<input id="exportQuality" type="number" min="70" max="100" value="98"></label>
+      <label>Tên hậu tố<input id="exportSuffix" value="_TB"></label>
+      <label>Độ phân giải<select id="exportResolution"><option value="original">Giữ nguyên ảnh gốc</option><option value="preview">Preview</option></select></label>
+    </div>
+    <p class="muted">Mặc định xuất ở kích thước ảnh gốc. GPU xử lý compositing/filter; CPU đảm nhiệm mã hóa file.</p>
+    <div class="modal-actions"><button id="btnCancelExport">Hủy</button><button id="btnDoExport" class="primary">XUẤT ẢNH</button></div>
+    <div id="exportStatus" class="export-status"></div>
+  </div>
+</div>
+
+<script src="renderer.js"></script>
+</body></html>
