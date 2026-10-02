@@ -1,0 +1,1 @@
+Target UI: same five-zone workspace structure users expect from Evoto-style editors, but original Tuấn Bồ implementation, purple theme, no copied Evoto assets.
