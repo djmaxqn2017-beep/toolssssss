@@ -1,13 +1,16 @@
 {
   "name": "tuan-bo-ai-studio",
-  "version": "0.1.0",
-  "description": "Tuấn Bồ AI Studio - offline-first photo editor",
+  "version": "0.2.0",
+  "description": "Tuấn Bồ AI Studio - offline AI portrait editor",
   "main": "src/main.js",
   "author": "Tuan Bo",
   "license": "UNLICENSED",
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder --win nsis"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "3.8.1"
   },
   "devDependencies": {
     "electron": "31.7.7",
@@ -22,8 +25,13 @@
     },
     "files": [
       "src/**/*",
-      "resources/**/*",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/models",
+        "to": "models"
+      }
     ],
     "win": {
       "target": ["nsis"]
