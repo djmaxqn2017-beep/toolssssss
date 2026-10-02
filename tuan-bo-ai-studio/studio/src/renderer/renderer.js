@@ -1,298 +1,85 @@
-const state = {
-  images: [],
-  selected: -1,
-  view: 'after',
-  copiedSettings: null,
-  referenceIndex: -1,
-  settings: defaultSettings()
-};
+const state={images:[],selected:-1,view:'after',copiedSettings:null,referenceIndex:-1,settings:null,undo:[],redo:[],zoomIndex:2,maskPreview:false};
 
-const colorControls = [
-  ['exposure','Exposure',-2,2,0.01,0],
-  ['contrast','Contrast',-100,100,1,0],
-  ['highlights','Highlights',-100,100,1,0],
-  ['shadows','Shadows',-100,100,1,0],
-  ['temperature','Temperature',-100,100,1,0],
-  ['tint','Tint',-100,100,1,0],
-  ['saturation','Saturation',-100,100,1,0]
+const colorControls=[
+ ['exposure','Exposure',-2,2,.01,0],['contrast','Contrast',-100,100,1,0],['highlights','Highlights',-100,100,1,0],['shadows','Shadows',-100,100,1,0],['temperature','Temperature',-100,100,1,0],['tint','Tint',-100,100,1,0],['saturation','Saturation',-100,100,1,0],['vibrance','Vibrance',-100,100,1,0]
 ];
-const portraitControls = [
-  ['skinSmooth','Làm mịn giữ texture',0,100,1,0],
-  ['skinEven','Đều màu da',0,100,1,0],
-  ['blemish','Giảm mụn / khuyết điểm',0,100,1,0],
-  ['skinBright','Sáng da',-30,60,1,0]
-];
-const backgroundControls = [
-  ['backgroundBlur','Làm mờ nền',0,100,1,0],
-  ['backgroundLight','Sáng / tối nền',-100,100,1,0],
-  ['backgroundSat','Bão hòa nền',-100,100,1,0]
-];
-const lightingControls = [
-  ['subjectLight','Sáng chủ thể',-50,100,1,0],
-  ['lightWarm','Độ ấm ánh sáng',-100,100,1,0],
-  ['rimLight','Viền sáng / glow',0,100,1,0],
-  ['backgroundDepth','Chiều sâu hậu cảnh',0,100,1,0]
-];
-const allControls = [...colorControls,...portraitControls,...backgroundControls,...lightingControls];
+const hslBands=[['red','Đỏ',0],['orange','Cam',30],['yellow','Vàng',60],['green','Xanh lá',120],['cyan','Cyan',180],['blue','Xanh dương',220],['purple','Tím',275],['magenta','Hồng tím',320]];
+const hslControls=hslBands.flatMap(([k,l])=>[[`${k}Hue`,`${l} • Hue`,-60,60,1,0],[`${k}Sat`,`${l} • Saturation`,-100,100,1,0]]);
+const toneControls=[['toneBlacks','Blacks',-100,100,1,0],['toneShadows','Shadows',-100,100,1,0],['toneMids','Midtones',-100,100,1,0],['toneHighlights','Highlights',-100,100,1,0],['toneWhites','Whites',-100,100,1,0]];
+const gradingControls=[['shadowWarm','Shadow Warm',-100,100,1,0],['shadowTint','Shadow Tint',-100,100,1,0],['midWarm','Mid Warm',-100,100,1,0],['midTint','Mid Tint',-100,100,1,0],['highlightWarm','Highlight Warm',-100,100,1,0],['highlightTint','Highlight Tint',-100,100,1,0],['gradingBalance','Balance',-100,100,1,0]];
+const portraitControls=[['skinSmooth','Làm mịn giữ texture',0,100,1,0],['skinEven','Đều màu da',0,100,1,0],['blemish','Giảm mụn / đỏ da',0,100,1,0],['skinBright','Sáng da',-30,60,1,0],['eyeBright','Sáng mắt',0,100,1,0],['teethBright','Sáng răng',0,100,1,0]];
+const faceControls=[['faceSlim','Thon mặt',0,100,1,0],['jawSlim','Gọn hàm',0,100,1,0],['eyeSize','Mắt lớn',0,100,1,0],['noseSlim','Gọn mũi',0,100,1,0]];
+const makeupControls=[['lipColor','Màu môi',0,100,1,0],['blush','Má hồng',0,100,1,0],['browContrast','Lông mày',0,100,1,0]];
+const bodyControls=[['bodySlim','Thon người',0,100,1,0],['bodyTall','Kéo chân / chiều cao',0,100,1,0]];
+const hairControls=[['hairShine','Bóng tóc',0,100,1,0],['hairSat','Màu tóc',-100,100,1,0]];
+const backgroundControls=[['backgroundBlur','Làm mờ nền',0,100,1,0],['backgroundLight','Sáng / tối nền',-100,100,1,0],['backgroundSat','Bão hòa nền',-100,100,1,0],['backgroundTemp','Nhiệt độ nền',-100,100,1,0]];
+const lightingControls=[['subjectLight','Sáng chủ thể',-50,100,1,0],['lightWarm','Độ ấm ánh sáng',-100,100,1,0],['rimLight','Viền sáng / glow',0,100,1,0],['backgroundDepth','Chiều sâu hậu cảnh',0,100,1,0],['vignette','Vignette',0,100,1,0]];
+const allControls=[...colorControls,...hslControls,...toneControls,...gradingControls,...portraitControls,...faceControls,...makeupControls,...bodyControls,...hairControls,...backgroundControls,...lightingControls];
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const canvas=$('#canvas'),ctx=canvas.getContext('2d',{willReadFrequently:true});
+let sourcePixels=null,subjectMaskPixels=null,subjectMaskCanvas=document.createElement('canvas'),subjectAlphaCanvas=document.createElement('canvas'),aiBusy=false,renderQueued=false,lastFaceBox=null,lastSubjectBox=null;
 
-const $ = s => document.querySelector(s);
-const $$ = s => [...document.querySelectorAll(s)];
-const canvas = $('#canvas');
-const ctx = canvas.getContext('2d', { willReadFrequently: true });
-let sourceImage = null;
-let sourcePixels = null;
-let subjectMaskPixels = null;
-let subjectMaskCanvas = document.createElement('canvas');
-let subjectAlphaCanvas = document.createElement('canvas');
-let aiBusy = false;
-
-function defaultSettings(){
-  return Object.fromEntries(allControls.map(([k,,,,v]) => [k,v]));
-}
-
-function buildControlSet(hostSelector, controls){
-  const host=$(hostSelector); if(!host) return;
-  host.innerHTML='';
-  for(const [key,label,min,max,step] of controls){
-    const wrap=document.createElement('div');
-    wrap.className='control';
-    wrap.innerHTML=`<div class="control-head"><span>${label}</span><span id="v-${key}">0</span></div><input id="s-${key}" type="range" min="${min}" max="${max}" step="${step}" value="0">`;
-    host.appendChild(wrap);
-    wrap.querySelector('input').addEventListener('input',e=>{
-      state.settings[key]=Number(e.target.value);
-      const valueEl=$(`#v-${key}`); if(valueEl) valueEl.textContent=e.target.value;
-      persistCurrentSettings();
-      renderImage();
-    });
-  }
-}
-
-function buildSliders(){
-  buildControlSet('#sliders',colorControls);
-  buildControlSet('#portraitSliders',portraitControls);
-  buildControlSet('#backgroundSliders',backgroundControls);
-  buildControlSet('#lightingSliders',lightingControls);
-}
-
-function syncSliders(){
-  for(const [key] of allControls){
-    const el=$(`#s-${key}`); if(!el) continue;
-    el.value=state.settings[key] ?? 0;
-    const val=$(`#v-${key}`); if(val) val.textContent=Number(state.settings[key] ?? 0).toFixed(key==='exposure'?2:0);
-  }
-}
-
-function setAiStatus(text,good=false){
-  ['#portraitAiStatus','#backgroundAiStatus','#lightingAiStatus'].forEach(sel=>{const el=$(sel);if(el)el.textContent=text;});
-  const top=$('#aiTopStatus');
-  if(top){top.textContent=good?'AI Offline • Sẵn sàng':text;top.style.color=good?'#d9b8ff':'#e8b9ff';}
-}
-
-async function refreshAiStatus(){
-  try{
-    const s=await window.tb.aiStatus();
-    if(s.modelInstalled) setAiStatus(s.ready?'AI đã tải model':'Model offline đã cài',true);
-    else setAiStatus('Thiếu model AI');
-  }catch{setAiStatus('AI chưa sẵn sàng');}
-}
-
-async function importImages(){
-  const files=await window.tb.openImages();
-  for(const f of files){state.images.push({...f,settings:defaultSettings()});}
-  rebuildLibrary();
-  if(state.selected<0&&state.images.length)selectImage(0);
-}
-
-function rebuildLibrary(){
-  const lib=$('#library');const strip=$('#filmstrip');
-  if(lib)lib.innerHTML='';if(strip)strip.innerHTML='';
-  state.images.forEach((img,i)=>{
-    if(strip){
-      const th=document.createElement('img');th.src=img.url;th.className=i===state.selected?'active':'';th.title=img.name;th.onclick=()=>selectImage(i);strip.appendChild(th);
-    }
-  });
-}
-
-async function selectImage(index){
-  if(index<0||index>=state.images.length)return;
-  state.selected=index;
-  state.settings={...defaultSettings(),...(state.images[index].settings||{})};
-  subjectMaskPixels=null;
-  syncSliders();rebuildLibrary();
-  $('#imageInfo').textContent=state.images[index].name;
-  const img=new Image();
-  img.onload=()=>{
-    sourceImage=img;
-    const maxSide=2200;const scale=Math.min(1,maxSide/Math.max(img.naturalWidth,img.naturalHeight));
-    canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
-    ctx.drawImage(img,0,0,canvas.width,canvas.height);sourcePixels=ctx.getImageData(0,0,canvas.width,canvas.height);
-    canvas.style.display='block';$('#emptyState').style.display='none';
-    renderImage();
-    if(state.images[index].aiMaskDataUrl) loadMaskDataUrl(state.images[index].aiMaskDataUrl);
-    else setTimeout(()=>ensureAIMask(false),120);
-  };
-  img.src=state.images[index].url;
-}
-
-function persistCurrentSettings(){if(state.selected>=0)state.images[state.selected].settings={...state.settings};}
+function defaultSettings(){return Object.fromEntries(allControls.map(([k,,,,v])=>[k,v]));}
+state.settings=defaultSettings();
 function clamp(v){return Math.max(0,Math.min(255,v));}
-function isSkin(r,g,b){
-  const cb=128-0.168736*r-0.331264*g+0.5*b;
-  const cr=128+0.5*r-0.418688*g-0.081312*b;
-  return r>45&&g>30&&b>20&&cb>72&&cb<142&&cr>128&&cr<190&&Math.max(r,g,b)-Math.min(r,g,b)>8;
-}
-
+function clamp01(v){return Math.max(0,Math.min(1,v));}
 function makeCanvas(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
+function snapshot(){return JSON.parse(JSON.stringify(state.settings));}
+function pushHistory(){if(state.selected<0)return;const s=snapshot();const prev=state.undo[state.undo.length-1];if(!prev||JSON.stringify(prev)!==JSON.stringify(s)){state.undo.push(s);if(state.undo.length>40)state.undo.shift();}state.redo=[];}
+function applySettings(s){state.settings={...defaultSettings(),...s};persistCurrentSettings();syncSliders();scheduleRender();}
+function undo(){if(!state.undo.length)return;state.redo.push(snapshot());applySettings(state.undo.pop());}
+function redo(){if(!state.redo.length)return;state.undo.push(snapshot());applySettings(state.redo.pop());}
 
-async function loadMaskDataUrl(dataUrl){
-  return new Promise((resolve,reject)=>{
-    const img=new Image();
-    img.onload=()=>{
-      subjectMaskCanvas.width=canvas.width;subjectMaskCanvas.height=canvas.height;
-      const mctx=subjectMaskCanvas.getContext('2d',{willReadFrequently:true});
-      mctx.clearRect(0,0,canvas.width,canvas.height);mctx.drawImage(img,0,0,canvas.width,canvas.height);
-      subjectMaskPixels=mctx.getImageData(0,0,canvas.width,canvas.height);
-      subjectAlphaCanvas.width=canvas.width;subjectAlphaCanvas.height=canvas.height;
-      const actx=subjectAlphaCanvas.getContext('2d');const alpha=actx.createImageData(canvas.width,canvas.height);
-      const md=subjectMaskPixels.data,ad=alpha.data;
-      for(let i=0;i<md.length;i+=4){const a=md[i];ad[i]=255;ad[i+1]=255;ad[i+2]=255;ad[i+3]=a;}
-      actx.putImageData(alpha,0,0);setAiStatus('AI mask sẵn sàng',true);renderImage();resolve();
-    };
-    img.onerror=reject;img.src=dataUrl;
-  });
-}
+function buildControlSet(hostSelector,controls){const host=$(hostSelector);if(!host)return;host.innerHTML='';for(const [key,label,min,max,step] of controls){const wrap=document.createElement('div');wrap.className='control';wrap.innerHTML=`<div class="control-head"><span>${label}</span><span id="v-${key}">0</span></div><input id="s-${key}" type="range" min="${min}" max="${max}" step="${step}" value="0">`;host.appendChild(wrap);const input=wrap.querySelector('input');input.addEventListener('pointerdown',pushHistory,{passive:true});input.addEventListener('input',e=>{state.settings[key]=Number(e.target.value);const v=$(`#v-${key}`);if(v)v.textContent=e.target.value;persistCurrentSettings();scheduleRender();});}}
+function buildSliders(){buildControlSet('#sliders',colorControls);buildControlSet('#hslSliders',hslControls);buildControlSet('#toneSliders',toneControls);buildControlSet('#gradingSliders',gradingControls);buildControlSet('#portraitSliders',portraitControls);buildControlSet('#faceSliders',faceControls);buildControlSet('#makeupSliders',makeupControls);buildControlSet('#bodySliders',bodyControls);buildControlSet('#hairSliders',hairControls);buildControlSet('#backgroundSliders',backgroundControls);buildControlSet('#lightingSliders',lightingControls);}
+function syncSliders(){for(const [key] of allControls){const el=$(`#s-${key}`);if(!el)continue;el.value=state.settings[key]??0;const v=$(`#v-${key}`);if(v)v.textContent=Number(state.settings[key]??0).toFixed(key==='exposure'?2:0);}}
+function scheduleRender(){if(renderQueued)return;renderQueued=true;requestAnimationFrame(()=>{renderQueued=false;renderImage();});}
+function persistCurrentSettings(){if(state.selected>=0)state.images[state.selected].settings={...state.settings};}
 
-async function ensureAIMask(showErrors=true){
-  if(aiBusy||state.selected<0||!sourcePixels)return;
-  const currentIndex=state.selected;const image=state.images[currentIndex];
-  if(image.aiMaskDataUrl){await loadMaskDataUrl(image.aiMaskDataUrl);return;}
-  aiBusy=true;setAiStatus('AI đang phân tích…');
-  try{
-    const res=await window.tb.aiSegmentSubject(image.path);
-    if(currentIndex!==state.selected)return;
-    if(!res||!res.ok)throw new Error(res?.error||'Không thể tạo AI mask');
-    image.aiMaskDataUrl=res.dataUrl;await loadMaskDataUrl(res.dataUrl);
-  }catch(e){setAiStatus('AI lỗi');if(showErrors)alert(`AI Offline: ${e.message||e}`);}
-  finally{aiBusy=false;}
-}
+function setAiStatus(text,good=false){['#portraitAiStatus','#backgroundAiStatus','#lightingAiStatus'].forEach(sel=>{const el=$(sel);if(el)el.textContent=text;});const top=$('#aiTopStatus');if(top){top.textContent=good?'AI Offline • Sẵn sàng':text;top.style.color=good?'#d9b8ff':'#e8b9ff';}}
+async function refreshAiStatus(){try{const s=await window.tb.aiStatus();if(s.modelInstalled)setAiStatus(s.ready?'AI đã sẵn sàng':(s.loading?'AI đang tải…':'Model offline đã cài'),true);else setAiStatus('Thiếu model AI');}catch(e){setAiStatus('AI lỗi');}}
+async function warmupAI(){setAiStatus('AI đang khởi động…');try{const s=await window.tb.aiWarmup();if(s.ready)setAiStatus('AI đã sẵn sàng',true);else setAiStatus(s.error||'AI chưa sẵn sàng');}catch(e){setAiStatus('AI lỗi');}}
 
-function renderImage(){
-  if(!sourcePixels)return;
-  if(state.view==='before'){ctx.putImageData(sourcePixels,0,0);return;}
-  const src=sourcePixels.data;const out=new Uint8ClampedArray(src.length);const s=state.settings;
-  const exp=Math.pow(2,s.exposure||0),contrast=(s.contrast||0)/100,sat=1+(s.saturation||0)/100;
-  const temp=(s.temperature||0)*0.45,tint=(s.tint||0)*0.28,shadow=(s.shadows||0)/100,hi=(s.highlights||0)/100;
-  for(let i=0;i<src.length;i+=4){
-    let r=src[i]*exp,g=src[i+1]*exp,b=src[i+2]*exp;
-    const lum=(r+g+b)/3,shW=Math.max(0,1-lum/150),hiW=Math.max(0,(lum-105)/150);
-    const shLift=shadow*70*shW,hiLift=hi*70*hiW;
-    r+=shLift+hiLift+temp;g+=shLift+hiLift+tint;b+=shLift+hiLift-temp;
-    r=(r-128)*(1+contrast)+128;g=(g-128)*(1+contrast)+128;b=(b-128)*(1+contrast)+128;
-    const gray=.299*r+.587*g+.114*b;r=gray+(r-gray)*sat;g=gray+(g-gray)*sat;b=gray+(b-gray)*sat;
-    out[i]=clamp(r);out[i+1]=clamp(g);out[i+2]=clamp(b);out[i+3]=src[i+3];
-  }
+async function importImages(){const files=await window.tb.openImages();for(const f of files)state.images.push({...f,settings:defaultSettings()});rebuildLibrary();if(state.selected<0&&state.images.length)selectImage(0);}
+function rebuildLibrary(){const strip=$('#filmstrip');if(strip)strip.innerHTML='';state.images.forEach((img,i)=>{if(strip){const th=document.createElement('img');th.src=img.url;th.className=i===state.selected?'active':'';th.title=img.name;th.onclick=()=>selectImage(i);strip.appendChild(th);}});const gc=$('#galleryCount');if(gc)gc.textContent=`${state.images.length} ảnh`;}
+async function selectImage(index){if(index<0||index>=state.images.length)return;state.selected=index;state.settings={...defaultSettings(),...(state.images[index].settings||{})};state.undo=[];state.redo=[];subjectMaskPixels=null;lastFaceBox=null;lastSubjectBox=null;syncSliders();rebuildLibrary();$('#imageInfo').textContent=state.images[index].name;const img=new Image();img.onload=()=>{const maxSide=1800,scale=Math.min(1,maxSide/Math.max(img.naturalWidth,img.naturalHeight));canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));ctx.drawImage(img,0,0,canvas.width,canvas.height);sourcePixels=ctx.getImageData(0,0,canvas.width,canvas.height);canvas.style.display='block';$('#emptyState').style.display='none';scheduleRender();if(state.images[index].aiMaskDataUrl)loadMaskDataUrl(state.images[index].aiMaskDataUrl);else setTimeout(()=>ensureAIMask(false),500);};img.onerror=()=>alert('Không mở được ảnh này.');img.src=state.images[index].url;}
 
-  const baseCanvas=makeCanvas(canvas.width,canvas.height),bctx=baseCanvas.getContext('2d',{willReadFrequently:true});
-  bctx.putImageData(new ImageData(out,sourcePixels.width,sourcePixels.height),0,0);
+async function loadMaskDataUrl(dataUrl){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{subjectMaskCanvas.width=canvas.width;subjectMaskCanvas.height=canvas.height;const mctx=subjectMaskCanvas.getContext('2d',{willReadFrequently:true});mctx.clearRect(0,0,canvas.width,canvas.height);mctx.drawImage(img,0,0,canvas.width,canvas.height);subjectMaskPixels=mctx.getImageData(0,0,canvas.width,canvas.height);subjectAlphaCanvas.width=canvas.width;subjectAlphaCanvas.height=canvas.height;const actx=subjectAlphaCanvas.getContext('2d'),alpha=actx.createImageData(canvas.width,canvas.height),md=subjectMaskPixels.data,ad=alpha.data;for(let i=0;i<md.length;i+=4){const a=md[i];ad[i]=255;ad[i+1]=255;ad[i+2]=255;ad[i+3]=a;}actx.putImageData(alpha,0,0);lastSubjectBox=computeSubjectBox(subjectMaskPixels);setAiStatus('AI mask sẵn sàng',true);scheduleRender();resolve();};img.onerror=reject;img.src=dataUrl;});}
+async function ensureAIMask(showErrors=true){if(aiBusy||state.selected<0||!sourcePixels)return;if(state.images[state.selected].aiMaskDataUrl){await loadMaskDataUrl(state.images[state.selected].aiMaskDataUrl);return;}aiBusy=true;setAiStatus('AI đang phân tích…');const idx=state.selected;try{const res=await window.tb.aiSegmentSubject(state.images[idx].path);if(idx!==state.selected)return;if(!res||!res.ok)throw new Error(res?.error||'Không thể tạo AI mask');state.images[idx].aiMaskDataUrl=res.dataUrl;await loadMaskDataUrl(res.dataUrl);}catch(e){setAiStatus('AI lỗi');if(showErrors)alert(`AI Offline: ${e.message||e}`);}finally{aiBusy=false;}}
 
-  if(subjectMaskPixels&&(s.skinSmooth||s.skinEven||s.blemish||s.skinBright)){
-    const blurCanvas=makeCanvas(canvas.width,canvas.height),blctx=blurCanvas.getContext('2d',{willReadFrequently:true});
-    blctx.filter=`blur(${Math.max(0.5,0.8+(s.skinSmooth||0)/32)}px)`;blctx.drawImage(baseCanvas,0,0);
-    const blurred=blctx.getImageData(0,0,canvas.width,canvas.height).data;
-    const img=bctx.getImageData(0,0,canvas.width,canvas.height),d=img.data,m=subjectMaskPixels.data;
-    const smooth=(s.skinSmooth||0)/100*.62,even=(s.skinEven||0)/100*.28,blem=(s.blemish||0)/100*.38,bright=(s.skinBright||0)/100*.18;
-    for(let i=0;i<d.length;i+=4){
-      if(m[i]<45||!isSkin(d[i],d[i+1],d[i+2]))continue;
-      let mix=smooth;
-      if(d[i]>d[i+1]*1.12&&d[i]>d[i+2]*1.16)mix=Math.min(.82,mix+blem);
-      d[i]=clamp(d[i]*(1-mix)+blurred[i]*mix);d[i+1]=clamp(d[i+1]*(1-mix)+blurred[i+1]*mix);d[i+2]=clamp(d[i+2]*(1-mix)+blurred[i+2]*mix);
-      const l=.299*d[i]+.587*d[i+1]+.114*d[i+2];
-      d[i]=clamp(d[i]*(1-even)+l*1.06*even);d[i+1]=clamp(d[i+1]*(1-even)+l*1.00*even);d[i+2]=clamp(d[i+2]*(1-even)+l*.94*even);
-      d[i]=clamp(d[i]*(1+bright));d[i+1]=clamp(d[i+1]*(1+bright));d[i+2]=clamp(d[i+2]*(1+bright));
-    }
-    bctx.putImageData(img,0,0);
-  }
+function isSkin(r,g,b){const cb=128-.168736*r-.331264*g+.5*b,cr=128+.5*r-.418688*g-.081312*b;return r>45&&g>30&&b>20&&cb>72&&cb<142&&cr>128&&cr<190&&Math.max(r,g,b)-Math.min(r,g,b)>8;}
+function rgbToHsl(r,g,b){r/=255;g/=255;b/=255;const max=Math.max(r,g,b),min=Math.min(r,g,b),l=(max+min)/2;let h=0,s=0;if(max!==min){const d=max-min;s=l>.5?d/(2-max-min):d/(max+min);switch(max){case r:h=(g-b)/d+(g<b?6:0);break;case g:h=(b-r)/d+2;break;default:h=(r-g)/d+4;}h*=60;}return[h,s,l];}
+function hslToRgb(h,s,l){h=((h%360)+360)%360;const c=(1-Math.abs(2*l-1))*s,x=c*(1-Math.abs((h/60)%2-1)),m=l-c/2;let r=0,g=0,b=0;if(h<60){r=c;g=x}else if(h<120){r=x;g=c}else if(h<180){g=c;b=x}else if(h<240){g=x;b=c}else if(h<300){r=x;b=c}else{r=c;b=x}return[(r+m)*255,(g+m)*255,(b+m)*255];}
+function hueDistance(a,b){const d=Math.abs(a-b)%360;return Math.min(d,360-d);}
+function applyHSL(r,g,b,s){let[h,ss,l]=rgbToHsl(r,g,b);let dh=0,ds=0,wSum=0;for(const [k,,center] of hslBands){const w=Math.max(0,1-hueDistance(h,center)/45);if(w>0){dh+=(s[`${k}Hue`]||0)*w;ds+=(s[`${k}Sat`]||0)/100*w;wSum+=w;}}if(wSum){h+=dh/Math.max(1,wSum);ss=clamp01(ss+ds/Math.max(1,wSum)*.75);}return hslToRgb(h,ss,l);}
+function toneWeight(l,c,w){return Math.max(0,1-Math.abs(l-c)/w);}
+function computeSubjectBox(mask){if(!mask)return null;const d=mask.data,w=mask.width,h=mask.height;let minX=w,minY=h,maxX=0,maxY=0,n=0;for(let y=0;y<h;y+=3)for(let x=0;x<w;x+=3){const i=(y*w+x)*4;if(d[i]>55){minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y);n++;}}return n?{x:minX,y:minY,w:Math.max(1,maxX-minX),h:Math.max(1,maxY-minY)}:null;}
+function estimateFaceBox(imgData,mask,sub){if(!sub)return null;const d=imgData.data,m=mask?.data,w=imgData.width,h=imgData.height;let minX=w,minY=h,maxX=0,maxY=0,n=0;const yEnd=Math.min(h,sub.y+sub.h*.55);for(let y=Math.max(0,sub.y);y<yEnd;y+=2)for(let x=Math.max(0,sub.x);x<Math.min(w,sub.x+sub.w);x+=2){const i=(y*w+x)*4;if((!m||m[i]>50)&&isSkin(d[i],d[i+1],d[i+2])){minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y);n++;}}if(n>120){let fw=maxX-minX,fh=maxY-minY;minX-=fw*.12;maxX+=fw*.12;minY-=fh*.18;maxY+=fh*.15;return{x:Math.max(0,minX),y:Math.max(0,minY),w:Math.min(w,maxX)-Math.max(0,minX),h:Math.min(h,maxY)-Math.max(0,minY)};}return{x:sub.x+sub.w*.25,y:sub.y+sub.h*.03,w:sub.w*.5,h:sub.h*.32};}
 
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  if(subjectMaskPixels){
-    const bg=makeCanvas(canvas.width,canvas.height),bgx=bg.getContext('2d');
-    const blurPx=Math.max(0,(s.backgroundBlur||0)/7.5),depth=(s.backgroundDepth||0)/100;
-    const bgBrightness=Math.max(.2,1+(s.backgroundLight||0)/180-depth*.45),bgSat=Math.max(0,1+(s.backgroundSat||0)/100);
-    bgx.filter=`blur(${blurPx}px) brightness(${bgBrightness}) saturate(${bgSat})`;bgx.drawImage(baseCanvas,0,0);
-    ctx.drawImage(bg,0,0);
+function drawHistogram(data){const c=$('#histogramCanvas');if(!c||!data)return;c.width=Math.max(280,c.clientWidth||320);c.height=Math.max(70,c.clientHeight||80);const x=c.getContext('2d');x.clearRect(0,0,c.width,c.height);const bins=[new Uint32Array(64),new Uint32Array(64),new Uint32Array(64)];let max=1;for(let i=0;i<data.length;i+=16){for(let ch=0;ch<3;ch++){const b=Math.min(63,Math.floor(data[i+ch]/4));bins[ch][b]++;max=Math.max(max,bins[ch][b]);}}[['rgba(255,100,125,.65)',bins[0]],['rgba(100,255,165,.55)',bins[1]],['rgba(120,145,255,.65)',bins[2]]].forEach(([col,b])=>{x.beginPath();x.strokeStyle=col;x.lineWidth=1.2;for(let i=0;i<64;i++){const px=i/(63)*(c.width-4)+2,py=c.height-3-(b[i]/max)*(c.height-8);i?x.lineTo(px,py):x.moveTo(px,py);}x.stroke();});}
 
-    if((s.rimLight||0)>0){
-      const glow=makeCanvas(canvas.width,canvas.height),gx=glow.getContext('2d');
-      gx.filter=`blur(${3+(s.rimLight||0)/7}px)`;gx.drawImage(subjectAlphaCanvas,0,0);
-      gx.globalCompositeOperation='source-in';gx.fillStyle=`rgba(255,196,134,${Math.min(.72,(s.rimLight||0)/125)})`;gx.fillRect(0,0,canvas.width,canvas.height);
-      gx.globalCompositeOperation='destination-out';gx.filter='none';gx.drawImage(subjectAlphaCanvas,0,0);
-      ctx.globalCompositeOperation='screen';ctx.drawImage(glow,0,0);ctx.globalCompositeOperation='source-over';
-    }
+function baseColorImage(){const src=sourcePixels.data,out=new Uint8ClampedArray(src.length),s=state.settings;const exp=Math.pow(2,s.exposure||0),contrast=(s.contrast||0)/100,sat=1+(s.saturation||0)/100,vib=(s.vibrance||0)/100,temp=(s.temperature||0)*.45,tint=(s.tint||0)*.28,shadow=(s.shadows||0)/100,hi=(s.highlights||0)/100;for(let i=0;i<src.length;i+=4){let r=src[i]*exp,g=src[i+1]*exp,b=src[i+2]*exp;let lum=(r+g+b)/3;const shW=Math.max(0,1-lum/150),hiW=Math.max(0,(lum-105)/150);r+=shadow*70*shW+hi*70*hiW+temp;g+=shadow*70*shW+hi*70*hiW+tint;b+=shadow*70*shW+hi*70*hiW-temp;r=(r-128)*(1+contrast)+128;g=(g-128)*(1+contrast)+128;b=(b-128)*(1+contrast)+128;lum=.299*r+.587*g+.114*b;const chroma=Math.max(r,g,b)-Math.min(r,g,b),vibGain=1+vib*(1-Math.min(1,chroma/180));r=lum+(r-lum)*sat*vibGain;g=lum+(g-lum)*sat*vibGain;b=lum+(b-lum)*sat*vibGain;const L=clamp(lum);const lift=(s.toneBlacks||0)*.48*toneWeight(L,22,55)+(s.toneShadows||0)*.38*toneWeight(L,70,75)+(s.toneMids||0)*.30*toneWeight(L,128,85)+(s.toneHighlights||0)*.35*toneWeight(L,190,70)+(s.toneWhites||0)*.45*toneWeight(L,238,50);r+=lift;g+=lift;b+=lift;const bal=(s.gradingBalance||0)/100;const sw=toneWeight(L,45,110)*(.5-.25*bal),mw=toneWeight(L,128,110)*.45,hw=toneWeight(L,220,100)*(.5+.25*bal);r+=(s.shadowWarm||0)*.22*sw+(s.midWarm||0)*.16*mw+(s.highlightWarm||0)*.22*hw;g+=(s.shadowTint||0)*.18*sw+(s.midTint||0)*.14*mw+(s.highlightTint||0)*.18*hw;b-=(s.shadowWarm||0)*.22*sw+(s.midWarm||0)*.16*mw+(s.highlightWarm||0)*.22*hw;b-=(s.shadowTint||0)*.08*sw+(s.midTint||0)*.06*mw+(s.highlightTint||0)*.08*hw;[r,g,b]=applyHSL(clamp(r),clamp(g),clamp(b),s);out[i]=clamp(r);out[i+1]=clamp(g);out[i+2]=clamp(b);out[i+3]=src[i+3];}drawHistogram(out);return new ImageData(out,sourcePixels.width,sourcePixels.height);}
 
-    const subject=makeCanvas(canvas.width,canvas.height),sx=subject.getContext('2d');
-    const subjectBrightness=Math.max(.45,1+(s.subjectLight||0)/180),warm=(s.lightWarm||0)/100;
-    sx.filter=`brightness(${subjectBrightness}) saturate(${1+Math.max(0,warm)*.12}) sepia(${Math.max(0,warm)*.16})`;
-    sx.drawImage(baseCanvas,0,0);sx.filter='none';sx.globalCompositeOperation='destination-in';sx.drawImage(subjectAlphaCanvas,0,0);
-    ctx.drawImage(subject,0,0);
-  }else{
-    ctx.drawImage(baseCanvas,0,0);
-  }
+function applyPortraitPixels(baseCanvas,faceBox,subBox){if(!subjectMaskPixels)return baseCanvas;const s=state.settings,ctxB=baseCanvas.getContext('2d',{willReadFrequently:true});const needSkin=s.skinSmooth||s.skinEven||s.blemish||s.skinBright||s.hairShine||s.hairSat;if(!needSkin)return baseCanvas;const blur=makeCanvas(canvas.width,canvas.height),bx=blur.getContext('2d',{willReadFrequently:true});bx.filter=`blur(${Math.max(.6,.9+(s.skinSmooth||0)/30)}px)`;bx.drawImage(baseCanvas,0,0);const bd=bx.getImageData(0,0,canvas.width,canvas.height).data,img=ctxB.getImageData(0,0,canvas.width,canvas.height),d=img.data,m=subjectMaskPixels.data;const smooth=(s.skinSmooth||0)/100*.58,even=(s.skinEven||0)/100*.25,blem=(s.blemish||0)/100*.4,bright=(s.skinBright||0)/100*.16;for(let y=0;y<canvas.height;y++)for(let x=0;x<canvas.width;x++){const i=(y*canvas.width+x)*4;if(m[i]<45)continue;const skin=isSkin(d[i],d[i+1],d[i+2]);if(skin){let mix=smooth;if(d[i]>d[i+1]*1.12&&d[i]>d[i+2]*1.15)mix=Math.min(.8,mix+blem);d[i]=clamp(d[i]*(1-mix)+bd[i]*mix);d[i+1]=clamp(d[i+1]*(1-mix)+bd[i+1]*mix);d[i+2]=clamp(d[i+2]*(1-mix)+bd[i+2]*mix);const l=.299*d[i]+.587*d[i+1]+.114*d[i+2];d[i]=clamp(d[i]*(1-even)+l*1.05*even);d[i+1]=clamp(d[i+1]*(1-even)+l*1.00*even);d[i+2]=clamp(d[i+2]*(1-even)+l*.95*even);d[i]=clamp(d[i]*(1+bright));d[i+1]=clamp(d[i+1]*(1+bright));d[i+2]=clamp(d[i+2]*(1+bright));}else if(subBox&&y<subBox.y+subBox.h*.48&&d[i]<95&&d[i+1]<95&&d[i+2]<95){const shine=(s.hairShine||0)/100*.28,hs=(s.hairSat||0)/100;const lum=.299*d[i]+.587*d[i+1]+.114*d[i+2];d[i]=clamp(d[i]*(1+shine));d[i+1]=clamp(d[i+1]*(1+shine));d[i+2]=clamp(d[i+2]*(1+shine));d[i]=clamp(lum+(d[i]-lum)*(1+hs*.5));d[i+1]=clamp(lum+(d[i+1]-lum)*(1+hs*.5));d[i+2]=clamp(lum+(d[i+2]-lum)*(1+hs*.5));}}ctxB.putImageData(img,0,0);return baseCanvas;}
 
-  if(state.view==='split'){
-    ctx.save();ctx.beginPath();ctx.rect(0,0,canvas.width/2,canvas.height);ctx.clip();ctx.putImageData(sourcePixels,0,0);ctx.restore();
-    ctx.strokeStyle='#b66cff';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(canvas.width/2,0);ctx.lineTo(canvas.width/2,canvas.height);ctx.stroke();
-  }
-}
+function addFaceMakeup(subject,face){if(!face)return;const s=state.settings,x=subject.getContext('2d');const cx=face.x+face.w/2,eyeY=face.y+face.h*.40,mouthY=face.y+face.h*.72;if(s.eyeBright){x.save();x.globalCompositeOperation='screen';x.fillStyle=`rgba(210,225,255,${(s.eyeBright||0)/250})`;[.34,.66].forEach(p=>{x.beginPath();x.ellipse(face.x+face.w*p,eyeY,face.w*.075,face.h*.035,0,0,Math.PI*2);x.fill();});x.restore();}if(s.teethBright){x.save();x.globalCompositeOperation='screen';x.fillStyle=`rgba(255,250,225,${(s.teethBright||0)/330})`;x.beginPath();x.ellipse(cx,mouthY,face.w*.105,face.h*.028,0,0,Math.PI*2);x.fill();x.restore();}if(s.lipColor){x.save();x.globalCompositeOperation='multiply';x.fillStyle=`rgba(190,45,82,${(s.lipColor||0)/180})`;x.beginPath();x.ellipse(cx,mouthY,face.w*.14,face.h*.046,0,0,Math.PI*2);x.fill();x.restore();}if(s.blush){[.31,.69].forEach(p=>{const gx=x.createRadialGradient(face.x+face.w*p,face.y+face.h*.60,1,face.x+face.w*p,face.y+face.h*.60,face.w*.14);gx.addColorStop(0,`rgba(255,92,116,${(s.blush||0)/310})`);gx.addColorStop(1,'rgba(255,92,116,0)');x.fillStyle=gx;x.fillRect(face.x+face.w*(p-.18),face.y+face.h*.48,face.w*.36,face.h*.28);});}if(s.browContrast){x.save();x.strokeStyle=`rgba(35,20,24,${(s.browContrast||0)/170})`;x.lineWidth=Math.max(1,face.h*.012);x.lineCap='round';[.34,.66].forEach(p=>{x.beginPath();x.moveTo(face.x+face.w*(p-.08),face.y+face.h*.29);x.quadraticCurveTo(face.x+face.w*p,face.y+face.h*.25,face.x+face.w*(p+.08),face.y+face.h*.29);x.stroke();});x.restore();}}
+function warpRegion(target,rect,sxScale,syScale,ellipse=true){if(!rect||Math.abs(sxScale-1)<.001&&Math.abs(syScale-1)<.001)return;const copy=makeCanvas(target.width,target.height);copy.getContext('2d').drawImage(target,0,0);const x=target.getContext('2d');x.save();x.beginPath();if(ellipse)x.ellipse(rect.x+rect.w/2,rect.y+rect.h/2,rect.w/2,rect.h/2,0,0,Math.PI*2);else x.rect(rect.x,rect.y,rect.w,rect.h);x.clip();x.clearRect(rect.x,rect.y,rect.w,rect.h);const dw=rect.w*sxScale,dh=rect.h*syScale,dx=rect.x+(rect.w-dw)/2,dy=rect.y+(rect.h-dh)/2;x.drawImage(copy,rect.x,rect.y,rect.w,rect.h,dx,dy,dw,dh);x.restore();}
+function warpSubject(subject,face,sub){const s=state.settings;if(face){warpRegion(subject,face,1-(s.faceSlim||0)*.0018,1,true);if(s.jawSlim){const jaw={x:face.x+face.w*.12,y:face.y+face.h*.50,w:face.w*.76,h:face.h*.48};warpRegion(subject,jaw,1-(s.jawSlim||0)*.0022,1,true);}if(s.eyeSize){const scale=1+(s.eyeSize||0)*.0025;[.34,.66].forEach(p=>{const r={x:face.x+face.w*(p-.09),y:face.y+face.h*.33,w:face.w*.18,h:face.h*.14};warpRegion(subject,r,scale,scale,true);});}if(s.noseSlim){const r={x:face.x+face.w*.39,y:face.y+face.h*.38,w:face.w*.22,h:face.h*.34};warpRegion(subject,r,1-(s.noseSlim||0)*.0018,1,true);}}if(sub&&s.bodySlim){const r={x:sub.x+sub.w*.08,y:sub.y+sub.h*.30,w:sub.w*.84,h:sub.h*.60};warpRegion(subject,r,1-(s.bodySlim||0)*.0022,1,false);}if(sub&&s.bodyTall){const r={x:sub.x,y:sub.y+sub.h*.28,w:sub.w,h:sub.h*.70};warpRegion(subject,r,1,1+(s.bodyTall||0)*.0020,false);}}
 
-function calcMean(imageData){
-  const d=imageData.data;let r=0,g=0,b=0,n=0;const step=40;
-  for(let i=0;i<d.length;i+=4*step){r+=d[i];g+=d[i+1];b+=d[i+2];n++;}
-  return{r:r/n,g:g/n,b:b/n,l:(r+g+b)/(3*n)};
-}
+function applyBackgroundTint(bg){const s=state.settings;if(!s.backgroundTemp)return;const x=bg.getContext('2d',{willReadFrequently:true}),im=x.getImageData(0,0,bg.width,bg.height),d=im.data,t=(s.backgroundTemp||0)*.22;for(let i=0;i<d.length;i+=4){d[i]=clamp(d[i]+t);d[i+2]=clamp(d[i+2]-t);}x.putImageData(im,0,0);}
+function applyVignette(){const v=(state.settings.vignette||0)/100;if(!v)return;const g=ctx.createRadialGradient(canvas.width/2,canvas.height/2,Math.min(canvas.width,canvas.height)*.20,canvas.width/2,canvas.height/2,Math.max(canvas.width,canvas.height)*.68);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,`rgba(0,0,0,${v*.62})`);ctx.fillStyle=g;ctx.fillRect(0,0,canvas.width,canvas.height);}
 
-async function colorMatch(){
-  if(state.referenceIndex<0||state.selected<0)return alert('Hãy chọn ảnh mẫu trước.');
-  const ref=state.images[state.referenceIndex],img=new Image();
-  img.onload=()=>{
-    const c=document.createElement('canvas'),x=c.getContext('2d',{willReadFrequently:true});
-    const scale=Math.min(1,800/Math.max(img.naturalWidth,img.naturalHeight));c.width=Math.round(img.naturalWidth*scale);c.height=Math.round(img.naturalHeight*scale);x.drawImage(img,0,0,c.width,c.height);
-    const refMean=calcMean(x.getImageData(0,0,c.width,c.height)),curMean=calcMean(sourcePixels);
-    const tempDelta=(refMean.r-refMean.b)-(curMean.r-curMean.b),tintDelta=(refMean.g-(refMean.r+refMean.b)/2)-(curMean.g-(curMean.r+curMean.b)/2),expDelta=Math.log2(Math.max(.15,refMean.l)/Math.max(.15,curMean.l));
-    state.settings.exposure=Math.max(-2,Math.min(2,expDelta));state.settings.temperature=Math.max(-100,Math.min(100,tempDelta*1.15));state.settings.tint=Math.max(-100,Math.min(100,tintDelta*1.2));
-    state.settings.contrast=ref.settings?.contrast||0;state.settings.saturation=ref.settings?.saturation||0;persistCurrentSettings();syncSliders();renderImage();
-  };img.src=ref.url;
-}
+function renderImage(){if(!sourcePixels)return;if(state.view==='before'){ctx.putImageData(sourcePixels,0,0);return;}const baseData=baseColorImage(),base=makeCanvas(canvas.width,canvas.height),bx=base.getContext('2d',{willReadFrequently:true});bx.putImageData(baseData,0,0);lastSubjectBox=subjectMaskPixels?computeSubjectBox(subjectMaskPixels):null;lastFaceBox=subjectMaskPixels?estimateFaceBox(baseData,subjectMaskPixels,lastSubjectBox):null;applyPortraitPixels(base,lastFaceBox,lastSubjectBox);ctx.clearRect(0,0,canvas.width,canvas.height);ctx.globalCompositeOperation='source-over';ctx.filter='none';if(subjectMaskPixels){const bg=makeCanvas(canvas.width,canvas.height),bgx=bg.getContext('2d'),blurPx=Math.max(0,(state.settings.backgroundBlur||0)/7.5),depth=(state.settings.backgroundDepth||0)/100,bgBrightness=Math.max(.2,1+(state.settings.backgroundLight||0)/180-depth*.45),bgSat=Math.max(0,1+(state.settings.backgroundSat||0)/100);bgx.filter=`blur(${blurPx}px) brightness(${bgBrightness}) saturate(${bgSat})`;bgx.drawImage(base,0,0);bgx.filter='none';applyBackgroundTint(bg);ctx.drawImage(bg,0,0);const subject=makeCanvas(canvas.width,canvas.height),sx=subject.getContext('2d');sx.drawImage(base,0,0);sx.globalCompositeOperation='destination-in';sx.drawImage(subjectAlphaCanvas,0,0);sx.globalCompositeOperation='source-over';addFaceMakeup(subject,lastFaceBox);warpSubject(subject,lastFaceBox,lastSubjectBox);if((state.settings.rimLight||0)>0){const glow=makeCanvas(canvas.width,canvas.height),gx=glow.getContext('2d');gx.filter=`blur(${3+(state.settings.rimLight||0)/7}px)`;gx.drawImage(subject,0,0);gx.globalCompositeOperation='source-in';gx.fillStyle=`rgba(255,205,150,${Math.min(.72,(state.settings.rimLight||0)/125)})`;gx.fillRect(0,0,canvas.width,canvas.height);ctx.globalCompositeOperation='screen';ctx.drawImage(glow,0,0);ctx.globalCompositeOperation='source-over';}const lit=makeCanvas(canvas.width,canvas.height),lx=lit.getContext('2d');const sb=Math.max(.45,1+(state.settings.subjectLight||0)/180),warm=(state.settings.lightWarm||0)/100;lx.filter=`brightness(${sb}) saturate(${1+Math.max(0,warm)*.12}) sepia(${Math.max(0,warm)*.16})`;lx.drawImage(subject,0,0);ctx.drawImage(lit,0,0);}else ctx.drawImage(base,0,0);applyVignette();if(state.maskPreview&&subjectMaskPixels){ctx.save();ctx.globalCompositeOperation='source-over';ctx.globalAlpha=.34;ctx.fillStyle='#a747ff';ctx.drawImage(subjectAlphaCanvas,0,0);ctx.globalCompositeOperation='source-in';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.restore();}if(state.view==='split'){ctx.save();ctx.beginPath();ctx.rect(0,0,canvas.width/2,canvas.height);ctx.clip();ctx.putImageData(sourcePixels,0,0);ctx.restore();ctx.strokeStyle='#b66cff';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(canvas.width/2,0);ctx.lineTo(canvas.width/2,canvas.height);ctx.stroke();}}
 
-async function exportCurrent(){
-  if(state.selected<0)return;
-  const folder=await window.tb.chooseExportFolder();if(!folder)return;
-  const old=state.view;state.view='after';renderImage();const base=state.images[state.selected].name.replace(/\.[^.]+$/,'');
-  const result=await window.tb.writeExport({folder,filename:`${base}_TB.jpg`,dataUrl:canvas.toDataURL('image/jpeg',.95)});state.view=old;renderImage();
-  if(!result.ok)alert(result.error);await refreshLicense();
-}
+function calcStats(imageData){const d=imageData.data;let r=0,g=0,b=0,n=0,lum=0,lum2=0,ch=0;for(let i=0;i<d.length;i+=160){const rr=d[i],gg=d[i+1],bb=d[i+2],l=.299*rr+.587*gg+.114*bb;r+=rr;g+=gg;b+=bb;lum+=l;lum2+=l*l;ch+=Math.max(rr,gg,bb)-Math.min(rr,gg,bb);n++;}const ml=lum/n;return{r:r/n,g:g/n,b:b/n,l:ml,std:Math.sqrt(Math.max(0,lum2/n-ml*ml)),chroma:ch/n};}
+async function colorMatch(){if(state.referenceIndex<0||state.selected<0)return alert('Hãy chọn ảnh mẫu trước.');pushHistory();const ref=state.images[state.referenceIndex],img=new Image();img.onload=()=>{const c=makeCanvas(800,800),x=c.getContext('2d',{willReadFrequently:true}),scale=Math.min(1,800/Math.max(img.naturalWidth,img.naturalHeight));c.width=Math.max(1,Math.round(img.naturalWidth*scale));c.height=Math.max(1,Math.round(img.naturalHeight*scale));x.drawImage(img,0,0,c.width,c.height);const rs=calcStats(x.getImageData(0,0,c.width,c.height)),cs=calcStats(sourcePixels);state.settings.exposure=Math.max(-2,Math.min(2,Math.log2(Math.max(.2,rs.l)/Math.max(.2,cs.l))));state.settings.temperature=Math.max(-100,Math.min(100,((rs.r-rs.b)-(cs.r-cs.b))*1.1));state.settings.tint=Math.max(-100,Math.min(100,((rs.g-(rs.r+rs.b)/2)-(cs.g-(cs.r+cs.b)/2))*1.1));state.settings.contrast=Math.max(-100,Math.min(100,(rs.std-cs.std)*2.2));state.settings.vibrance=Math.max(-100,Math.min(100,(rs.chroma-cs.chroma)*2));state.settings.saturation=ref.settings?.saturation||0;persistCurrentSettings();syncSliders();scheduleRender();};img.src=ref.url;}
 
-async function refreshLicense(){
-  const s=await window.tb.licenseStatus();
-  $('#licenseText').textContent=s.valid?(s.kind==='quota'?`Còn ${s.remaining}/${s.total} ảnh`:`Unlimited đến ${new Date(s.expiresAt).toLocaleDateString('vi-VN')}`):`${s.reason||'Chưa có license'} • Máy ${s.machineId}`;
-}
+async function exportCurrent(){if(state.selected<0)return alert('Hãy chọn ảnh.');const folder=await window.tb.chooseExportFolder();if(!folder)return;const old=state.view,oldMask=state.maskPreview;state.view='after';state.maskPreview=false;renderImage();const base=state.images[state.selected].name.replace(/\.[^.]+$/,''),result=await window.tb.writeExport({folder,filename:`${base}_TB.jpg`,dataUrl:canvas.toDataURL('image/jpeg',.96)});state.view=old;state.maskPreview=oldMask;scheduleRender();if(!result.ok)alert(result.error);else alert(`Đã xuất: ${result.filePath}`);await refreshLicense();}
+async function refreshLicense(){const s=await window.tb.licenseStatus();const el=$('#licenseText');if(!el)return;if(s.valid){el.textContent=s.kind==='quota'?`${s.customer||''} • Còn ${s.remaining}/${s.total} ảnh`:`${s.customer||''} • Unlimited đến ${new Date(s.expiresAt).toLocaleDateString('vi-VN')}`;el.title=`Machine ID: ${s.machineId}\nSigner: ${s.signerFingerprint||''}`;}else{el.textContent=`${s.reason||'Chưa có license'} • Máy ${s.machineId}`;el.title='Bấm Mã máy để copy';}}
+function projectSnapshot(){return{version:3,images:state.images.map(({aiMaskDataUrl,...rest})=>rest),selected:state.selected,referenceIndex:state.referenceIndex};}
+function applyPreset(){const raw=localStorage.getItem('tb-preset');if(!raw)return alert('Chưa có cài sẵn đã lưu.');try{pushHistory();applySettings(JSON.parse(raw));}catch{alert('Preset bị lỗi.');}}
+function resetSettings(){pushHistory();applySettings(defaultSettings());}
+function cycleZoom(){const vals=[50,75,100,125,150,200];state.zoomIndex=(state.zoomIndex+1)%vals.length;const z=vals[state.zoomIndex];canvas.style.transform=`scale(${z/100})`;$('#btnZoom').textContent=`${z}%`;}
 
-function projectSnapshot(){
-  return{version:2,images:state.images.map(({aiMaskDataUrl,...rest})=>rest),selected:state.selected,referenceIndex:state.referenceIndex};
-}
-function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-
-buildSliders();syncSliders();refreshLicense();refreshAiStatus();
-$('#btnOpen').onclick=importImages;$('#btnOpenCenter').onclick=importImages;$('#btnExport').onclick=exportCurrent;
-$('#btnReset').onclick=()=>{state.settings=defaultSettings();persistCurrentSettings();syncSliders();renderImage();};
-$('#btnCopy').onclick=()=>state.copiedSettings={...state.settings};
-$('#btnPaste').onclick=()=>{if(state.copiedSettings){state.settings={...state.copiedSettings};persistCurrentSettings();syncSliders();renderImage();}};
-$('#btnSetReference').onclick=()=>{if(state.selected>=0){state.referenceIndex=state.selected;$('#referenceName').textContent=state.images[state.selected].name;}};
-$('#btnColorMatch').onclick=colorMatch;
-$('#btnSaveProject').onclick=()=>window.tb.saveProject(projectSnapshot());
-$('#btnLoadProject').onclick=async()=>{const p=await window.tb.loadProject();if(!p)return;state.images=(p.images||[]).map(x=>({...x,settings:{...defaultSettings(),...(x.settings||{})}}));state.selected=-1;state.referenceIndex=p.referenceIndex??-1;rebuildLibrary();if(state.images.length)selectImage(Math.max(0,p.selected||0));};
-$('#btnPrev').onclick=()=>selectImage(Math.max(0,state.selected-1));$('#btnNext').onclick=()=>selectImage(Math.min(state.images.length-1,state.selected+1));
-$('#btnPreset').onclick=()=>{localStorage.setItem('tb-preset',JSON.stringify(state.settings));alert('Đã lưu preset local.');};
-$$('.segmented button').forEach(b=>b.onclick=()=>{$$('.segmented button').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.view=b.dataset.view;renderImage();});
-$$('.right-tabs button').forEach(b=>b.onclick=()=>{$$('.right-tabs button').forEach(x=>x.classList.remove('active'));$$('.panel').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelector(`[data-panel-content="${b.dataset.panel}"]`).classList.add('active');});
-['#btnAnalyzePortrait','#btnAnalyzeBackground','#btnAnalyzeLighting'].forEach(sel=>{const b=$(sel);if(b)b.onclick=()=>ensureAIMask(true);});
-$('#btnLicense').onclick=async()=>{await window.tb.importLicense();await refreshLicense();};
+buildSliders();syncSliders();refreshLicense();refreshAiStatus();setTimeout(warmupAI,800);
+$('#btnOpen').onclick=importImages;$('#btnOpenCenter').onclick=importImages;$('#btnExport').onclick=exportCurrent;$('#btnReset').onclick=resetSettings;$('#btnResetTop').onclick=resetSettings;$('#btnUndo').onclick=undo;$('#btnRedo').onclick=redo;$('#btnHistory').onclick=undo;$('#btnCopy').onclick=()=>{state.copiedSettings=snapshot();};$('#btnPaste').onclick=()=>{if(state.copiedSettings){pushHistory();applySettings(state.copiedSettings);}};$('#btnSetReference').onclick=()=>{if(state.selected>=0){state.referenceIndex=state.selected;$('#referenceName').textContent=state.images[state.selected].name;}};$('#btnColorMatch').onclick=colorMatch;$('#btnSaveProject').onclick=()=>window.tb.saveProject(projectSnapshot());$('#btnLoadProject').onclick=async()=>{const p=await window.tb.loadProject();if(!p)return;if(p.__error)return alert(p.__error);state.images=(p.images||[]).map(x=>({...x,settings:{...defaultSettings(),...(x.settings||{})}}));state.selected=-1;state.referenceIndex=p.referenceIndex??-1;rebuildLibrary();if(state.images.length)selectImage(Math.max(0,p.selected||0));};$('#btnPrev').onclick=()=>selectImage(Math.max(0,state.selected-1));$('#btnNext').onclick=()=>selectImage(Math.min(state.images.length-1,state.selected+1));$('#btnPreset').onclick=()=>{localStorage.setItem('tb-preset',JSON.stringify(state.settings));alert('Đã lưu cài sẵn local.');};$('#btnLoadPreset').onclick=applyPreset;$('#btnPresetPanel').onclick=applyPreset;$('#btnZoom').onclick=cycleZoom;$('#btnMaskPreview').onclick=async()=>{if(!subjectMaskPixels)await ensureAIMask(true);state.maskPreview=!state.maskPreview;$('#btnMaskPreview').classList.toggle('active',state.maskPreview);scheduleRender();};$$('.segmented button').forEach(b=>b.onclick=()=>{$$('.segmented button').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.view=b.dataset.view;scheduleRender();});$$('.right-tabs button').forEach(b=>b.onclick=()=>{$$('.right-tabs button').forEach(x=>x.classList.remove('active'));$$('.panel').forEach(x=>x.classList.remove('active'));b.classList.add('active');const p=document.querySelector(`[data-panel-content="${b.dataset.panel}"]`);if(p)p.classList.add('active');});['#btnAnalyzePortrait','#btnAnalyzeBackground','#btnAnalyzeLighting'].forEach(sel=>{const b=$(sel);if(b)b.onclick=()=>ensureAIMask(true);});$('#btnCopyMachine').onclick=async()=>{const id=await window.tb.copyMachineId();alert(`Đã copy Machine ID:\n${id}`);};$('#btnLicense').onclick=async()=>{let s=await window.tb.importLicense();if(!s.valid&&/License Center khác/.test(s.reason||'')){if(confirm('Máy đang tin cậy License Center khác. Reset khóa tin cậy để nhập license mới?')){await window.tb.resetLicenseTrust();alert('Đã reset. Hãy bấm Nhập license và chọn lại file .tblic.');}}else if(s.valid)alert('Kích hoạt license thành công.');else if(s.reason)alert(s.reason);await refreshLicense();};
