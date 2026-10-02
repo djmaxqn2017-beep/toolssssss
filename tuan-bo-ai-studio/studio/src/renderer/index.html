@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tuấn Bồ AI Studio</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">TB</div>
+        <div><strong>Tuấn Bồ AI Studio</strong><span>Offline-first portrait editor</span></div>
+      </div>
+      <div class="top-actions">
+        <button id="btnOpen">Nhập ảnh</button>
+        <button id="btnLoadProject">Mở Project</button>
+        <button id="btnSaveProject">Lưu Project</button>
+        <button class="primary" id="btnExport">Xuất ảnh</button>
+      </div>
+    </header>
+
+    <aside class="leftbar">
+      <div class="section-title">THƯ VIỆN</div>
+      <div id="library" class="library"></div>
+      <div class="left-bottom">
+        <button id="btnCopy">Copy chỉnh sửa</button>
+        <button id="btnPaste">Paste</button>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <div class="viewer-toolbar">
+        <div class="segmented">
+          <button class="active" data-view="after">After</button>
+          <button data-view="before">Before</button>
+          <button data-view="split">Before / After</button>
+        </div>
+        <div id="imageInfo">Chưa chọn ảnh</div>
+      </div>
+      <div class="viewer" id="viewer">
+        <canvas id="canvas"></canvas>
+        <div id="emptyState" class="empty-state">
+          <div class="empty-icon">✦</div>
+          <h2>Tuấn Bồ AI Studio</h2>
+          <p>Nhập ảnh để bắt đầu chỉnh sửa.</p>
+          <button class="primary" id="btnOpenCenter">Nhập ảnh</button>
+        </div>
+      </div>
+      <div class="bottom-strip">
+        <button id="btnPrev">‹</button>
+        <div id="filmstrip" class="filmstrip"></div>
+        <button id="btnNext">›</button>
+      </div>
+    </main>
+
+    <aside class="rightbar">
+      <div class="panel-tabs">
+        <button class="active" data-panel="color">Màu</button>
+        <button data-panel="portrait">Chân dung AI</button>
+        <button data-panel="background">Nền</button>
+        <button data-panel="lighting">Ánh sáng</button>
+      </div>
+
+      <section class="panel active" data-panel-content="color">
+        <div class="panel-block">
+          <h3>AI Color Match</h3>
+          <p class="muted">Chọn ảnh reference trong thư viện rồi tạo recipe màu.</p>
+          <div class="row two">
+            <button id="btnSetReference">Đặt làm ảnh mẫu</button>
+            <button class="primary" id="btnColorMatch">Bắt chước màu</button>
+          </div>
+          <div id="referenceName" class="reference-name">Chưa có ảnh mẫu</div>
+        </div>
+        <div class="panel-block" id="sliders"></div>
+        <div class="panel-block">
+          <div class="row two">
+            <button id="btnReset">Khôi phục</button>
+            <button id="btnPreset">Lưu Preset</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" data-panel-content="portrait">
+        <div class="coming-card"><b>Portrait AI</b><span>Kiến trúc model đã sẵn sàng. V0.2 sẽ nối mask da, khuôn mặt, tóc và retouch local.</span></div>
+        <div class="fake-slider"><label>Mụn / khuyết điểm</label><input type="range" disabled /></div>
+        <div class="fake-slider"><label>Làm mịn giữ texture</label><input type="range" disabled /></div>
+        <div class="fake-slider"><label>Quầng mắt</label><input type="range" disabled /></div>
+        <div class="fake-slider"><label>Đều màu da</label><input type="range" disabled /></div>
+      </section>
+
+      <section class="panel" data-panel-content="background">
+        <div class="coming-card"><b>Background AI</b><span>BiRefNet/SAM adapter sẽ được gắn ở milestone AI.</span></div>
+      </section>
+
+      <section class="panel" data-panel-content="lighting">
+        <div class="coming-card"><b>AI Relight</b><span>IC-Light adapter + subject mask, chạy local khi model được cài.</span></div>
+      </section>
+
+      <footer class="license-card">
+        <div><strong>LICENSE</strong><span id="licenseText">Đang kiểm tra…</span></div>
+        <button id="btnLicense">Nhập license</button>
+      </footer>
+    </aside>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>
