@@ -1,0 +1,32 @@
+{
+  "name": "tuan-bo-license-center",
+  "version": "0.1.0",
+  "description": "Offline license issuer for Tuấn Bồ AI Studio",
+  "main": "src/main.js",
+  "author": "Tuan Bo",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "31.7.7",
+    "electron-builder": "24.13.3"
+  },
+  "build": {
+    "appId": "com.tuanbo.licensecenter",
+    "productName": "Tuấn Bồ License Center",
+    "artifactName": "TuanBo-License-Center-${version}-Setup.${ext}",
+    "directories": { "output": "dist" },
+    "files": ["src/**/*", "package.json"],
+    "win": { "target": ["nsis"] },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Tuấn Bồ License Center",
+      "uninstallDisplayName": "Tuấn Bồ License Center"
+    }
+  }
+}
