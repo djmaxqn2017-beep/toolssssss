@@ -2,6 +2,7 @@ const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const license = require('./licenseService');
+const ai = require('./aiService');
 
 let win;
 
@@ -67,6 +68,15 @@ ipcMain.handle('export:write', async (_, { folder, filename, dataUrl }) => {
   fs.mkdirSync(folder, { recursive: true });
   fs.writeFileSync(path.join(folder, filename), Buffer.from(match[2], 'base64'));
   return { ok: true, license: license.validateLicense() };
+});
+
+ipcMain.handle('ai:status', () => ai.status());
+ipcMain.handle('ai:segment-subject', async (_, imagePath) => {
+  try {
+    return await ai.segmentSubject(imagePath);
+  } catch (e) {
+    return { ok: false, error: e.message || String(e) };
+  }
 });
 
 ipcMain.handle('license:status', () => license.validateLicense());
