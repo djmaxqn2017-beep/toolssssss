@@ -30,7 +30,7 @@ function defaultSettings(){
 
 function buildSliders(){
   const host = $('#sliders');
-  host.innerHTML = '<h3>Điều chỉnh màu</h3>';
+  host.innerHTML = '';
   for(const [key,label,min,max,step] of controls){
     const wrap = document.createElement('div');
     wrap.className='control';
@@ -63,12 +63,18 @@ async function importImages(){
 }
 
 function rebuildLibrary(){
-  const lib=$('#library'); const strip=$('#filmstrip'); lib.innerHTML=''; strip.innerHTML='';
+  const lib=$('#library'); const strip=$('#filmstrip');
+  if(lib) lib.innerHTML='';
+  if(strip) strip.innerHTML='';
   state.images.forEach((img,i)=>{
-    const row=document.createElement('div'); row.className='library-item'+(i===state.selected?' active':'');
-    row.innerHTML=`<img class="thumb" src="${img.url}"><div class="lib-meta"><b>${escapeHtml(img.name)}</b><span>${i+1}/${state.images.length}</span></div>`;
-    row.onclick=()=>selectImage(i); lib.appendChild(row);
-    const th=document.createElement('img'); th.src=img.url; th.className=i===state.selected?'active':''; th.onclick=()=>selectImage(i); strip.appendChild(th);
+    if(lib){
+      const row=document.createElement('div'); row.className='library-item'+(i===state.selected?' active':'');
+      row.innerHTML=`<img class="thumb" src="${img.url}"><div class="lib-meta"><b>${escapeHtml(img.name)}</b><span>${i+1}/${state.images.length}</span></div>`;
+      row.onclick=()=>selectImage(i); lib.appendChild(row);
+    }
+    if(strip){
+      const th=document.createElement('img'); th.src=img.url; th.className=i===state.selected?'active':''; th.title=img.name; th.onclick=()=>selectImage(i); strip.appendChild(th);
+    }
   });
 }
 
@@ -86,7 +92,6 @@ async function selectImage(index){
 }
 
 function persistCurrentSettings(){ if(state.selected>=0) state.images[state.selected].settings={...state.settings}; }
-
 function clamp(v){return Math.max(0,Math.min(255,v));}
 function renderImage(){
   if(!sourcePixels)return;
@@ -107,7 +112,7 @@ function renderImage(){
   ctx.putImageData(new ImageData(out,sourcePixels.width,sourcePixels.height),0,0);
   if(state.view==='split'){
     ctx.save(); ctx.beginPath(); ctx.rect(0,0,canvas.width/2,canvas.height); ctx.clip(); ctx.putImageData(sourcePixels,0,0); ctx.restore();
-    ctx.strokeStyle='#c158ff'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(canvas.width/2,0); ctx.lineTo(canvas.width/2,canvas.height); ctx.stroke();
+    ctx.strokeStyle='#b66cff'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(canvas.width/2,0); ctx.lineTo(canvas.width/2,canvas.height); ctx.stroke();
   }
 }
 
@@ -156,7 +161,8 @@ function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':
 buildSliders();syncSliders();refreshLicense();
 $('#btnOpen').onclick=importImages;$('#btnOpenCenter').onclick=importImages;$('#btnExport').onclick=exportCurrent;
 $('#btnReset').onclick=()=>{state.settings=defaultSettings();persistCurrentSettings();syncSliders();renderImage();};
-$('#btnCopy').onclick=()=>state.copiedSettings={...state.settings};$('#btnPaste').onclick=()=>{if(state.copiedSettings){state.settings={...state.copiedSettings};persistCurrentSettings();syncSliders();renderImage();}};
+$('#btnCopy').onclick=()=>state.copiedSettings={...state.settings};
+$('#btnPaste').onclick=()=>{if(state.copiedSettings){state.settings={...state.copiedSettings};persistCurrentSettings();syncSliders();renderImage();}};
 $('#btnSetReference').onclick=()=>{if(state.selected>=0){state.referenceIndex=state.selected;$('#referenceName').textContent=state.images[state.selected].name;}};
 $('#btnColorMatch').onclick=colorMatch;
 $('#btnSaveProject').onclick=()=>window.tb.saveProject(projectSnapshot());
@@ -164,5 +170,5 @@ $('#btnLoadProject').onclick=async()=>{const p=await window.tb.loadProject();if(
 $('#btnPrev').onclick=()=>selectImage(Math.max(0,state.selected-1));$('#btnNext').onclick=()=>selectImage(Math.min(state.images.length-1,state.selected+1));
 $('#btnPreset').onclick=()=>{localStorage.setItem('tb-preset',JSON.stringify(state.settings));alert('Đã lưu preset local.');};
 $$('.segmented button').forEach(b=>b.onclick=()=>{$$('.segmented button').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.view=b.dataset.view;renderImage();});
-$$('.panel-tabs button').forEach(b=>b.onclick=()=>{$$('.panel-tabs button').forEach(x=>x.classList.remove('active'));$$('.panel').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelector(`[data-panel-content="${b.dataset.panel}"]`).classList.add('active');});
+$$('.right-tabs button').forEach(b=>b.onclick=()=>{$$('.right-tabs button').forEach(x=>x.classList.remove('active'));$$('.panel').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelector(`[data-panel-content="${b.dataset.panel}"]`).classList.add('active');});
 $('#btnLicense').onclick=async()=>{await window.tb.importLicense();await refreshLicense();};
