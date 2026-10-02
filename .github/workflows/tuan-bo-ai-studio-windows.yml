@@ -1,0 +1,56 @@
+name: Build Tuấn Bồ AI Studio Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - tuan-bo-ai-studio-v0.1
+    paths:
+      - 'tuan-bo-ai-studio/**'
+      - '.github/workflows/tuan-bo-ai-studio-windows.yml'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Studio dependencies
+        working-directory: tuan-bo-ai-studio/studio
+        run: npm install
+
+      - name: Build Studio installer
+        working-directory: tuan-bo-ai-studio/studio
+        run: npm run dist
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Install License Center dependencies
+        working-directory: tuan-bo-ai-studio/license-center
+        run: npm install
+
+      - name: Build License Center installer
+        working-directory: tuan-bo-ai-studio/license-center
+        run: npm run dist
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Upload Studio installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: TuanBo-AI-Studio-V0.1-Windows
+          path: tuan-bo-ai-studio/studio/dist/*.exe
+
+      - name: Upload License Center installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: TuanBo-License-Center-V0.1-Windows
+          path: tuan-bo-ai-studio/license-center/dist/*.exe
