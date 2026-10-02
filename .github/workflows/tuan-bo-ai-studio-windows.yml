@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - tuan-bo-ai-studio-v0.2
+      - tuan-bo-ai-studio-v0.3
     paths:
       - 'tuan-bo-ai-studio/**'
       - '.github/workflows/tuan-bo-ai-studio-windows.yml'
@@ -33,6 +33,17 @@ jobs:
           curl.exe -L --retry 4 --retry-delay 3 -o "$root/onnx/model.onnx" "https://huggingface.co/onnx-community/BiRefNet_lite-ONNX/resolve/main/onnx/model.onnx?download=true"
           if ((Get-Item "$root/onnx/model.onnx").Length -lt 100MB) { throw 'BiRefNet model download incomplete' }
 
+      - name: Syntax check Studio and License Center
+        shell: pwsh
+        run: |
+          node --check tuan-bo-ai-studio/studio/src/main.js
+          node --check tuan-bo-ai-studio/studio/src/preload.js
+          node --check tuan-bo-ai-studio/studio/src/aiService.js
+          node --check tuan-bo-ai-studio/studio/src/licenseService.js
+          node --check tuan-bo-ai-studio/studio/src/renderer/renderer.js
+          node --check tuan-bo-ai-studio/license-center/src/main.js
+          node --check tuan-bo-ai-studio/license-center/src/preload.js
+
       - name: Install Studio dependencies
         working-directory: tuan-bo-ai-studio/studio
         run: npm install
@@ -57,13 +68,8 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path release | Out-Null
-
           function Split-Installer {
-            param(
-              [string]$InputFile,
-              [string]$Prefix,
-              [string]$OutputExe
-            )
+            param([string]$InputFile,[string]$Prefix,[string]$OutputExe)
             $chunkSize = 20 * 1024 * 1024
             $input = [System.IO.File]::OpenRead($InputFile)
             $index = 1
@@ -75,79 +81,34 @@ jobs:
                 try { $output.Write($buffer, 0, $read) } finally { $output.Dispose() }
                 $index++
               }
-            } finally {
-              $input.Dispose()
-            }
-
+            } finally { $input.Dispose() }
             $count = $index - 1
             $partNames = 1..$count | ForEach-Object { '"' + ("{0}.part{1:D2}" -f $Prefix, $_) + '"' }
             $copyLine = 'copy /b ' + ($partNames -join '+') + ' "' + $OutputExe + '"'
-            $bat = @(
-              '@echo off',
-              'chcp 65001 >nul',
-              'title Tuấn Bồ - Ghép bộ cài',
-              'echo ==============================================',
-              'echo        TUAN BO AI STUDIO - GHEP BO CAI',
-              'echo ==============================================',
-              'echo.',
-              'echo Dang ghep cac phan, vui long cho...',
-              $copyLine,
-              'if errorlevel 1 goto error',
-              'echo.',
-              'echo Ghep thanh cong: ' + $OutputExe,
-              'echo.',
-              'certutil -hashfile "' + $OutputExe + '" SHA256',
-              'echo.',
-              'echo Bay gio co the chay file Setup EXE.',
-              'pause',
-              'exit /b 0',
-              ':error',
-              'echo.',
-              'echo LOI: Thieu part hoac part bi hong. Hay tai du tat ca cac part.',
-              'pause',
-              'exit /b 1'
-            )
+            $bat = @('@echo off','chcp 65001 >nul','title Tuấn Bồ - Ghép bộ cài','echo ==============================================','echo        TUAN BO AI STUDIO - GHEP BO CAI','echo ==============================================','echo.','echo Dang ghep cac phan, vui long cho...',$copyLine,'if errorlevel 1 goto error','echo.','echo Ghep thanh cong: ' + $OutputExe,'echo.','certutil -hashfile "' + $OutputExe + '" SHA256','echo.','echo Bay gio co the chay file Setup EXE.','pause','exit /b 0',':error','echo.','echo LOI: Thieu part hoac part bi hong. Hay tai du tat ca cac part.','pause','exit /b 1')
             Set-Content -Path (Join-Path 'release' ("Ghep_{0}.bat" -f $Prefix)) -Value $bat -Encoding ASCII
             return $count
           }
-
           $studio = Get-ChildItem 'tuan-bo-ai-studio/studio/dist/*.exe' | Select-Object -First 1
           $license = Get-ChildItem 'tuan-bo-ai-studio/license-center/dist/*.exe' | Select-Object -First 1
           if (-not $studio) { throw 'Studio installer not found' }
           if (-not $license) { throw 'License Center installer not found' }
-
-          $studioCount = Split-Installer -InputFile $studio.FullName -Prefix 'TuanBo-AI-Studio-V0.2' -OutputExe 'TuanBo-AI-Studio-V0.2-Setup.exe'
-          $licenseCount = Split-Installer -InputFile $license.FullName -Prefix 'TuanBo-License-Center-V0.2' -OutputExe 'TuanBo-License-Center-V0.2-Setup.exe'
-
+          $studioCount = Split-Installer -InputFile $studio.FullName -Prefix 'TuanBo-AI-Studio-V0.3' -OutputExe 'TuanBo-AI-Studio-V0.3-Setup.exe'
+          $licenseCount = Split-Installer -InputFile $license.FullName -Prefix 'TuanBo-License-Center-V0.3' -OutputExe 'TuanBo-License-Center-V0.3-Setup.exe'
           $studioHash = (Get-FileHash $studio.FullName -Algorithm SHA256).Hash
           $licenseHash = (Get-FileHash $license.FullName -Algorithm SHA256).Hash
-          @(
-            'TUAN BO AI STUDIO V0.2',
-            '',
-            "Studio parts: $studioCount",
-            "Studio SHA256: $studioHash",
-            '',
-            "License Center parts: $licenseCount",
-            "License Center SHA256: $licenseHash",
-            '',
-            'CACH GHEP:',
-            '1. Tai DU tat ca file .part cua phan mem can dung.',
-            '2. Tai file Ghep_*.bat tu cung trang Release.',
-            '3. Dat tat ca chung 1 thu muc.',
-            '4. Double-click file Ghep_*.bat.',
-            '5. Sau khi ghep xong, chay file Setup.exe.'
-          ) | Set-Content 'release/HUONG_DAN_GHEP.txt' -Encoding UTF8
+          @('TUAN BO AI STUDIO V0.3','',"Studio parts: $studioCount","Studio SHA256: $studioHash",'',"License Center parts: $licenseCount","License Center SHA256: $licenseHash",'','CACH GHEP:','1. Tai DU tat ca file .part cua phan mem can dung.','2. Tai file Ghep_*.bat tu cung trang Release.','3. Dat tat ca chung 1 thu muc.','4. Double-click file Ghep_*.bat.','5. Sau khi ghep xong, chay file Setup.exe.','','LICENSE V0.3:','- Trong Studio bam Ma may de copy Machine ID.','- Tao 1 file .tblic bang License Center V0.3.','- Trong Studio bam Nhap license va chon file .tblic.','- Khong can import Public Key rieng.') | Set-Content 'release/HUONG_DAN_GHEP.txt' -Encoding UTF8
 
       - name: Upload Studio installer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TuanBo-AI-Studio-V0.2-Windows
+          name: TuanBo-AI-Studio-V0.3-Windows
           path: tuan-bo-ai-studio/studio/dist/*.exe
 
       - name: Upload License Center installer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TuanBo-License-Center-V0.2-Windows
+          name: TuanBo-License-Center-V0.3-Windows
           path: tuan-bo-ai-studio/license-center/dist/*.exe
 
       - name: Publish public GitHub Release download parts
@@ -155,9 +116,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = 'tuan-bo-ai-studio-v0.2-download'
+          $tag = 'tuan-bo-ai-studio-v0.3-download'
           gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title 'Tuấn Bồ AI Studio V0.2 - Offline AI - Split Download' --notes 'Bộ cài đã chia thành các part 20 MB. Tải đủ part và file Ghep_*.bat rồi đặt chung một thư mục để ghép lại.'
+            gh release create $tag --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title 'Tuấn Bồ AI Studio V0.3 - Functional Fix - Split Download' --notes 'V0.3 sửa license 1-file, AI offline load, color/HSL/tone/grading, portrait, makeup, face/body reshape, background, relight, undo/redo, preset và mask preview. Bộ cài chia part 20 MB.'
           }
           gh release upload $tag 'release/*' --repo $env:GITHUB_REPOSITORY --clobber
