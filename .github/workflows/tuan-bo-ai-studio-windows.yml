@@ -47,6 +47,11 @@ jobs:
         working-directory: tuan-bo-ai-studio/studio
         run: npm install
 
+      - name: Generate TB logo PNG
+        working-directory: tuan-bo-ai-studio/studio
+        shell: pwsh
+        run: node -e "require('sharp')('resources/tb-icon.svg').resize(256,256).png().toFile('resources/tb-icon.png').then(()=>console.log('TB icon OK'))"
+
       - name: Real offline AI CPU smoke test
         working-directory: tuan-bo-ai-studio/studio
         run: node scripts/smoke-ai.mjs
@@ -79,10 +84,7 @@ jobs:
           $parts = 1..$count | ForEach-Object { '"' + ("TBRetoch-V0.4.part{0:D2}" -f $_) + '"' }
           $copyLine = 'copy /b ' + ($parts -join '+') + ' "TBRetoch-V0.4-Setup.exe"'
           @(
-            '@echo off','chcp 65001 >nul','title TBRetoch - Ghep bo cai',
-            'echo ==============================================','echo              TBRETOCH V0.4','echo ==============================================','echo.',
-            'echo Dang ghep cac part...',$copyLine,'if errorlevel 1 goto error','echo.','echo Ghep thanh cong: TBRetoch-V0.4-Setup.exe',
-            'certutil -hashfile "TBRetoch-V0.4-Setup.exe" SHA256','pause','exit /b 0',':error','echo LOI: Thieu part hoac part bi hong.','pause','exit /b 1'
+            '@echo off','chcp 65001 >nul','title TBRetoch - Ghep bo cai','echo ==============================================','echo              TBRETOCH V0.4','echo ==============================================','echo.','echo Dang ghep cac part...',$copyLine,'if errorlevel 1 goto error','echo.','echo Ghep thanh cong: TBRetoch-V0.4-Setup.exe','certutil -hashfile "TBRetoch-V0.4-Setup.exe" SHA256','pause','exit /b 0',':error','echo LOI: Thieu part hoac part bi hong.','pause','exit /b 1'
           ) | Set-Content 'release/Ghep_TBRetoch-V0.4.bat' -Encoding ASCII
           $hash=(Get-FileHash $installer.FullName -Algorithm SHA256).Hash
           @(
@@ -105,6 +107,6 @@ jobs:
           $tag = 'tbretouch-v0.4-download'
           gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title 'TBRetoch V0.4 - Team Offline CPU GPU' --notes 'TBRetoch V0.4: giao diện tím TB, pan/zoom kéo ảnh, preview nhẹ hơn, DirectML GPU AI + CPU fallback, export full resolution chất lượng cao, không giới hạn export/không cần license. Chia part 20 MB.'
+            gh release create $tag --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title 'TBRetoch V0.4 - Team Offline CPU GPU' --notes 'TBRetoch V0.4: logo TB, giao diện tím, pan/zoom kéo ảnh, preview nhẹ hơn, DirectML GPU AI + CPU fallback, export full resolution chất lượng cao, không giới hạn export/không cần license. Chia part 20 MB.'
           }
           gh release upload $tag 'release/*' --repo $env:GITHUB_REPOSITORY --clobber
