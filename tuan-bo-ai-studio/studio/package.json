@@ -1,22 +1,49 @@
 {
   "name": "tbretouch",
   "version": "0.5.0",
-  "description": "TBRetoch - offline portrait retouching workstation with isolated processing worker",
+  "description": "TBRetoch - internal offline portrait workstation with GPU/CPU processing workers",
   "main": "src/main.js",
   "author": "Tuan Bo",
   "license": "UNLICENSED",
-  "scripts": {"start":"electron .","dist":"electron-builder --win nsis"},
-  "dependencies": {"onnxruntime-node":"1.30.0","sharp":"0.34.4"},
-  "devDependencies": {"electron":"31.7.7","electron-builder":"24.13.3"},
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "1.0.1",
+    "onnxruntime-node": "1.30.0",
+    "sharp": "0.34.4"
+  },
+  "devDependencies": {
+    "electron": "31.7.7",
+    "electron-builder": "24.13.3"
+  },
   "build": {
-    "appId":"com.tuanbo.tbretouch",
-    "productName":"TBRetoch",
-    "artifactName":"TBRetoch-${version}-Setup.${ext}",
-    "directories":{"output":"dist"},
-    "files":["src/**/*","package.json"],
-    "extraResources":[{"from":"resources/models","to":"models"}],
-    "asarUnpack":["node_modules/onnxruntime-node/**/*","node_modules/sharp/**/*","node_modules/@img/**/*"],
-    "win":{"target":["nsis"],"icon":"resources/tb-icon.png"},
-    "nsis":{"oneClick":false,"allowToChangeInstallationDirectory":true,"createDesktopShortcut":true,"createStartMenuShortcut":true,"shortcutName":"TBRetoch","uninstallDisplayName":"TBRetoch"}
+    "appId": "com.tuanbo.tbretouch",
+    "productName": "TBRetoch",
+    "artifactName": "TBRetoch-${version}-Setup.${ext}",
+    "directories": { "output": "dist" },
+    "files": ["src/**/*", "package.json"],
+    "extraResources": [
+      { "from": "resources/models", "to": "models" }
+    ],
+    "asarUnpack": [
+      "node_modules/onnxruntime-node/**/*",
+      "node_modules/sharp/**/*",
+      "node_modules/@img/**/*",
+      "node_modules/@mediapipe/tasks-vision/**/*"
+    ],
+    "win": {
+      "target": ["nsis"],
+      "icon": "resources/tb-icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "TBRetoch",
+      "uninstallDisplayName": "TBRetoch"
+    }
   }
 }
