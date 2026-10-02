@@ -9,94 +9,159 @@
 <body>
   <div class="app-shell">
     <header class="topbar">
-      <div class="brand">
-        <div class="logo">TB</div>
-        <div><strong>Tuấn Bồ AI Studio</strong><span>Offline-first portrait editor</span></div>
+      <div class="top-left">
+        <button class="icon-btn ghost" title="Quay lại">‹</button>
+        <div class="brand-mark">TB</div>
+        <div class="brand-name">Tuấn Bồ AI Studio</div>
+        <button id="btnOpen" class="toolbar-btn"><span>＋</span> Thêm ảnh</button>
+        <button id="btnLoadProject" class="icon-btn" title="Mở Project">▣</button>
+        <button id="btnSaveProject" class="icon-btn" title="Lưu Project">⌁</button>
       </div>
-      <div class="top-actions">
-        <button id="btnOpen">Nhập ảnh</button>
-        <button id="btnLoadProject">Mở Project</button>
-        <button id="btnSaveProject">Lưu Project</button>
-        <button class="primary" id="btnExport">Xuất ảnh</button>
+      <div class="top-center">
+        <button class="icon-btn" title="Undo">↶</button>
+        <button class="icon-btn" title="Redo">↷</button>
+        <button class="toolbar-btn"><span>✦</span> Công cụ thủ công</button>
+        <div class="feature-search">⌕ <span>Tìm tính năng</span></div>
+      </div>
+      <div class="top-right">
+        <button class="icon-btn" title="Lịch sử xuất">◷</button>
+        <button class="icon-btn" title="Tài khoản">●</button>
+        <button id="btnExport" class="primary export-btn">Xuất ảnh</button>
       </div>
     </header>
 
-    <aside class="leftbar">
-      <div class="section-title">THƯ VIỆN</div>
-      <div id="library" class="library"></div>
-      <div class="left-bottom">
-        <button id="btnCopy">Copy chỉnh sửa</button>
-        <button id="btnPaste">Paste</button>
-      </div>
-    </aside>
-
     <main class="workspace">
-      <div class="viewer-toolbar">
-        <div class="segmented">
-          <button class="active" data-view="after">After</button>
-          <button data-view="before">Before</button>
-          <button data-view="split">Before / After</button>
+      <div id="library" class="library-hidden"></div>
+
+      <aside class="floating-tools">
+        <button class="float-tool active"><span class="float-icon">✦</span><span>Cài sẵn</span></button>
+        <button class="float-tool"><span class="float-icon">◐</span><span>Mặt nạ</span></button>
+        <button class="float-tool"><span class="float-icon">↺</span><span>Lịch sử</span></button>
+      </aside>
+
+      <section class="preview-area">
+        <div class="viewer-toolbar">
+          <div id="imageInfo" class="image-info">Chưa chọn ảnh</div>
+          <div class="viewer-tools">
+            <div class="segmented compact">
+              <button class="active" data-view="after">After</button>
+              <button data-view="before">Before</button>
+              <button data-view="split">A/B</button>
+            </div>
+            <button class="icon-btn mini">⌗</button>
+            <button class="zoom-pill">100%</button>
+          </div>
         </div>
-        <div id="imageInfo">Chưa chọn ảnh</div>
-      </div>
-      <div class="viewer" id="viewer">
-        <canvas id="canvas"></canvas>
-        <div id="emptyState" class="empty-state">
-          <div class="empty-icon">✦</div>
-          <h2>Tuấn Bồ AI Studio</h2>
-          <p>Nhập ảnh để bắt đầu chỉnh sửa.</p>
-          <button class="primary" id="btnOpenCenter">Nhập ảnh</button>
+
+        <div class="viewer" id="viewer">
+          <canvas id="canvas"></canvas>
+          <div id="emptyState" class="empty-state">
+            <div class="empty-logo">TB</div>
+            <h2>Tuấn Bồ AI Studio</h2>
+            <p>Nhập ảnh để bắt đầu chỉnh sửa.</p>
+            <button class="primary" id="btnOpenCenter">Nhập ảnh</button>
+          </div>
         </div>
-      </div>
-      <div class="bottom-strip">
-        <button id="btnPrev">‹</button>
+      </section>
+
+      <section class="gallery-area">
+        <div class="gallery-toolbar">
+          <div class="gallery-left">
+            <button class="icon-btn mini">☰</button>
+            <button class="toolbar-btn small">Bộ lọc</button>
+            <button class="toolbar-btn small">Sắp xếp</button>
+            <span class="gallery-count">Thư viện ảnh</span>
+          </div>
+          <div class="gallery-right">
+            <button id="btnCopy" class="toolbar-btn small">Copy</button>
+            <button id="btnPaste" class="toolbar-btn small">Paste</button>
+            <button id="btnPrev" class="icon-btn mini">‹</button>
+            <button id="btnNext" class="icon-btn mini">›</button>
+          </div>
+        </div>
         <div id="filmstrip" class="filmstrip"></div>
-        <button id="btnNext">›</button>
-      </div>
+      </section>
     </main>
 
     <aside class="rightbar">
-      <div class="panel-tabs">
-        <button class="active" data-panel="color">Màu</button>
-        <button data-panel="portrait">Chân dung AI</button>
-        <button data-panel="background">Nền</button>
-        <button data-panel="lighting">Ánh sáng</button>
+      <div class="right-tabs">
+        <button class="active" data-panel="color"><span>◉</span><em>Màu</em></button>
+        <button data-panel="portrait"><span>♙</span><em>Chân dung</em></button>
+        <button data-panel="background"><span>▧</span><em>Phông nền</em></button>
+        <button data-panel="lighting"><span>☼</span><em>Ánh sáng</em></button>
       </div>
 
-      <section class="panel active" data-panel-content="color">
-        <div class="panel-block">
-          <h3>AI Color Match</h3>
-          <p class="muted">Chọn ảnh reference trong thư viện rồi tạo recipe màu.</p>
-          <div class="row two">
-            <button id="btnSetReference">Đặt làm ảnh mẫu</button>
-            <button class="primary" id="btnColorMatch">Bắt chước màu</button>
+      <div class="right-scroll">
+        <section class="panel active" data-panel-content="color">
+          <div class="histogram-card">
+            <div class="histogram-grid"></div>
+            <div class="histogram-title">HISTOGRAM</div>
           </div>
-          <div id="referenceName" class="reference-name">Chưa có ảnh mẫu</div>
-        </div>
-        <div class="panel-block" id="sliders"></div>
-        <div class="panel-block">
-          <div class="row two">
+
+          <details class="ev-section" open>
+            <summary>AI Bắt chước màu <span>⌄</span></summary>
+            <div class="section-body">
+              <p class="muted">Dùng ảnh tham chiếu để đồng bộ màu và độ sáng.</p>
+              <div class="row two">
+                <button id="btnSetReference">Đặt ảnh mẫu</button>
+                <button class="primary" id="btnColorMatch">Bắt chước màu</button>
+              </div>
+              <div id="referenceName" class="reference-name">Chưa có ảnh mẫu</div>
+            </div>
+          </details>
+
+          <details class="ev-section" open>
+            <summary>Điều chỉnh cơ bản <span>⌄</span></summary>
+            <div id="sliders" class="section-body sliders-host"></div>
+          </details>
+
+          <details class="ev-section">
+            <summary>HSL <span>⌄</span></summary>
+            <div class="section-body placeholder-lines"><i></i><i></i><i></i></div>
+          </details>
+
+          <details class="ev-section">
+            <summary>Đường cong <span>⌄</span></summary>
+            <div class="section-body curve-box"></div>
+          </details>
+
+          <details class="ev-section">
+            <summary>Phân cấp màu <span>⌄</span></summary>
+            <div class="section-body color-wheels"><i></i><i></i><i></i></div>
+          </details>
+
+          <div class="panel-actions">
             <button id="btnReset">Khôi phục</button>
-            <button id="btnPreset">Lưu Preset</button>
+            <button id="btnPreset" class="primary">Lưu cài sẵn</button>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section class="panel" data-panel-content="portrait">
-        <div class="coming-card"><b>Portrait AI</b><span>Kiến trúc model đã sẵn sàng. V0.2 sẽ nối mask da, khuôn mặt, tóc và retouch local.</span></div>
-        <div class="fake-slider"><label>Mụn / khuyết điểm</label><input type="range" disabled /></div>
-        <div class="fake-slider"><label>Làm mịn giữ texture</label><input type="range" disabled /></div>
-        <div class="fake-slider"><label>Quầng mắt</label><input type="range" disabled /></div>
-        <div class="fake-slider"><label>Đều màu da</label><input type="range" disabled /></div>
-      </section>
+        <section class="panel" data-panel-content="portrait">
+          <details class="ev-section" open>
+            <summary>Chỉnh sửa chân dung AI <span>⌄</span></summary>
+            <div class="section-body">
+              <div class="coming-card"><b>Portrait AI</b><span>Pipeline local đang được nối model da, khuôn mặt và tóc.</span></div>
+              <div class="fake-slider"><label>Mụn / khuyết điểm</label><input type="range" disabled /></div>
+              <div class="fake-slider"><label>Làm mịn giữ texture</label><input type="range" disabled /></div>
+              <div class="fake-slider"><label>Quầng mắt</label><input type="range" disabled /></div>
+              <div class="fake-slider"><label>Đều màu da</label><input type="range" disabled /></div>
+            </div>
+          </details>
+          <details class="ev-section"><summary>Chỉnh hình khuôn mặt <span>⌄</span></summary><div class="section-body placeholder-lines"><i></i><i></i><i></i></div></details>
+          <details class="ev-section"><summary>Trang điểm <span>⌄</span></summary><div class="section-body placeholder-lines"><i></i><i></i></div></details>
+        </section>
 
-      <section class="panel" data-panel-content="background">
-        <div class="coming-card"><b>Background AI</b><span>BiRefNet/SAM adapter sẽ được gắn ở milestone AI.</span></div>
-      </section>
+        <section class="panel" data-panel-content="background">
+          <details class="ev-section" open><summary>Phông nền AI <span>⌄</span></summary><div class="section-body"><div class="coming-card"><b>Background AI</b><span>BiRefNet/SAM adapter đang được gắn cho tách chủ thể và chỉnh nền offline.</span></div></div></details>
+          <details class="ev-section"><summary>Làm mờ nền <span>⌄</span></summary><div class="section-body placeholder-lines"><i></i><i></i></div></details>
+          <details class="ev-section"><summary>Tinh chỉnh hậu cảnh <span>⌄</span></summary><div class="section-body placeholder-lines"><i></i><i></i></div></details>
+        </section>
 
-      <section class="panel" data-panel-content="lighting">
-        <div class="coming-card"><b>AI Relight</b><span>IC-Light adapter + subject mask, chạy local khi model được cài.</span></div>
-      </section>
+        <section class="panel" data-panel-content="lighting">
+          <details class="ev-section" open><summary>AI Relight <span>⌄</span></summary><div class="section-body"><div class="coming-card"><b>AI Relight</b><span>IC-Light + subject mask sẽ chạy local khi model được cài.</span></div></div></details>
+          <details class="ev-section"><summary>Ánh sáng chân dung <span>⌄</span></summary><div class="section-body placeholder-lines"><i></i><i></i><i></i></div></details>
+        </section>
+      </div>
 
       <footer class="license-card">
         <div><strong>LICENSE</strong><span id="licenseText">Đang kiểm tra…</span></div>
