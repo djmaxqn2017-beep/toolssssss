@@ -1,0 +1,40 @@
+{
+  "name": "tuan-bo-ai-studio",
+  "version": "0.1.0",
+  "description": "Tuấn Bồ AI Studio - offline-first photo editor",
+  "main": "src/main.js",
+  "author": "Tuan Bo",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "31.7.7",
+    "electron-builder": "24.13.3"
+  },
+  "build": {
+    "appId": "com.tuanbo.aistudio",
+    "productName": "Tuấn Bồ AI Studio",
+    "artifactName": "TuanBo-AI-Studio-${version}-Setup.${ext}",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "resources/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": ["nsis"]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Tuấn Bồ AI Studio",
+      "uninstallDisplayName": "Tuấn Bồ AI Studio"
+    }
+  }
+}
