@@ -1,6 +1,6 @@
 {
   "name": "tuan-bo-ai-studio",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Tuấn Bồ AI Studio - offline AI portrait editor",
   "main": "src/main.js",
   "author": "Tuan Bo",
@@ -20,22 +20,16 @@
     "appId": "com.tuanbo.aistudio",
     "productName": "Tuấn Bồ AI Studio",
     "artifactName": "TuanBo-AI-Studio-${version}-Setup.${ext}",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "src/**/*",
-      "package.json"
-    ],
+    "directories": { "output": "dist" },
+    "files": ["src/**/*", "package.json"],
     "extraResources": [
-      {
-        "from": "resources/models",
-        "to": "models"
-      }
+      { "from": "resources/models", "to": "models" }
     ],
-    "win": {
-      "target": ["nsis"]
-    },
+    "asarUnpack": [
+      "node_modules/onnxruntime-node/**/*",
+      "node_modules/@huggingface/transformers/**/*"
+    ],
+    "win": { "target": ["nsis"] },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
