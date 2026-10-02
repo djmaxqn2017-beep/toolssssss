@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - tuan-bo-ai-studio-v0.1
+      - tuan-bo-ai-studio-v0.2
     paths:
       - 'tuan-bo-ai-studio/**'
       - '.github/workflows/tuan-bo-ai-studio-windows.yml'
@@ -22,6 +22,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      - name: Download offline BiRefNet Lite model
+        shell: pwsh
+        run: |
+          $root = 'tuan-bo-ai-studio/studio/resources/models/onnx-community/BiRefNet_lite-ONNX'
+          New-Item -ItemType Directory -Force -Path "$root/onnx" | Out-Null
+          curl.exe -L --retry 4 --retry-delay 3 -o "$root/config.json" "https://huggingface.co/onnx-community/BiRefNet_lite-ONNX/resolve/main/config.json?download=true"
+          curl.exe -L --retry 4 --retry-delay 3 -o "$root/preprocessor_config.json" "https://huggingface.co/onnx-community/BiRefNet_lite-ONNX/resolve/main/preprocessor_config.json?download=true"
+          curl.exe -L --retry 4 --retry-delay 3 -o "$root/onnx/model.onnx" "https://huggingface.co/onnx-community/BiRefNet_lite-ONNX/resolve/main/onnx/model.onnx?download=true"
+          if ((Get-Item "$root/onnx/model.onnx").Length -lt 100MB) { throw 'BiRefNet model download incomplete' }
 
       - name: Install Studio dependencies
         working-directory: tuan-bo-ai-studio/studio
@@ -46,11 +56,11 @@ jobs:
       - name: Upload Studio installer
         uses: actions/upload-artifact@v4
         with:
-          name: TuanBo-AI-Studio-V0.1-Windows
+          name: TuanBo-AI-Studio-V0.2-Windows
           path: tuan-bo-ai-studio/studio/dist/*.exe
 
       - name: Upload License Center installer
         uses: actions/upload-artifact@v4
         with:
-          name: TuanBo-License-Center-V0.1-Windows
+          name: TuanBo-License-Center-V0.2-Windows
           path: tuan-bo-ai-studio/license-center/dist/*.exe
