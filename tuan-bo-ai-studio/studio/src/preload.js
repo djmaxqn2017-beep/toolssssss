@@ -7,9 +7,12 @@ contextBridge.exposeInMainWorld('tb', {
   chooseExportFolder: () => ipcRenderer.invoke('export:choose-folder'),
   writeExport: (payload) => ipcRenderer.invoke('export:write', payload),
   aiStatus: () => ipcRenderer.invoke('ai:status'),
+  aiWarmup: () => ipcRenderer.invoke('ai:warmup'),
   aiSegmentSubject: (imagePath) => ipcRenderer.invoke('ai:segment-subject', imagePath),
   licenseStatus: () => ipcRenderer.invoke('license:status'),
   machineId: () => ipcRenderer.invoke('license:machine-id'),
+  copyMachineId: () => ipcRenderer.invoke('license:copy-machine-id'),
+  resetLicenseTrust: () => ipcRenderer.invoke('license:reset-trust'),
   importPublicKey: () => ipcRenderer.invoke('license:import-key'),
   importLicense: () => ipcRenderer.invoke('license:import-license')
 });
