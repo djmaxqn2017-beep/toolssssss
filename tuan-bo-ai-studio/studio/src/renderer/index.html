@@ -24,6 +24,7 @@
         <div class="feature-search">⌕ <span>Tìm tính năng</span></div>
       </div>
       <div class="top-right">
+        <span id="aiTopStatus" class="ai-top-status">AI Offline</span>
         <button class="icon-btn" title="Lịch sử xuất">◷</button>
         <button class="icon-btn" title="Tài khoản">●</button>
         <button id="btnExport" class="primary export-btn">Xuất ảnh</button>
@@ -140,26 +141,38 @@
           <details class="ev-section" open>
             <summary>Chỉnh sửa chân dung AI <span>⌄</span></summary>
             <div class="section-body">
-              <div class="coming-card"><b>Portrait AI</b><span>Pipeline local đang được nối model da, khuôn mặt và tóc.</span></div>
-              <div class="fake-slider"><label>Mụn / khuyết điểm</label><input type="range" disabled /></div>
-              <div class="fake-slider"><label>Làm mịn giữ texture</label><input type="range" disabled /></div>
-              <div class="fake-slider"><label>Quầng mắt</label><input type="range" disabled /></div>
-              <div class="fake-slider"><label>Đều màu da</label><input type="range" disabled /></div>
+              <div class="ai-card"><div><b>TB Portrait AI</b><span id="portraitAiStatus">Chờ ảnh</span></div><button id="btnAnalyzePortrait" class="primary small-ai-btn">Phân tích AI</button></div>
+              <div id="portraitSliders"></div>
             </div>
           </details>
-          <details class="ev-section"><summary>Chỉnh hình khuôn mặt <span>⌄</span></summary><div class="section-body placeholder-lines"><i></i><i></i><i></i></div></details>
-          <details class="ev-section"><summary>Trang điểm <span>⌄</span></summary><div class="section-body placeholder-lines"><i></i><i></i></div></details>
+          <details class="ev-section" open>
+            <summary>Da & chi tiết <span>⌄</span></summary>
+            <div class="section-body"><p class="muted">Mask chủ thể từ BiRefNet giúp giới hạn retouch vào người và tóc, giảm ảnh hưởng hậu cảnh.</p></div>
+          </details>
+          <details class="ev-section"><summary>Chỉnh hình khuôn mặt <span>⌄</span></summary><div class="section-body"><p class="muted">Face mesh chuyên dụng sẽ được gắn ở model pack tiếp theo.</p></div></details>
+          <details class="ev-section"><summary>Trang điểm <span>⌄</span></summary><div class="section-body"><p class="muted">Makeup semantic đang dùng chung pipeline mask chân dung.</p></div></details>
         </section>
 
         <section class="panel" data-panel-content="background">
-          <details class="ev-section" open><summary>Phông nền AI <span>⌄</span></summary><div class="section-body"><div class="coming-card"><b>Background AI</b><span>BiRefNet/SAM adapter đang được gắn cho tách chủ thể và chỉnh nền offline.</span></div></div></details>
-          <details class="ev-section"><summary>Làm mờ nền <span>⌄</span></summary><div class="section-body placeholder-lines"><i></i><i></i></div></details>
-          <details class="ev-section"><summary>Tinh chỉnh hậu cảnh <span>⌄</span></summary><div class="section-body placeholder-lines"><i></i><i></i></div></details>
+          <details class="ev-section" open>
+            <summary>Phông nền AI <span>⌄</span></summary>
+            <div class="section-body">
+              <div class="ai-card"><div><b>BiRefNet Offline</b><span id="backgroundAiStatus">Chờ ảnh</span></div><button id="btnAnalyzeBackground" class="primary small-ai-btn">Tách chủ thể</button></div>
+              <div id="backgroundSliders"></div>
+            </div>
+          </details>
+          <details class="ev-section"><summary>Tinh chỉnh hậu cảnh <span>⌄</span></summary><div class="section-body"><p class="muted">Làm mờ, tối/sáng và bão hòa chỉ tác động nền; chủ thể được ghép lại bằng AI mask.</p></div></details>
         </section>
 
         <section class="panel" data-panel-content="lighting">
-          <details class="ev-section" open><summary>AI Relight <span>⌄</span></summary><div class="section-body"><div class="coming-card"><b>AI Relight</b><span>IC-Light + subject mask sẽ chạy local khi model được cài.</span></div></div></details>
-          <details class="ev-section"><summary>Ánh sáng chân dung <span>⌄</span></summary><div class="section-body placeholder-lines"><i></i><i></i><i></i></div></details>
+          <details class="ev-section" open>
+            <summary>AI Relight <span>⌄</span></summary>
+            <div class="section-body">
+              <div class="ai-card"><div><b>Subject-aware Relight</b><span id="lightingAiStatus">Chờ ảnh</span></div><button id="btnAnalyzeLighting" class="primary small-ai-btn">Phân tích AI</button></div>
+              <div id="lightingSliders"></div>
+            </div>
+          </details>
+          <details class="ev-section"><summary>Ánh sáng chân dung <span>⌄</span></summary><div class="section-body"><p class="muted">Tăng sáng chủ thể, làm ấm, tạo viền glow và chiều sâu nền từ cùng AI mask.</p></div></details>
         </section>
       </div>
 
