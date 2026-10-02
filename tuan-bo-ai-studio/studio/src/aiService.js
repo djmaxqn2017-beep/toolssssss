@@ -1,9 +1,11 @@
-const { app } = require('electron');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const ort = require('onnxruntime-node');
 const sharp = require('sharp');
+
+let electronApp = null;
+try { electronApp = require('electron').app || null; } catch {}
 
 let session = null;
 let loadingPromise = null;
@@ -11,7 +13,12 @@ let lastError = null;
 let backend = 'Chưa khởi tạo';
 let loadStartedAt = null;
 
-function modelRoot(){ return app.isPackaged ? path.join(process.resourcesPath,'models') : path.join(__dirname,'..','resources','models'); }
+function modelRoot(){
+  if(process.env.TBRETOCH_MODEL_ROOT) return process.env.TBRETOCH_MODEL_ROOT;
+  if(process.env.TBRETOCH_RESOURCE_PATH) return path.join(process.env.TBRETOCH_RESOURCE_PATH,'models');
+  if(electronApp?.isPackaged) return path.join(process.resourcesPath,'models');
+  return path.join(__dirname,'..','resources','models');
+}
 function modelDir(){ return path.join(modelRoot(),'onnx-community','BiRefNet_lite-ONNX'); }
 function modelFile(){ return path.join(modelDir(),'onnx','model.onnx'); }
 function hasModel(){ try { return fs.existsSync(modelFile()) && fs.statSync(modelFile()).size > 100*1024*1024; } catch { return false; } }
@@ -40,9 +47,7 @@ async function createSession(){
         backend = 'DirectML GPU + CPU fallback';
         lastError = null;
         return session;
-      }catch(e){
-        lastError = e;
-      }
+      }catch(e){ lastError = e; }
     }
     session = await ort.InferenceSession.create(modelFile(),{
       executionProviders:['cpu'],
@@ -118,7 +123,8 @@ function status(){
     runtime:'ONNX Runtime Node 1.30',backend,ready:!!session,
     loading:!!loadingPromise&&!session,
     loadSeconds:loadStartedAt&&!session?Math.round((Date.now()-loadStartedAt)/1000):0,
-    error:lastError?lastError.message:null,modelPath:modelFile(),cpuThreads:os.cpus()?.length||0
+    error:lastError?lastError.message:null,modelPath:modelFile(),cpuThreads:os.cpus()?.length||0,
+    processRole:process.env.TBRETOCH_PROCESS_ROLE||'main'
   };
 }
 
