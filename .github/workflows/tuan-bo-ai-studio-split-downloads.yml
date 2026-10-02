@@ -1,0 +1,188 @@
+name: Split Tuấn Bồ AI Studio installers
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - tuan-bo-ai-studio-v0.2
+    paths:
+      - '.github/workflows/tuan-bo-ai-studio-split-downloads.yml'
+
+jobs:
+  split:
+    runs-on: windows-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Download Studio V0.2 artifact from successful build
+        uses: actions/download-artifact@v4
+        with:
+          name: TuanBo-AI-Studio-V0.2-Windows
+          path: input/studio
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: 36976427988
+
+      - name: Download License Center V0.2 artifact from successful build
+        uses: actions/download-artifact@v4
+        with:
+          name: TuanBo-License-Center-V0.2-Windows
+          path: input/license
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: 36976427988
+
+      - name: Split installers into 30 MiB parts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force split/studio | Out-Null
+          New-Item -ItemType Directory -Force split/license | Out-Null
+          New-Item -ItemType Directory -Force split/tools | Out-Null
+
+          function Split-File([string]$Path,[string]$OutDir,[string]$Prefix,[int64]$ChunkSize=31457280) {
+            $stream = [System.IO.File]::OpenRead($Path)
+            try {
+              $buffer = New-Object byte[] $ChunkSize
+              $part = 1
+              while (($read = $stream.Read($buffer,0,$buffer.Length)) -gt 0) {
+                $name = Join-Path $OutDir ("{0}.part{1:D2}" -f $Prefix,$part)
+                $out = [System.IO.File]::Create($name)
+                try { $out.Write($buffer,0,$read) } finally { $out.Dispose() }
+                $part++
+              }
+            } finally { $stream.Dispose() }
+          }
+
+          $studioExe = (Get-ChildItem input/studio -Filter *.exe | Select-Object -First 1).FullName
+          $licenseExe = (Get-ChildItem input/license -Filter *.exe | Select-Object -First 1).FullName
+          if (-not $studioExe) { throw 'Studio installer EXE not found' }
+          if (-not $licenseExe) { throw 'License Center installer EXE not found' }
+
+          Split-File $studioExe 'split/studio' 'TuanBo-AI-Studio-V0.2'
+          Split-File $licenseExe 'split/license' 'TuanBo-License-Center-V0.2'
+
+          $studioParts = Get-ChildItem split/studio -Filter 'TuanBo-AI-Studio-V0.2.part*' | Sort-Object Name
+          $licenseParts = Get-ChildItem split/license -Filter 'TuanBo-License-Center-V0.2.part*' | Sort-Object Name
+
+          $studioJoin = ($studioParts | ForEach-Object { $_.Name }) -join '+'
+          $licenseJoin = ($licenseParts | ForEach-Object { $_.Name }) -join '+'
+
+          @"
+          @echo off
+          chcp 65001 >nul
+          echo ==============================================
+          echo  GHEP FILE TUAN BO AI STUDIO V0.2
+          echo ==============================================
+          echo.
+          copy /b $studioJoin "TuanBo-AI-Studio-V0.2-Setup.exe"
+          if errorlevel 1 (
+            echo.
+            echo GHEP THAT BAI. KIEM TRA DA TAI DU CAC PART CHUA.
+            pause
+            exit /b 1
+          )
+          echo.
+          echo GHEP THANH CONG: TuanBo-AI-Studio-V0.2-Setup.exe
+          echo.
+          certutil -hashfile "TuanBo-AI-Studio-V0.2-Setup.exe" SHA256
+          pause
+          "@ | Set-Content -Encoding ASCII split/tools/Ghep_TuanBo_AI_Studio_V0.2.bat
+
+          @"
+          @echo off
+          chcp 65001 >nul
+          echo ==============================================
+          echo  GHEP FILE TUAN BO LICENSE CENTER V0.2
+          echo ==============================================
+          echo.
+          copy /b $licenseJoin "TuanBo-License-Center-V0.2-Setup.exe"
+          if errorlevel 1 (
+            echo.
+            echo GHEP THAT BAI. KIEM TRA DA TAI DU CAC PART CHUA.
+            pause
+            exit /b 1
+          )
+          echo.
+          echo GHEP THANH CONG: TuanBo-License-Center-V0.2-Setup.exe
+          echo.
+          certutil -hashfile "TuanBo-License-Center-V0.2-Setup.exe" SHA256
+          pause
+          "@ | Set-Content -Encoding ASCII split/tools/Ghep_TuanBo_License_Center_V0.2.bat
+
+          $studioHash = (Get-FileHash $studioExe -Algorithm SHA256).Hash
+          $licenseHash = (Get-FileHash $licenseExe -Algorithm SHA256).Hash
+          @"
+          HUONG DAN GHEP FILE TUAN BO AI STUDIO V0.2
+
+          1. Tai TAT CA cac file part cua Studio va file Ghep_TuanBo_AI_Studio_V0.2.bat.
+          2. Neu part duoc tai duoi dang ZIP, giai nen tung ZIP.
+          3. Dat tat ca file .partXX va file BAT vao CUNG MOT THU MUC.
+          4. Chay Ghep_TuanBo_AI_Studio_V0.2.bat.
+          5. Sau khi ghep xong se co: TuanBo-AI-Studio-V0.2-Setup.exe
+          6. SHA256 file Studio goc: $studioHash
+
+          LICENSE CENTER:
+          Lam tuong tu voi cac part License va Ghep_TuanBo_License_Center_V0.2.bat.
+          SHA256 file License Center goc: $licenseHash
+          "@ | Set-Content -Encoding UTF8 split/tools/HUONG_DAN_GHEP_V0.2.txt
+
+          Write-Host "Studio parts:" $studioParts.Count
+          Write-Host "License parts:" $licenseParts.Count
+          Get-ChildItem split/studio | Format-Table Name,Length
+          Get-ChildItem split/license | Format-Table Name,Length
+
+      - name: Upload Studio Part 01
+        uses: actions/upload-artifact@v4
+        with: { name: Studio-Part-01, path: split/studio/TuanBo-AI-Studio-V0.2.part01, compression-level: 0 }
+      - name: Upload Studio Part 02
+        uses: actions/upload-artifact@v4
+        with: { name: Studio-Part-02, path: split/studio/TuanBo-AI-Studio-V0.2.part02, compression-level: 0 }
+      - name: Upload Studio Part 03
+        uses: actions/upload-artifact@v4
+        with: { name: Studio-Part-03, path: split/studio/TuanBo-AI-Studio-V0.2.part03, compression-level: 0 }
+      - name: Upload Studio Part 04
+        uses: actions/upload-artifact@v4
+        with: { name: Studio-Part-04, path: split/studio/TuanBo-AI-Studio-V0.2.part04, compression-level: 0 }
+      - name: Upload Studio Part 05
+        uses: actions/upload-artifact@v4
+        with: { name: Studio-Part-05, path: split/studio/TuanBo-AI-Studio-V0.2.part05, compression-level: 0 }
+      - name: Upload Studio Part 06
+        uses: actions/upload-artifact@v4
+        with: { name: Studio-Part-06, path: split/studio/TuanBo-AI-Studio-V0.2.part06, compression-level: 0 }
+      - name: Upload Studio Part 07
+        uses: actions/upload-artifact@v4
+        with: { name: Studio-Part-07, path: split/studio/TuanBo-AI-Studio-V0.2.part07, compression-level: 0 }
+      - name: Upload Studio Part 08
+        uses: actions/upload-artifact@v4
+        with: { name: Studio-Part-08, path: split/studio/TuanBo-AI-Studio-V0.2.part08, compression-level: 0 }
+      - name: Upload Studio Part 09
+        uses: actions/upload-artifact@v4
+        with: { name: Studio-Part-09, path: split/studio/TuanBo-AI-Studio-V0.2.part09, compression-level: 0 }
+      - name: Upload Studio Part 10
+        uses: actions/upload-artifact@v4
+        with: { name: Studio-Part-10, path: split/studio/TuanBo-AI-Studio-V0.2.part10, compression-level: 0, if-no-files-found: ignore }
+      - name: Upload Studio Part 11
+        uses: actions/upload-artifact@v4
+        with: { name: Studio-Part-11, path: split/studio/TuanBo-AI-Studio-V0.2.part11, compression-level: 0, if-no-files-found: ignore }
+      - name: Upload Studio Part 12
+        uses: actions/upload-artifact@v4
+        with: { name: Studio-Part-12, path: split/studio/TuanBo-AI-Studio-V0.2.part12, compression-level: 0, if-no-files-found: ignore }
+
+      - name: Upload License Part 01
+        uses: actions/upload-artifact@v4
+        with: { name: License-Part-01, path: split/license/TuanBo-License-Center-V0.2.part01, compression-level: 0 }
+      - name: Upload License Part 02
+        uses: actions/upload-artifact@v4
+        with: { name: License-Part-02, path: split/license/TuanBo-License-Center-V0.2.part02, compression-level: 0 }
+      - name: Upload License Part 03
+        uses: actions/upload-artifact@v4
+        with: { name: License-Part-03, path: split/license/TuanBo-License-Center-V0.2.part03, compression-level: 0, if-no-files-found: ignore }
+      - name: Upload License Part 04
+        uses: actions/upload-artifact@v4
+        with: { name: License-Part-04, path: split/license/TuanBo-License-Center-V0.2.part04, compression-level: 0, if-no-files-found: ignore }
+
+      - name: Upload merge tools
+        uses: actions/upload-artifact@v4
+        with:
+          name: Merge-Tools-V0.2
+          path: split/tools/*
+          compression-level: 0
