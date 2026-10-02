@@ -1,0 +1,1 @@
+V0.2 UI rebuild will move the editor to a five-zone layout: top toolbar, left floating tools, central preview, bottom gallery, right control panel. Purple Tuấn Bồ theme; original implementation and assets only.
