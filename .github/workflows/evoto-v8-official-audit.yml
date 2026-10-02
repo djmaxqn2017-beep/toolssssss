@@ -1,0 +1,52 @@
+name: Audit official Evoto 8.0.0 Windows build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - tbretouch-v0.5-evoto-parity-audit
+    paths:
+      - '.github/workflows/evoto-v8-official-audit.yml'
+
+jobs:
+  audit-evoto-v8:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download official Evoto 8.0.0-679 installer
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path evoto-audit | Out-Null
+          $url = 'https://res.evoto.ai/package/8.0.0-679/Evoto_Setup_8.0.0-679.exe'
+          curl.exe -L --retry 4 --retry-delay 3 -o 'evoto-audit/Evoto-Official-Setup.exe' $url
+          $f = Get-Item 'evoto-audit/Evoto-Official-Setup.exe'
+          if ($f.Length -lt 500MB) { throw "Evoto 8 installer download incomplete: $($f.Length) bytes" }
+          @{
+            auditedAt=(Get-Date).ToUniversalTime().ToString('o')
+            url=$url
+            bytes=$f.Length
+            sha256=(Get-FileHash $f.FullName -Algorithm SHA256).Hash
+          } | ConvertTo-Json | Set-Content 'evoto-audit/v8-download.json' -Encoding UTF8
+
+      - name: Inspect signature, package, install and public UI metadata
+        shell: pwsh
+        run: ./tuan-bo-ai-studio/scripts/evoto-installed-audit.ps1 -AuditDir evoto-audit | Tee-Object -FilePath evoto-audit/audit-console.txt
+
+      - name: Remove copyrighted installer before artifact upload
+        if: always()
+        shell: pwsh
+        run: |
+          Remove-Item 'evoto-audit/Evoto-Official-Setup.exe' -Force -ErrorAction SilentlyContinue
+          Get-ChildItem evoto-audit -File | Select-Object Name,Length | Format-Table -AutoSize
+
+      - name: Upload audit evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evoto-v8-official-audit
+          path: evoto-audit/*
+          if-no-files-found: warn
+          retention-days: 7
