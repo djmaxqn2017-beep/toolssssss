@@ -48,6 +48,10 @@ jobs:
         working-directory: tuan-bo-ai-studio/studio
         run: npm install
 
+      - name: Real offline AI smoke test
+        working-directory: tuan-bo-ai-studio/studio
+        run: node scripts/smoke-ai.mjs
+
       - name: Build Studio installer
         working-directory: tuan-bo-ai-studio/studio
         run: npm run dist
@@ -119,6 +123,6 @@ jobs:
           $tag = 'tuan-bo-ai-studio-v0.3-download'
           gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title 'Tuấn Bồ AI Studio V0.3 - Functional Fix - Split Download' --notes 'V0.3 sửa license 1-file, AI offline load, color/HSL/tone/grading, portrait, makeup, face/body reshape, background, relight, undo/redo, preset và mask preview. Bộ cài chia part 20 MB.'
+            gh release create $tag --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title 'Tuấn Bồ AI Studio V0.3 - Functional Fix - Split Download' --notes 'V0.3 sửa license 1-file, kiểm thử AI offline thật trước khi đóng gói, color/HSL/tone/grading, portrait, makeup, face/body reshape, background, relight, undo/redo, preset và mask preview. Bộ cài chia part 20 MB.'
           }
           gh release upload $tag 'release/*' --repo $env:GITHUB_REPOSITORY --clobber
