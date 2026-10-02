@@ -5,7 +5,6 @@ contextBridge.exposeInMainWorld('tb', {
   saveProject: (project) => ipcRenderer.invoke('project:save', project),
   loadProject: () => ipcRenderer.invoke('project:load'),
   chooseExportFolder: () => ipcRenderer.invoke('export:choose-folder'),
-  writeExportBuffer: (payload) => ipcRenderer.invoke('export:write-buffer', payload),
   exportFull: (payload) => ipcRenderer.invoke('export:full', payload),
   performanceInfo: () => ipcRenderer.invoke('system:performance'),
   processingDiagnostics: () => ipcRenderer.invoke('processing:diagnostics'),
@@ -14,5 +13,6 @@ contextBridge.exposeInMainWorld('tb', {
   aiSegmentSubject: (imagePath) => ipcRenderer.invoke('ai:segment-subject', imagePath),
   modelStatus: () => ipcRenderer.invoke('models:status'),
   prepareVisionModels: () => ipcRenderer.invoke('models:prepare'),
-  visionRuntimePaths: () => ipcRenderer.invoke('vision:runtime-paths')
+  visionRuntimePaths: () => ipcRenderer.invoke('vision:runtime-paths'),
+  visionModelBytes: (key) => ipcRenderer.invoke('vision:model-bytes', key)
 });
