@@ -12,6 +12,15 @@ ApplicationWindow {
     visible: true
     title: "TBRetoch"
     color: "#0d0c10"
+    palette.window: "#17151b"
+    palette.windowText: "#e9e5ee"
+    palette.base: "#211e25"
+    palette.alternateBase: "#28242e"
+    palette.text: "#e9e5ee"
+    palette.button: "#29242f"
+    palette.buttonText: "#e9e5ee"
+    palette.highlight: "#8247d6"
+    palette.highlightedText: "#ffffff"
 
     property string viewMode: "after"
     property real zoom: 1.0
@@ -224,6 +233,7 @@ ApplicationWindow {
 
                     Item {
                         id: photoLayer
+                        objectName: "photoLayer"
                         width: sourceImage.implicitWidth
                         height: sourceImage.implicitHeight
                         x: (viewer.width - width) / 2 + panX

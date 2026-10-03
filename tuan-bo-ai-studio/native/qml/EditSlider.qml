@@ -32,7 +32,10 @@ Item {
                 if (pressed) appController.beginSettingEdit()
                 else appController.endSettingEdit()
             }
-            onMoved: appController.setSetting(root.keyName, value)
+            onMoved: {
+                appController.setSetting(root.keyName, value)
+                if (!pressed) appController.endSettingEdit()
+            }
 
             Binding {
                 target: slider

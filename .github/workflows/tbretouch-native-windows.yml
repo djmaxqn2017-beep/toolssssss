@@ -21,7 +21,7 @@ jobs:
         with:
           version: '6.8.2'
           arch: 'win64_msvc2022_64'
-          modules: 'qtshadertools'
+          modules: 'qtshadertools qtimageformats'
           cache: true
 
       - name: Configure
@@ -43,6 +43,9 @@ jobs:
           New-Item -ItemType Directory -Force -Path $pkg | Out-Null
           Copy-Item 'tuan-bo-ai-studio/native/build/Release/TBRetoch.exe' "$pkg/TBRetoch.exe"
           windeployqt --release --qmldir 'tuan-bo-ai-studio/native/qml' --no-translations "$pkg/TBRetoch.exe"
+          foreach ($dll in @('vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll')) {
+            if (-not (Test-Path "$pkg/$dll")) { Copy-Item "$env:SystemRoot/system32/$dll" "$pkg/$dll" }
+          }
           @(
             'TBRetoch V0.5 Native Core',
             'This is an engineering build of the new native core.',
@@ -70,6 +73,22 @@ jobs:
           & "${env:ProgramFiles(x86)}/Inno Setup 6/ISCC.exe" 'tuan-bo-ai-studio/native/installer.iss'
           if ($LASTEXITCODE -ne 0) { throw "Installer build failed" }
 
+      - name: Verify installed application and rendered preview
+        shell: pwsh
+        run: |
+          $installDir = Join-Path $PWD 'smoke-installed'
+          $setup = './tuan-bo-ai-studio/native/dist/TBRetoch-Native-Core-Setup.exe'
+          $proc = Start-Process -FilePath $setup -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/LANG=vietnamese', ('/DIR="' + $installDir + '"')) -Wait -PassThru
+          if ($proc.ExitCode -ne 0) { throw "Silent installation failed: $($proc.ExitCode)" }
+          $env:PATH = "$env:SystemRoot\system32;$env:SystemRoot"
+          $env:QT_QPA_PLATFORM = 'windows'
+          $env:QSG_RHI_PREFER_SOFTWARE_RENDERER = '1'
+          $env:QSG_RHI_BACKEND = 'd3d11'
+          $env:TBRETOCH_SMOKE_SCREENSHOT = Join-Path $PWD 'native-preview.png'
+          $proc = Start-Process -FilePath "$installDir/TBRetoch.exe" -ArgumentList '--render-smoke-test' -Wait -PassThru -RedirectStandardError 'native-render.log'
+          Get-Content 'native-render.log'
+          if ($proc.ExitCode -ne 0) { throw "Installed render test failed: $($proc.ExitCode)" }
+
       - name: Upload artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -79,3 +98,5 @@ jobs:
           path: |
             TBRetoch-V0.5-Native-Core-Windows.zip
             tuan-bo-ai-studio/native/dist/TBRetoch-Native-Core-Setup.exe
+            native-preview.png
+            native-render.log
