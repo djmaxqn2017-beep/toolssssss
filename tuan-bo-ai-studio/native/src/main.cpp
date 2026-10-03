@@ -5,6 +5,7 @@
 #include <QSGRendererInterface>
 
 #include "AppController.h"
+#include "LocalizationManager.h"
 
 int main(int argc, char *argv[]) {
 #if defined(Q_OS_WIN)
@@ -14,14 +15,19 @@ int main(int argc, char *argv[]) {
     QCoreApplication::setOrganizationName(QStringLiteral("TB"));
     QCoreApplication::setOrganizationDomain(QStringLiteral("tbretouch.local"));
     QCoreApplication::setApplicationName(QStringLiteral("TBRetoch"));
-    QCoreApplication::setApplicationVersion(QStringLiteral("0.5.0"));
+    QCoreApplication::setApplicationVersion(QStringLiteral("0.6.0-dev"));
 
     AppController controller;
+    LocalizationManager i18n;
+
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty(QStringLiteral("appController"), &controller);
+    engine.rootContext()->setContextProperty(QStringLiteral("i18n"), &i18n);
+
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &app, []() {
         QCoreApplication::exit(-1);
     }, Qt::QueuedConnection);
+
     engine.loadFromModule("TBRetoch", "Main");
     return app.exec();
 }
