@@ -6,7 +6,6 @@
 #include <QImage>
 #include <QImageReader>
 #include <QImageWriter>
-#include <QSaveFile>
 #include <QStandardPaths>
 #include <QtConcurrent/QtConcurrent>
 #include <QtMath>
@@ -27,6 +26,9 @@ static QImage applyColorRecipe(QImage img, const QVariantMap &s) {
     const double tint = s.value("tint", 0.0).toDouble() / 100.0;
     const double saturation = s.value("saturation", 0.0).toDouble() / 100.0;
     const double vibrance = s.value("vibrance", 0.0).toDouble() / 100.0;
+    const double clarity = s.value("clarity", 0.0).toDouble() / 100.0;
+    const double dehaze = s.value("dehaze", 0.0).toDouble() / 100.0;
+    const double fade = s.value("fade", 0.0).toDouble() / 100.0;
     const double gain = qPow(2.0, exposure);
 
     for (int y = 0; y < img.height(); ++y) {
@@ -65,6 +67,32 @@ static QImage applyColorRecipe(QImage img, const QVariantMap &s) {
             g = l + (g-l) * satGain;
             b = l + (b-l) * satGain;
 
+            l = 0.2126*r + 0.7152*g + 0.0722*b;
+            const double midWeight = qBound(0.0, 1.0 - qAbs(l - 0.5) * 2.0, 1.0);
+            const double clarityGain = 1.0 + clarity * 0.32 * midWeight;
+            r = l + (r - l) * clarityGain;
+            g = l + (g - l) * clarityGain;
+            b = l + (b - l) * clarityGain;
+
+            const double hazeContrast = 1.0 + dehaze * 0.42;
+            r = (r - 0.5) * hazeContrast + 0.5;
+            g = (g - 0.5) * hazeContrast + 0.5;
+            b = (b - 0.5) * hazeContrast + 0.5;
+
+            if (fade != 0.0) {
+                const double amount = qBound(-1.0, fade, 1.0);
+                if (amount >= 0.0) {
+                    r = r * (1.0 - amount * 0.18) + amount * 0.045;
+                    g = g * (1.0 - amount * 0.18) + amount * 0.045;
+                    b = b * (1.0 - amount * 0.18) + amount * 0.045;
+                } else {
+                    const double a = -amount;
+                    r = (r - 0.04 * a) * (1.0 + 0.14 * a);
+                    g = (g - 0.04 * a) * (1.0 + 0.14 * a);
+                    b = (b - 0.04 * a) * (1.0 + 0.14 * a);
+                }
+            }
+
             line[x] = qRgba(clamp8(r*255.0), clamp8(g*255.0), clamp8(b*255.0), qAlpha(px));
         }
     }
@@ -78,7 +106,8 @@ QVariantMap AppController::defaultSettings() {
     return {
         {"exposure", 0.0}, {"contrast", 0.0}, {"highlights", 0.0}, {"shadows", 0.0},
         {"whites", 0.0}, {"blacks", 0.0}, {"temperature", 0.0}, {"tint", 0.0},
-        {"saturation", 0.0}, {"vibrance", 0.0}
+        {"saturation", 0.0}, {"vibrance", 0.0}, {"clarity", 0.0}, {"dehaze", 0.0},
+        {"fade", 0.0}
     };
 }
 
@@ -162,7 +191,7 @@ void AppController::importFiles(const QVariantList &urls) {
     setBusy(true);
     setStatusText(QStringLiteral("Đang tạo preview…"));
 
-    int firstNew = m_images.size();
+    const int firstNew = m_images.size();
     for (const QVariant &v : urls) {
         const QUrl url = v.canConvert<QUrl>() ? v.toUrl() : QUrl(v.toString());
         const QString path = url.isLocalFile() ? url.toLocalFile() : v.toString();
