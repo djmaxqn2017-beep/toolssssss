@@ -133,6 +133,12 @@ QVariantMap AppController::currentSettings() const {
 }
 bool AppController::busy() const { return m_busy; }
 QString AppController::statusText() const { return m_statusText; }
+bool AppController::canUndo() const {
+    return m_currentIndex >= 0 && m_currentIndex < m_images.size() && !m_images.at(m_currentIndex).undoStack.isEmpty();
+}
+bool AppController::canRedo() const {
+    return m_currentIndex >= 0 && m_currentIndex < m_images.size() && !m_images.at(m_currentIndex).redoStack.isEmpty();
+}
 
 QString AppController::cacheRoot() const {
     const QString base = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
@@ -186,6 +192,13 @@ void AppController::setStatusText(const QString &text) {
     emit statusTextChanged();
 }
 
+void AppController::pushUndoSnapshot(ImageEntry &entry, const QVariantMap &snapshot) {
+    if (snapshot == entry.settings) return;
+    entry.undoStack.push_back(snapshot);
+    if (entry.undoStack.size() > 100) entry.undoStack.removeFirst();
+    entry.redoStack.clear();
+}
+
 void AppController::importFiles(const QVariantList &urls) {
     if (urls.isEmpty()) return;
     setBusy(true);
@@ -212,22 +225,48 @@ void AppController::importFiles(const QVariantList &urls) {
 
 void AppController::selectImage(int index) {
     if (index < 0 || index >= m_images.size() || index == m_currentIndex) return;
+    m_editInProgress = false;
+    m_editStartSettings.clear();
     m_currentIndex = index;
     emit currentIndexChanged();
     emit currentImageChanged();
     emit currentSettingsChanged();
+    emit historyChanged();
+}
+
+void AppController::beginSettingEdit() {
+    if (m_currentIndex < 0 || m_currentIndex >= m_images.size() || m_editInProgress) return;
+    m_editInProgress = true;
+    m_editStartSettings = m_images.at(m_currentIndex).settings;
 }
 
 void AppController::setSetting(const QString &key, double value) {
     if (m_currentIndex < 0 || m_currentIndex >= m_images.size()) return;
+    if (!m_editInProgress) beginSettingEdit();
     m_images[m_currentIndex].settings.insert(key, value);
     emit currentSettingsChanged();
 }
 
+void AppController::endSettingEdit() {
+    if (!m_editInProgress || m_currentIndex < 0 || m_currentIndex >= m_images.size()) return;
+    ImageEntry &entry = m_images[m_currentIndex];
+    const QVariantMap before = m_editStartSettings;
+    m_editInProgress = false;
+    m_editStartSettings.clear();
+    pushUndoSnapshot(entry, before);
+    emit historyChanged();
+}
+
 void AppController::resetCurrentSettings() {
     if (m_currentIndex < 0 || m_currentIndex >= m_images.size()) return;
-    m_images[m_currentIndex].settings = defaultSettings();
+    ImageEntry &entry = m_images[m_currentIndex];
+    const QVariantMap before = entry.settings;
+    const QVariantMap after = defaultSettings();
+    if (before == after) return;
+    pushUndoSnapshot(entry, before);
+    entry.settings = after;
     emit currentSettingsChanged();
+    emit historyChanged();
 }
 
 void AppController::copySettings() {
@@ -237,12 +276,37 @@ void AppController::copySettings() {
 
 void AppController::pasteSettings() {
     if (m_currentIndex < 0 || m_currentIndex >= m_images.size() || m_copiedSettings.isEmpty()) return;
-    m_images[m_currentIndex].settings = m_copiedSettings;
+    ImageEntry &entry = m_images[m_currentIndex];
+    if (entry.settings == m_copiedSettings) return;
+    pushUndoSnapshot(entry, entry.settings);
+    entry.settings = m_copiedSettings;
     emit currentSettingsChanged();
+    emit historyChanged();
+}
+
+void AppController::undo() {
+    if (!canUndo()) return;
+    if (m_editInProgress) endSettingEdit();
+    ImageEntry &entry = m_images[m_currentIndex];
+    entry.redoStack.push_back(entry.settings);
+    entry.settings = entry.undoStack.takeLast();
+    emit currentSettingsChanged();
+    emit historyChanged();
+}
+
+void AppController::redo() {
+    if (!canRedo()) return;
+    if (m_editInProgress) endSettingEdit();
+    ImageEntry &entry = m_images[m_currentIndex];
+    entry.undoStack.push_back(entry.settings);
+    entry.settings = entry.redoStack.takeLast();
+    emit currentSettingsChanged();
+    emit historyChanged();
 }
 
 void AppController::exportCurrent(const QUrl &folderUrl, const QString &format, int quality) {
     if (m_busy || m_currentIndex < 0 || m_currentIndex >= m_images.size()) return;
+    if (m_editInProgress) endSettingEdit();
     const ImageEntry entry = m_images.at(m_currentIndex);
     const QVariantMap settings = entry.settings;
     const QString folder = folderUrl.isLocalFile() ? folderUrl.toLocalFile() : folderUrl.toString();
