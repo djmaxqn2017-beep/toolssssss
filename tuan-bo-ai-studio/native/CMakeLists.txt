@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Quick QuickControls2 QuickDialogs2 Concurrent)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Quick QuickControls2 QuickDialogs2 Concurrent ShaderTools)
 qt_standard_project_setup(REQUIRES 6.5)
 
 qt_add_executable(TBRetoch
@@ -21,11 +21,19 @@ qt_add_qml_module(TBRetoch
         qml/Main.qml
 )
 
+qt_add_shaders(TBRetoch "tbretouch_shaders"
+    PREFIX "/shaders"
+    FILES
+        shaders/color.vert
+        shaders/color.frag
+)
+
 target_link_libraries(TBRetoch PRIVATE
     Qt6::Quick
     Qt6::QuickControls2
     Qt6::QuickDialogs2
     Qt6::Concurrent
+    Qt6::ShaderTools
 )
 
 set_target_properties(TBRetoch PROPERTIES
