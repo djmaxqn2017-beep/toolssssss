@@ -76,7 +76,7 @@ QImage applyPortraitRecipe(QImage image,const QVariantMap &s,const PortraitAnaly
         if(!active)return;
         cv::Mat skin=mask(a,"faceSkin",rgb.size(),face),under=mask(a,"underEyes",rgb.size(),face);
         repair(rgb,skin,val("blemishRemoval"),0);repair(rgb,skin,val("wrinkles"),3);
-        if(val("skinSoftening")||val("textureRecovery")){cv::Mat low;cv::bilateralFilter(rgb,low,9,.08,4*scale);cv::Mat base=smooth(rgb,1.3*scale),effect=low+(rgb-base)*.55;blend(rgb,effect,skin,val("skinSoftening")*.8);blend(rgb,rgb+(rgb-base)*.8,skin,val("textureRecovery"));}
+        if(val("skinSoftening")||val("textureRecovery")){cv::Mat base=smooth(rgb,1.3*scale),low;cv::bilateralFilter(base,low,9,.08,4*scale);cv::Mat effect=low+(rgb-base)*.55;blend(rgb,effect,skin,val("skinSoftening")*.8);blend(rgb,rgb+(rgb-base)*.8,skin,val("textureRecovery"));}
         if(val("skinUnify")){cv::Mat lab;cv::cvtColor(rgb,lab,cv::COLOR_RGB2Lab);auto average=cv::mean(lab,skin>.7);auto low=smooth(lab,18*scale);for(int y=0;y<lab.rows;++y){auto p=lab.ptr<cv::Vec3f>(y);auto l=low.ptr<cv::Vec3f>(y);for(int x=0;x<lab.cols;++x){p[x][1]+=(average[1]-l[x][1])*.55;p[x][2]+=(average[2]-l[x][2])*.55;}}cv::Mat effect;cv::cvtColor(lab,effect,cv::COLOR_Lab2RGB);blend(rgb,effect,skin,val("skinUnify"));}
         if(val("faceShine")){cv::Mat gray;cv::cvtColor(rgb,gray,cv::COLOR_RGB2GRAY);cv::Mat bright=(gray-.65)*3;cv::max(bright,0,bright);blend(rgb,smooth(rgb,7*scale),skin.mul(bright),val("faceShine"));tone(rgb,skin.mul(bright),-.25*val("faceShine"),0,0,0);}
         if(val("eyeBags"))blend(rgb,smooth(rgb,4*scale),under,val("eyeBags")*.6);tone(rgb,under,.4*val("darkCircles"),0,-8*val("darkCircles"),0);

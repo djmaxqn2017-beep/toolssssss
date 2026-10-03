@@ -283,9 +283,9 @@ std::shared_ptr<PortraitAnalysis> analysePortrait(const QImage &source,const QSt
     QImage proxy=source.scaled(1024,1024,Qt::KeepAspectRatio,Qt::SmoothTransformation);cv::Mat rgb=rgbImage(proxy);
     auto a=cached?cached:std::make_shared<PortraitAnalysis>();
     if(!cached) {
-        auto &seg=e.net(e.segment,"selfie_multiclass.onnx");cv::Mat small;cv::resize(rgb,small,{256,256});
+        auto &seg=e.net(e.segment,"selfie_multiclass.onnx");cv::Mat resizedInput;cv::resize(rgb,resizedInput,{256,256});
         std::vector<float> input(256*256*3);
-        for(int y=0;y<256;++y)for(int x=0;x<256;++x)for(int c=0;c<3;++c)input[(y*256+x)*3+c]=small.at<cv::Vec3b>(y,x)[c]/127.5f-1;
+        for(int y=0;y<256;++y)for(int x=0;x<256;++x)for(int c=0;c<3;++c)input[(y*256+x)*3+c]=resizedInput.at<cv::Vec3b>(y,x)[c]/127.5f-1;
         auto output=seg.run(input,{1,256,256,3});const float *logits=output[0].GetTensorData<float>();
         const std::array<QString,6> names={"background","hair","bodySkin","faceSkin","clothes","accessories"};
         std::array<cv::Mat,6> masks;for(auto&m:masks)m=cv::Mat(256,256,CV_32F);
@@ -323,7 +323,7 @@ std::shared_ptr<PortraitAnalysis> analysePortrait(const QImage &source,const QSt
         featureMasks(*a,rgb);a->backend=seg.backend;
     }
     if(needDepth&&!a->masks.contains("depth")) {
-        auto &net=e.net(e.depth,"depth.onnx");cv::Mat small;cv::resize(rgb,small,{518,518});auto input=chw(small,1.0/255);
+        auto &net=e.net(e.depth,"depth.onnx");cv::Mat resizedInput;cv::resize(rgb,resizedInput,{518,518});auto input=chw(resizedInput,1.0/255);
         const double mean[]={.485,.456,.406},stddev[]={.229,.224,.225};
         for(int c=0;c<3;++c)for(size_t i=size_t(c)*518*518;i<size_t(c+1)*518*518;++i)input[i]=float((input[i]-mean[c])/stddev[c]);
         auto output=net.run(input,{1,3,518,518});auto shape=output[0].GetTensorTypeAndShapeInfo().GetShape();
@@ -331,7 +331,7 @@ std::shared_ptr<PortraitAnalysis> analysePortrait(const QImage &source,const QSt
         cv::normalize(raw,norm,0,1,cv::NORM_MINMAX);a->masks["depth"]=grayImage(refine(norm,rgb));
     }
     if(needSky&&!a->masks.contains("sky")) {
-        auto &net=e.net(e.sky,"sky.onnx");cv::Mat small;cv::resize(rgb,small,{320,320});auto input=chw(small,1.0/255);
+        auto &net=e.net(e.sky,"sky.onnx");cv::Mat resizedInput;cv::resize(rgb,resizedInput,{320,320});auto input=chw(resizedInput,1.0/255);
         const double mean[]={.485,.456,.406},stddev[]={.229,.224,.225};for(int c=0;c<3;++c)for(size_t i=size_t(c)*320*320;i<size_t(c+1)*320*320;++i)input[i]=float((input[i]-mean[c])/stddev[c]);
         auto output=net.run(input,{1,3,320,320});auto shape=output[0].GetTensorTypeAndShapeInfo().GetShape();
         cv::Mat raw(static_cast<int>(shape[shape.size()-2]),static_cast<int>(shape.back()),CV_32F,output[0].GetTensorMutableData<float>());

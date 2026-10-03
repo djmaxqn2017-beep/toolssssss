@@ -1,5 +1,6 @@
 #include <QtTest>
 #include <cstdio>
+#include <cmath>
 #include <QTemporaryDir>
 #include <QDir>
 #include <QImage>
@@ -58,6 +59,13 @@ private slots:
         for(int y=source.height()/2;y<source.height()-10&&center.x()<0;++y)for(int x=20;x<source.width()-20;++x)if(qGray(cloth.pixel(x,y))>220&&qGray(cloth.pixel(x+8,y+8))>220){center={x+4,y+4};break;}
         QVERIFY(center.x()>0);
         for(const QString &key:{QString("wrinkleRemoval"),QString("lintRemoval"),QString("stainRemoval")}) {QImage defect=source.convertToFormat(QImage::Format_RGBA64);QPainter painter(&defect);painter.setPen(QPen(key=="lintRemoval"?Qt::white:Qt::black,2));painter.drawLine(center-QPoint(4,0),center+QPoint(4,0));if(key=="stainRemoval"){painter.setBrush(QColor(180,20,30));painter.drawEllipse(center,4,4);}painter.end();auto recipe=defaults;recipe[key]=100;QVERIFY2(applyPortraitRecipe(defect,recipe,*analysis)!=defect,qPrintable(key));}
+        QImage texture(4096,256,QImage::Format_RGBA64);
+        for(int y=0;y<texture.height();++y){auto row=reinterpret_cast<QRgba64*>(texture.scanLine(y));for(int x=0;x<texture.width();++x){quint16 value=qRound((.5+.04*std::sin(x*2*3.141592653589793/40))*65535);row[x]=QRgba64::fromRgba64(value,value,value,65535);}}
+        auto region=*analysis;QImage full(texture.size(),QImage::Format_Grayscale8);full.fill(255);region.masks["faceSkin"]=full;
+        auto soft=defaults;soft["skinSoftening"]=100;auto softened=applyPortraitRecipe(texture,soft,region);auto regionMask=semanticMask(region,"faceSkin",texture.size(),0);
+        double beforeGradient=0,afterGradient=0;
+        for(int y=1;y<texture.height()-1;++y){auto originalRow=reinterpret_cast<const QRgba64*>(texture.constScanLine(y));auto editedRow=reinterpret_cast<const QRgba64*>(softened.constScanLine(y));for(int x=1;x<texture.width()-1;++x)if(qGray(regionMask.pixel(x,y))>250){beforeGradient+=qAbs(int(originalRow[x].red())-originalRow[x-1].red());afterGradient+=qAbs(int(editedRow[x].red())-editedRow[x-1].red());}}
+        QVERIFY(beforeGradient>0);QVERIFY(afterGradient<beforeGradient*.98);
         QImage group(source.width()*2,source.height(),QImage::Format_RGBA64);QPainter groupPainter(&group);groupPainter.drawImage(0,0,source);groupPainter.drawImage(source.width(),0,source);groupPainter.end();
         auto people=analysePortrait(group,dir.filePath("group"));QCOMPARE(people->faces.size(),2);
         auto faceRecipe=defaults;faceRecipe["face_0_mask_faceSkin_exposure"]=1.;auto isolated=applyPortraitRecipe(group,faceRecipe,*people);
