@@ -76,7 +76,9 @@ int main(int argc, char *argv[]) {
                 auto *exportButton = window->findChild<QQuickItem*>(QStringLiteral("exportButton"));
                 const bool exportVisible = exportButton && exportButton->isVisible()
                     && exportButton->mapToScene(QPointF(exportButton->width(), 0)).x() <= window->width();
-                const bool ok = exportVisible && qAbs(actual.red()-expected.red()) <= 5
+                auto *title = window->findChild<QQuickItem*>(QStringLiteral("slider-title-exposure"));
+                const bool titleFits = title && title->width() >= title->implicitWidth();
+                const bool ok = exportVisible && titleFits && qAbs(actual.red()-expected.red()) <= 5
                     && qAbs(actual.green()-expected.green()) <= 5
                     && qAbs(actual.blue()-expected.blue()) <= 5;
                 qInfo() << "Rendered exposure preview:" << actual << "expected:" << expected << "passed:" << ok;
