@@ -1,4 +1,4 @@
-; *** Inno Setup version 6.5.0+ Vietnamese messages ***
+﻿; *** Inno Setup version 6.5.0+ Vietnamese messages ***
 ;
 ; Vietnamese translation by memecoder (memecoder17@gmail.com)
 ; Last modification date: 2023-10-26
