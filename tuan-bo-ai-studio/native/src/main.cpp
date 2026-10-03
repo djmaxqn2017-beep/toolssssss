@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
     QCoreApplication::setOrganizationName(QStringLiteral("TB"));
     QCoreApplication::setOrganizationDomain(QStringLiteral("tbretouch.local"));
     QCoreApplication::setApplicationName(QStringLiteral("TBRetoch"));
-    QCoreApplication::setApplicationVersion(QStringLiteral("0.6.0-dev"));
+    QCoreApplication::setApplicationVersion(QStringLiteral("0.6.1-import-fix"));
 
     AppController controller;
     LocalizationManager i18n;

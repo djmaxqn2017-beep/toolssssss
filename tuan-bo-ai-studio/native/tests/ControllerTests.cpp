@@ -6,6 +6,7 @@
 #include <QSignalSpy>
 #include <QFile>
 #include <QJSEngine>
+#include <QQmlEngine>
 #include "ImageDecoder.h"
 #include "AppController.h"
 
@@ -29,6 +30,7 @@ private slots:
         QSignalSpy errors(&c, &AppController::errorOccurred);
         // Exercise the same JavaScript-array -> invokable boundary as QML.
         QJSEngine engine;
+        QQmlEngine::setObjectOwnership(&c, QQmlEngine::CppOwnership);
         engine.globalObject().setProperty("controller", engine.newQObject(&c));
         QJSValue selection = engine.newArray(urls.size());
         for (int i = 0; i < urls.size(); ++i) selection.setProperty(i, urls[i].toString());
@@ -85,6 +87,25 @@ private slots:
         QTRY_COMPARE_WITH_TIMEOUT(exported.count(), 1, 30000);
         const QImage output(exported.first()[0].toString());
         QCOMPARE(output.size(), original.size());
+    }
+
+    void blockedCacheFallsBack() {
+        QTemporaryDir dir;
+        const QString path = dir.filePath("source.png");
+        QImage image(32, 32, QImage::Format_RGB32);
+        image.fill(Qt::gray);
+        QVERIFY(image.save(path));
+        QFile blocker(dir.filePath("not-a-directory"));
+        QVERIFY(blocker.open(QIODevice::WriteOnly));
+        blocker.close();
+        const QByteArray previous = qgetenv("TBRETOCH_CACHE_ROOT");
+        qputenv("TBRETOCH_CACHE_ROOT", blocker.fileName().toUtf8());
+        AppController c;
+        c.importFiles({QUrl::fromLocalFile(path)});
+        QTRY_VERIFY_WITH_TIMEOUT(!c.busy(), 30000);
+        qputenv("TBRETOCH_CACHE_ROOT", previous);
+        QVERIFY2(c.images().size() == 1, qPrintable(c.importDetails()));
+        QVERIFY(!QImage(QUrl(c.currentPreviewUrl()).toLocalFile()).isNull());
     }
 
     void rawDecodeAndExport() {

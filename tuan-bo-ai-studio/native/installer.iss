@@ -2,7 +2,7 @@
 [Setup]
 AppId={{83A238E8-EC89-4C9E-88A5-B765DF0AE036}
 AppName={#AppName}
-AppVersion=0.6.0
+AppVersion=0.6.1
 AppPublisher=TB
 DefaultDirName={localappdata}\Programs\TBRetoch
 DefaultGroupName=TBRetoch

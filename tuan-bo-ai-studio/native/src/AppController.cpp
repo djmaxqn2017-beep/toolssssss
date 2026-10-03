@@ -2,6 +2,7 @@
 #include "ImageDecoder.h"
 #include <QFileDialog>
 #include <QSaveFile>
+#include <QTemporaryFile>
 #include <QJSValue>
 
 #include <QCryptographicHash>
@@ -147,8 +148,15 @@ bool AppController::canRedo() const {
 }
 
 QString AppController::cacheRoot() const {
-    const QString base = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
-    const QString root = QDir(base).filePath("previews");
+    const QString overridePath = qEnvironmentVariable("TBRETOCH_CACHE_ROOT");
+    const QString base = overridePath.isEmpty() ? QStandardPaths::writableLocation(QStandardPaths::CacheLocation) : overridePath;
+    QString root = QDir(base).filePath("previews");
+    if (!base.isEmpty() && QDir().mkpath(root)) {
+        QTemporaryFile probe(QDir(root).filePath(".write-test-XXXXXX"));
+        if (probe.open()) return root;
+    }
+    // A blocked profile cache must not prevent all photo imports.
+    root = QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation)).filePath("TBRetoch/previews");
     QDir().mkpath(root);
     return root;
 }
@@ -159,7 +167,7 @@ QString AppController::makePreview(const QString &path, const QImage &image, int
                                  + QString::number(fi.size()) + QString::number(maxSide) + "v2").toUtf8();
     const QString key = QString::fromLatin1(QCryptographicHash::hash(keyBytes, QCryptographicHash::Sha1).toHex());
     const QString outPath = QDir(cacheRoot()).filePath(key + suffix + ".png");
-    if (QFileInfo::exists(outPath) && QImageReader(outPath).canRead()) return outPath;
+    if (QFileInfo::exists(outPath) && !QImage(outPath).isNull()) return outPath;
     QImage preview = image;
     if (qMax(image.width(), image.height()) > maxSide)
         preview = image.scaled(maxSide, maxSide, Qt::KeepAspectRatio, Qt::SmoothTransformation);
