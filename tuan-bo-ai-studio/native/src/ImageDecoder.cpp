@@ -53,9 +53,9 @@ QImage decodeImage(const QString &path, int maxSide, QString *error) {
     if (ext == "heic" || ext == "heif") {
         if (file.size() > 1024LL * 1024 * 1024) return fail("HEIF exceeds 1 GiB input limit");
         const QByteArray bytes = file.readAll();
-        // vcpkg ships HEVC decoder plugins beside the application in the package.
+        // Scan only installed HEIF codecs, avoiding unrelated Qt/AI DLL loaders.
         static const bool pluginsLoaded = [] {
-            const QByteArray folder = QDir::toNativeSeparators(QCoreApplication::applicationDirPath()).toUtf8();
+            const QByteArray folder = QDir::toNativeSeparators(QDir(QCoreApplication::applicationDirPath()).filePath("heif/plugins")).toUtf8();
             heif_load_plugins(folder.constData(), nullptr, nullptr, 0);
             return true;
         }();

@@ -22,6 +22,7 @@
 #endif
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <dxgi.h>
 #endif
 
 namespace {
@@ -29,6 +30,22 @@ QString modelRoot() {
     const QString override = qEnvironmentVariable("TBRETOCH_MODEL_DIR");
     return override.isEmpty() ? QDir(QCoreApplication::applicationDirPath()).filePath("models") : override;
 }
+#if defined(Q_OS_WIN)
+int hardwareAdapter() {
+    static const int adapter=[] {
+        HMODULE module=LoadLibraryExW(L"dxgi.dll",nullptr,LOAD_LIBRARY_SEARCH_SYSTEM32);
+        if(!module)return -1;
+        using Create=HRESULT(WINAPI *)(REFIID,void **);
+        auto create=reinterpret_cast<Create>(GetProcAddress(module,"CreateDXGIFactory1"));
+        IDXGIFactory1 *factory=nullptr;int result=-1;
+        if(create&&SUCCEEDED(create(__uuidof(IDXGIFactory1),reinterpret_cast<void**>(&factory)))) {
+            for(UINT index=0;;++index){IDXGIAdapter1 *device=nullptr;if(factory->EnumAdapters1(index,&device)==DXGI_ERROR_NOT_FOUND)break;if(!device)break;DXGI_ADAPTER_DESC1 info{};if(SUCCEEDED(device->GetDesc1(&info))&&!(info.Flags&DXGI_ADAPTER_FLAG_SOFTWARE)&&info.VendorId!=0x1414)result=int(index);device->Release();if(result>=0)break;}
+            factory->Release();
+        }
+        FreeLibrary(module);return result;
+    }();return adapter;
+}
+#endif
 struct Net {
     Ort::Session session{nullptr};
     std::string input;
@@ -46,9 +63,10 @@ struct Net {
             if (gpu && !qEnvironmentVariableIsSet("TBRETOCH_AI_CPU")) {
                 using Append = OrtStatus* (ORT_API_CALL *)(OrtSessionOptions*,int);
                 auto fn = reinterpret_cast<Append>(GetProcAddress(GetModuleHandleW(L"onnxruntime.dll"),"OrtSessionOptionsAppendExecutionProvider_DML"));
-                if (fn) {
+                const int adapter=hardwareAdapter();
+                if (fn && adapter>=0) {
                     opts.DisableMemPattern(); opts.SetExecutionMode(ExecutionMode::ORT_SEQUENTIAL);
-                    Ort::ThrowOnError(fn(opts,0)); backend = "DirectML";
+                    Ort::ThrowOnError(fn(opts,adapter)); backend = "DirectML";
                 }
             }
             session = Ort::Session(env,reinterpret_cast<const wchar_t*>(path.utf16()),opts);

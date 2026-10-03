@@ -79,7 +79,11 @@ jobs:
           # runtime beside both binaries, including during CTest.
           Copy-Item 'native-deps/ort/runtimes/win-x64/native/*.dll' 'tuan-bo-ai-studio/native/build/Release/'
           Copy-Item 'native-deps/directml/bin/x64-win/DirectML.dll' 'tuan-bo-ai-studio/native/build/Release/'
-          Copy-Item 'native-deps/opencv/build/x64/vc16/bin/opencv_world4110.dll' 'tuan-bo-ai-studio/native/build/Release/' 
+          Copy-Item 'native-deps/opencv/build/x64/vc16/bin/opencv_world4110.dll' 'tuan-bo-ai-studio/native/build/Release/'
+          New-Item -ItemType Directory -Force -Path 'tuan-bo-ai-studio/native/build/Release/heif/plugins' | Out-Null
+          if (Test-Path "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/plugins/libheif") {
+            Copy-Item "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/plugins/libheif/*.dll" 'tuan-bo-ai-studio/native/build/Release/heif/plugins/'
+          }
 
       - name: Obtain upstream HEIC regression fixture
         shell: pwsh
@@ -90,7 +94,7 @@ jobs:
 
       - name: Test native image pipeline
         shell: pwsh
-        run: ctest --test-dir tuan-bo-ai-studio/native/build -C Release --output-on-failure
+        run: ctest --test-dir tuan-bo-ai-studio/native/build -C Release -V --output-on-failure
 
       - name: Deploy Qt runtime
         shell: pwsh
@@ -100,7 +104,8 @@ jobs:
           Copy-Item 'tuan-bo-ai-studio/native/build/Release/TBRetoch.exe' "$pkg/TBRetoch.exe"
           Copy-Item "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin/*.dll" "$pkg/"
           if (Test-Path "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/plugins/libheif") {
-            Copy-Item "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/plugins/libheif/*.dll" "$pkg/"
+            New-Item -ItemType Directory -Force -Path "$pkg/heif/plugins" | Out-Null
+            Copy-Item "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/plugins/libheif/*.dll" "$pkg/heif/plugins/"
           }
           New-Item -ItemType Directory -Force -Path "$pkg/third-party" | Out-Null
           foreach ($name in @('libraw', 'libheif', 'libde265')) {

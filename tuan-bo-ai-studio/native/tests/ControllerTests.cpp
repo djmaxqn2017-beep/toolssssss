@@ -1,4 +1,5 @@
 #include <QtTest>
+#include <cstdio>
 #include <QTemporaryDir>
 #include <QDir>
 #include <QImage>
@@ -34,7 +35,7 @@ private slots:
         exports.clear();c.setSetting("exposure",.1);c.endSettingEdit();
         for(const QString &format:{QString("png"),QString("tiff")}){
             c.exportCurrent(QUrl::fromLocalFile(dir.path()),format,100);QTRY_COMPARE_WITH_TIMEOUT(exports.count(),1,30000);
-            QString path=exports[0][0].toString();QImage result(path);QCOMPARE(result.size(),source.size());QCOMPARE(result.depth(),64);
+            QString path=exports[0][0].toString();if(format=="png")QVERIFY(QFileInfo(path).size()<source.sizeInBytes()/2);QImage result(path);QCOMPARE(result.size(),source.size());QCOMPARE(result.depth(),64);
             auto row=reinterpret_cast<const QRgba64*>(result.constScanLine(20));QVERIFY(row[21].red()!=row[20].red());QCOMPARE(result.colorSpace().iccProfile(),source.colorSpace().iccProfile());
             metadata.start(helper,{"-Artist","-Copyright","-Orientation#",path});QVERIFY(metadata.waitForFinished(30000));const auto text=metadata.readAllStandardOutput();QVERIFY2(text.contains("TB Test"),text.constData());QVERIFY2(text.contains("Original photographer"),text.constData());QVERIFY2(text.contains("1"),text.constData());exports.clear();
         }
@@ -358,5 +359,8 @@ private slots:
     }
 };
 
-QTEST_MAIN(ControllerTests)
+int main(int argc,char **argv) {
+    std::setvbuf(stdout,nullptr,_IONBF,0);std::setvbuf(stderr,nullptr,_IONBF,0);
+    QApplication app(argc,argv);ControllerTests tests;return QTest::qExec(&tests,argc,argv);
+}
 #include "ControllerTests.moc"

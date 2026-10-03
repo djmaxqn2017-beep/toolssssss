@@ -582,7 +582,9 @@ void AppController::exportEntries(const QList<ImageEntry> &entries, const QUrl &
                         if(fmt=="png"||fmt=="tiff")output=output.convertToFormat(QImage::Format_RGBA64);
                         QTemporaryFile encoded(QDir(folder).filePath(".TBRetoch-XXXXXX."+fmt));
                         ok=encoded.open();QString temporary=encoded.fileName();encoded.close();
-                        if(ok){QImageWriter writer(temporary,fmt=="jpg"?QByteArray("jpeg"):fmt.toLatin1());writer.setQuality(qBound(0,quality,100));if(fmt=="tiff")writer.setCompression(1);ok=writer.write(output);if(!ok)error=writer.errorString();}
+                        if(ok){QImageWriter writer(temporary,fmt=="jpg"?QByteArray("jpeg"):fmt.toLatin1());if(fmt=="jpg"||fmt=="webp")writer.setQuality(qBound(0,quality,100));
+                            if(fmt=="png")writer.setCompression(70);
+                            if(fmt=="tiff")writer.setCompression(1);ok=writer.write(output);if(!ok)error=writer.errorString();}
                         if(ok)ok=preserveExportMetadata(entry.originalPath,temporary,output.size(),&error);
                         if(ok){QFile source(temporary);QSaveFile target(outPath);ok=source.open(QIODevice::ReadOnly)&&target.open(QIODevice::WriteOnly);while(ok&&!source.atEnd()){auto block=source.read(1024*1024);ok=!block.isEmpty()&&target.write(block)==block.size();}ok=ok&&target.commit();if(!ok)error=target.errorString();}
                         width=output.width();height=output.height();
