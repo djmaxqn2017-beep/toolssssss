@@ -10,7 +10,9 @@
 #include <QRegularExpression>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
+#define ORT_API_MANUAL_INIT
 #include <onnxruntime_cxx_api.h>
+#include <QDebug>
 #include <array>
 #include <mutex>
 #include <cmath>
@@ -69,10 +71,22 @@ struct Net {
     }
 };
 struct Engine {
-    Ort::Env env{ORT_LOGGING_LEVEL_ERROR,"TBRetoch"};
+    Ort::Env env{nullptr};
     std::unique_ptr<Net> detector,mesh,segment,depth,sky;
     std::mutex mutex;
-    Engine() { cv::setNumThreads(2); }
+    Engine() {
+        const auto *base=OrtGetApiBase();
+        const auto *api=base?base->GetApi(ORT_API_VERSION):nullptr;
+        if(!api)throw std::runtime_error("Installed AI runtime is incompatible. Reinstall TBRetoch 0.7.0.");
+        Ort::InitApi(api);
+        env=Ort::Env(ORT_LOGGING_LEVEL_ERROR,"TBRetoch");
+        cv::setNumThreads(2);
+        qInfo()<<"Native inference runtime"<<base->GetVersionString();
+#if defined(Q_OS_WIN)
+        wchar_t location[32768];auto module=GetModuleHandleW(L"onnxruntime.dll");
+        if(module&&GetModuleFileNameW(module,location,32768))qInfo()<<"Inference runtime path"<<QString::fromWCharArray(location);
+#endif
+    }
     Net &net(std::unique_ptr<Net> &slot,const char *file) {
         if (!slot) slot=std::make_unique<Net>(env,QString::fromLatin1(file));
         return *slot;
