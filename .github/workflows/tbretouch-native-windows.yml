@@ -1,0 +1,59 @@
+name: Build TBRetoch Native Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - tbretouch-v0.5-native-core
+    paths:
+      - 'tuan-bo-ai-studio/native/**'
+      - '.github/workflows/tbretouch-native-windows.yml'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.2'
+          arch: 'win64_msvc2022_64'
+          modules: 'qtshadertools'
+          cache: true
+
+      - name: Configure
+        shell: pwsh
+        run: cmake -S tuan-bo-ai-studio/native -B tuan-bo-ai-studio/native/build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build tuan-bo-ai-studio/native/build --config Release --parallel
+
+      - name: Deploy Qt runtime
+        shell: pwsh
+        run: |
+          $pkg = 'tuan-bo-ai-studio/native/package'
+          New-Item -ItemType Directory -Force -Path $pkg | Out-Null
+          Copy-Item 'tuan-bo-ai-studio/native/build/TBRetoch.exe' "$pkg/TBRetoch.exe"
+          windeployqt --release --qmldir 'tuan-bo-ai-studio/native/qml' --no-translations "$pkg/TBRetoch.exe"
+          @(
+            'TBRetoch V0.5 Native Core',
+            'This is an engineering build of the new native core.',
+            'GPU viewer: Qt RHI / Direct3D on Windows.',
+            'Export: original-resolution source, CPU pipeline.',
+            'No license/quota system.'
+          ) | Set-Content "$pkg/README.txt" -Encoding UTF8
+
+      - name: Package portable build
+        shell: pwsh
+        run: |
+          Compress-Archive -Path 'tuan-bo-ai-studio/native/package/*' -DestinationPath 'TBRetoch-V0.5-Native-Core-Windows.zip' -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TBRetoch-V0.5-Native-Core-Windows
+          path: TBRetoch-V0.5-Native-Core-Windows.zip
