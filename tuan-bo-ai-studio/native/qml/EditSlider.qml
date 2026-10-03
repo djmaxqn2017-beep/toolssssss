@@ -24,11 +24,19 @@ Item {
         elide: Text.ElideRight
     }
 
-    Label {
+    TextField {
         id: valueLabel
         anchors.top: parent.top
         anchors.right: parent.right
         width: 62
+        height: 20
+        padding: 1
+        background: Rectangle { color: "#231c2b"; radius: 3 }
+        validator: DoubleValidator { bottom: root.from; top: root.to; locale: "en_US" }
+        onEditingFinished: {
+            if (acceptableInput && isFinite(Number(text))) { appController.setSetting(root.keyName,Number(text)); appController.endSettingEdit() }
+            focus = false
+        }
         text: Number(slider.value).toFixed(root.stepSize < 1 ? 2 : 0)
         color: "#c994ff"
         font.pixelSize: 10

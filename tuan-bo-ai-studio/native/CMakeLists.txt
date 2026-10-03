@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(TBRetoch VERSION 0.6.1 LANGUAGES CXX)
+project(TBRetoch VERSION 0.6.2 LANGUAGES CXX)
 
 if(MSVC)
     add_compile_options(/utf-8)
@@ -20,7 +20,7 @@ find_library(LIBRAW_LIBRARY NAMES raw libraw raw_r libraw_r REQUIRED)
 find_path(LIBHEIF_INCLUDE_DIR libheif/heif.h REQUIRED)
 find_library(LIBHEIF_LIBRARY NAMES heif libheif REQUIRED)
 
-add_library(TBImageDecoder STATIC src/ImageDecoder.cpp src/ImageDecoder.h)
+add_library(TBImageDecoder STATIC src/ImageDecoder.cpp src/ImageDecoder.h src/AdvancedRecipe.cpp src/AdvancedRecipe.h)
 target_include_directories(TBImageDecoder PRIVATE ${LIBRAW_INCLUDE_DIR} ${LIBHEIF_INCLUDE_DIR})
 target_link_libraries(TBImageDecoder PUBLIC Qt6::Gui PRIVATE ${LIBRAW_LIBRARY} ${LIBHEIF_LIBRARY})
 
@@ -41,6 +41,7 @@ qt_add_qml_module(TBRetoch
     QML_FILES
         qml/Main.qml
         qml/EditSlider.qml
+        qml/EditSection.qml
 )
 
 qt_add_shaders(TBRetoch "tbretouch_shaders"

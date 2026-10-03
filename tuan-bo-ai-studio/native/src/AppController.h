@@ -6,12 +6,19 @@
 #include <QUrl>
 #include <QThreadPool>
 #include <QImage>
+#include <QTimer>
+#include <atomic>
 
 class AppController final : public QObject {
     Q_OBJECT
     Q_PROPERTY(QVariantList images READ images NOTIFY imagesChanged)
     Q_PROPERTY(int currentIndex READ currentIndex NOTIFY currentIndexChanged)
     Q_PROPERTY(QString currentPreviewUrl READ currentPreviewUrl NOTIFY currentImageChanged)
+    Q_PROPERTY(QString renderedPreviewUrl READ renderedPreviewUrl NOTIFY previewChanged)
+    Q_PROPERTY(bool useRenderedPreview READ useRenderedPreview NOTIFY currentSettingsChanged)
+    Q_PROPERTY(bool previewBusy READ previewBusy NOTIFY previewChanged)
+    Q_PROPERTY(int exportCompleted READ exportCompleted NOTIFY exportProgressChanged)
+    Q_PROPERTY(int exportTotal READ exportTotal NOTIFY exportProgressChanged)
     Q_PROPERTY(QString currentName READ currentName NOTIFY currentImageChanged)
     Q_PROPERTY(QVariantMap currentSettings READ currentSettings NOTIFY currentSettingsChanged)
     Q_PROPERTY(QString importDetails READ importDetails NOTIFY importDetailsChanged)
@@ -28,6 +35,11 @@ public:
     int currentIndex() const;
     QString currentPreviewUrl() const;
     QString currentName() const;
+    QString renderedPreviewUrl() const;
+    bool useRenderedPreview() const;
+    bool previewBusy() const { return m_previewActive || m_previewTimer.isActive(); }
+    int exportCompleted() const { return m_exportCompleted; }
+    int exportTotal() const { return m_exportTotal; }
     QVariantMap currentSettings() const;
     bool busy() const;
     QString statusText() const;
@@ -46,10 +58,20 @@ public:
     Q_INVOKABLE void pasteSettings();
     Q_INVOKABLE void undo();
     Q_INVOKABLE void redo();
+    Q_INVOKABLE void setSelected(int index, bool selected);
+    Q_INVOKABLE void selectAll(bool selected);
+    Q_INVOKABLE void syncSelected(const QString &group);
+    Q_INVOKABLE void savePreset(const QUrl &fileUrl);
+    Q_INVOKABLE void loadPreset(const QUrl &fileUrl);
+    Q_INVOKABLE void exportSelected(const QUrl &folderUrl, const QString &format, int quality);
+    Q_INVOKABLE void cancelExport();
     Q_INVOKABLE void exportCurrent(const QUrl &folderUrl, const QString &format, int quality);
 
 signals:
     void imagesChanged();
+    void previewChanged();
+    void exportProgressChanged();
+    void exportQueueFinished(int succeeded, int failed, bool cancelled);
     void importDetailsChanged();
     void currentIndexChanged();
     void currentImageChanged();
@@ -66,12 +88,20 @@ private:
         QString name;
         QString previewPath;
         QString thumbPath;
+        QString renderedPath;
+        bool selected = true;
         QVariantMap settings;
         QList<QVariantMap> undoStack;
         QList<QVariantMap> redoStack;
     };
 
     QThreadPool m_workers;
+    QTimer m_previewTimer;
+    int m_previewGeneration = 0;
+    bool m_previewActive = false;
+    int m_exportCompleted = 0;
+    int m_exportTotal = 0;
+    std::atomic_bool m_cancelExport{false};
     QList<ImageEntry> m_images;
     int m_currentIndex = -1;
     bool m_busy = false;
@@ -82,6 +112,9 @@ private:
     QVariantMap m_copiedSettings;
 
     static QVariantMap defaultSettings();
+    void schedulePreview();
+    void renderPreview();
+    void exportEntries(const QList<ImageEntry> &entries, const QUrl &folderUrl, const QString &format, int quality);
     QString cacheRoot() const;
     QString makePreview(const QString &path, const QImage &image, int maxSide, const QString &suffix, QString *error) const;
     QVariantMap imageToVariant(const ImageEntry &entry, int index) const;

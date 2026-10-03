@@ -8,6 +8,7 @@
 #include <QJSEngine>
 #include <QQmlEngine>
 #include "ImageDecoder.h"
+#include "AdvancedRecipe.h"
 #include "AppController.h"
 
 class ControllerTests : public QObject {
@@ -123,6 +124,108 @@ private slots:
         QVERIFY(!output.isNull());
         QVERIFY(output.width() >= 100);
         QVERIFY(output.height() >= 80);
+    }
+
+    void geometryAndColorEffects() {
+        QImage source(100,80,QImage::Format_ARGB32);
+        source.fill(qRgba(255,0,0,128));
+        source.setPixelColor(90,70,QColor(0,0,255,128));
+        QVariantMap settings = advancedDefaults();
+        QCOMPARE(applyAdvancedRecipe(source,settings),source);
+        settings["cropLeft"] = 10;
+        settings["cropRight"] = 20;
+        settings["cropTop"] = 10;
+        settings["rotation"] = 1;
+        const QImage crop = applyAdvancedRecipe(source,settings);
+        QCOMPARE(crop.size(),QSize(72,70));
+        QCOMPARE(crop.pixelColor(10,10).alpha(),128);
+        settings = advancedDefaults();
+        settings["hsl_redHue"] = 100;
+        const QImage hue = applyAdvancedRecipe(source,settings);
+        QVERIFY(hue.pixelColor(20,20).green() > 80);
+        QCOMPARE(hue.pixelColor(90,70),source.pixelColor(90,70));
+        settings = advancedDefaults();
+        settings["vignette"] = 100;
+        const QImage shade = applyAdvancedRecipe(source,settings);
+        QVERIFY(shade.pixelColor(0,0).red() < shade.pixelColor(50,40).red());
+        settings = advancedDefaults();
+        settings["grain"] = 50;
+        QCOMPARE(applyAdvancedRecipe(source,settings),applyAdvancedRecipe(source,settings));
+        QCOMPARE(source.pixelColor(20,20),QColor(255,0,0,128));
+    }
+
+    void presetSyncPreviewAndBatchExport() {
+        QTemporaryDir dir;
+        QImage source(100,80,QImage::Format_ARGB32);
+        source.fill(qRgba(255,0,0,128));
+        const QString path = dir.filePath("source.png");
+        QVERIFY(source.save(path));
+        AppController c;
+        c.importFiles({QUrl::fromLocalFile(path),QUrl::fromLocalFile(path)});
+        QTRY_VERIFY(!c.busy());
+        c.setSetting("hsl_redHue",100);
+        c.setSetting("cropLeft",10);
+        c.setSetting("rotation",1);
+        c.endSettingEdit();
+        QVERIFY(c.useRenderedPreview());
+        QTRY_VERIFY_WITH_TIMEOUT(!c.previewBusy(),15000);
+        const QImage preview(QUrl(c.renderedPreviewUrl()).toLocalFile());
+        QCOMPARE(preview.size(),QSize(80,90));
+        QVERIFY(preview.pixelColor(20,20).green() > 80);
+        const QUrl preset = QUrl::fromLocalFile(dir.filePath("preset.json"));
+        c.savePreset(preset);
+        QVERIFY(QFileInfo(preset.toLocalFile()).size() > 0);
+        c.selectImage(1);
+        c.setSetting("cropTop",20);
+        c.endSettingEdit();
+        c.selectImage(0);
+        c.syncSelected("color");
+        c.selectImage(1);
+        QCOMPARE(c.currentSettings()["hsl_redHue"].toInt(),100);
+        QCOMPARE(c.currentSettings()["cropTop"].toInt(),20);
+        QCOMPARE(c.currentSettings()["rotation"].toInt(),0);
+        c.undo();
+        QCOMPARE(c.currentSettings()["hsl_redHue"].toInt(),0);
+        c.loadPreset(preset);
+        QCOMPARE(c.currentSettings()["rotation"].toInt(),1);
+        QCOMPARE(c.currentSettings()["cropTop"].toInt(),0);
+        c.undo();
+        QCOMPARE(c.currentSettings()["cropTop"].toInt(),20);
+        c.redo();
+        QSignalSpy exported(&c,&AppController::exportFinished);
+        QSignalSpy finished(&c,&AppController::exportQueueFinished);
+        c.exportSelected(QUrl::fromLocalFile(dir.path()),"png",98);
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(),1,30000);
+        QCOMPARE(exported.count(),2);
+        QCOMPARE(c.exportCompleted(),2);
+        QCOMPARE(finished.first()[0].toInt(),2);
+        QCOMPARE(finished.first()[1].toInt(),0);
+        QVERIFY(exported[0][0].toString() != exported[1][0].toString());
+        const QImage output(exported[0][0].toString());
+        QCOMPARE(output.size(),QSize(80,90));
+        QVERIFY(output.pixelColor(20,20).green() > 80);
+        QCOMPARE(output.pixelColor(20,20).alpha(),128);
+    }
+
+    void invalidPresetDoesNotChangeImageAndQueueCancels() {
+        QTemporaryDir dir;
+        QImage source(32,32,QImage::Format_RGB32); source.fill(Qt::gray);
+        const QString path = dir.filePath("source.png"); QVERIFY(source.save(path));
+        AppController c;
+        c.importFiles({path,path,path}); QTRY_VERIFY(!c.busy());
+        const QVariantMap before = c.currentSettings();
+        const QString preset = dir.filePath("invalid.json");
+        QFile f(preset); QVERIFY(f.open(QIODevice::WriteOnly));
+        f.write("{\"schema\":1,\"settings\":{\"exposure\":2,\"unknown\":3}}");f.close();
+        QSignalSpy errors(&c,&AppController::errorOccurred);
+        c.loadPreset(QUrl::fromLocalFile(preset));
+        QCOMPARE(errors.count(),1); QCOMPARE(c.currentSettings(),before);
+        QSignalSpy finished(&c,&AppController::exportQueueFinished);
+        c.exportSelected(QUrl::fromLocalFile(dir.path()),"png",98);
+        c.cancelExport();
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(),1,15000);
+        QVERIFY(finished.first()[2].toBool());
+        QVERIFY(c.exportCompleted() < 3);
     }
 
     void imageWorkflow() {

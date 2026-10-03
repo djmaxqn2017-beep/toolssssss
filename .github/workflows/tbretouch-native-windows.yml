@@ -70,8 +70,8 @@ jobs:
             if (-not (Test-Path "$pkg/$dll")) { Copy-Item "$env:SystemRoot/system32/$dll" "$pkg/$dll" }
           }
           @(
-            'TBRetoch V0.5 Native Core',
-            'This is an engineering build of the new native core.',
+            'TBRetoch 0.6.2',
+            'Import, color/HSL, tone curves, crop/rotate, detail, presets, selective sync and batch export.',
             'GPU viewer: Qt RHI / Direct3D on Windows.',
             'Export: original-resolution source, CPU pipeline.',
             'No license/quota system. Portrait AI is not implemented in this build.'
@@ -88,7 +88,7 @@ jobs:
       - name: Package portable build
         shell: pwsh
         run: |
-          Compress-Archive -Path 'tuan-bo-ai-studio/native/package/*' -DestinationPath 'TBRetoch-V0.5-Native-Core-Windows.zip' -Force
+          Compress-Archive -Path 'tuan-bo-ai-studio/native/package/*' -DestinationPath 'TBRetoch-0.6.2-Windows.zip' -Force
 
       - name: Build offline installer
         shell: pwsh
@@ -114,6 +114,10 @@ jobs:
           $proc = Start-Process -FilePath "$installDir/TBRetoch.exe" -ArgumentList '--render-smoke-test' -Wait -PassThru -RedirectStandardError 'native-render.log'
           Get-Content 'native-render.log'
           if ($proc.ExitCode -ne 0) { throw "Installed render test failed: $($proc.ExitCode)" }
+          $env:TBRETOCH_SMOKE_SCREENSHOT = Join-Path $PWD 'advanced-preview.png'
+          $proc = Start-Process -FilePath "$installDir/TBRetoch.exe" -ArgumentList '--advanced-render-smoke-test' -Wait -PassThru -RedirectStandardError 'native-advanced.log'
+          Get-Content 'native-advanced.log'
+          if ($proc.ExitCode -ne 0) { throw "Installed advanced render test failed: $($proc.ExitCode)" }
 
       - name: Upload installer
         if: success()
@@ -129,7 +133,7 @@ jobs:
         with:
           name: TBRetoch-Native-Core-Portable-Windows
           if-no-files-found: error
-          path: TBRetoch-V0.5-Native-Core-Windows.zip
+          path: TBRetoch-0.6.2-Windows.zip
 
       - name: Upload preview diagnostics
         if: always()
@@ -140,3 +144,5 @@ jobs:
             native-preview.png
             native-render.log
             native-import.log
+            advanced-preview.png
+            native-advanced.log

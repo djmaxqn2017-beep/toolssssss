@@ -1,5 +1,9 @@
 #include "AppController.h"
 #include "ImageDecoder.h"
+#include "AdvancedRecipe.h"
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QFile>
 #include <QFileDialog>
 #include <QSaveFile>
 #include <QTemporaryFile>
@@ -106,16 +110,25 @@ static QImage applyColorRecipe(QImage img, const QVariantMap &s) {
 }
 }
 
-AppController::AppController(QObject *parent) : QObject(parent) { QImageReader::setAllocationLimit(512); }
+AppController::AppController(QObject *parent) : QObject(parent) {
+    QImageReader::setAllocationLimit(512);
+    m_previewTimer.setSingleShot(true);
+    m_previewTimer.setInterval(45);
+    connect(&m_previewTimer, &QTimer::timeout, this, &AppController::renderPreview);
+    connect(this, &AppController::currentSettingsChanged, this, &AppController::schedulePreview);
+}
 AppController::~AppController() { m_workers.waitForDone(); }
 
 QVariantMap AppController::defaultSettings() {
-    return {
+    QVariantMap settings = {
         {"exposure", 0.0}, {"contrast", 0.0}, {"highlights", 0.0}, {"shadows", 0.0},
         {"whites", 0.0}, {"blacks", 0.0}, {"temperature", 0.0}, {"tint", 0.0},
         {"saturation", 0.0}, {"vibrance", 0.0}, {"clarity", 0.0}, {"dehaze", 0.0},
         {"fade", 0.0}
     };
+    const QVariantMap extra = advancedDefaults();
+    for (auto it = extra.cbegin(); it != extra.cend(); ++it) settings.insert(it.key(), it.value());
+    return settings;
 }
 
 QVariantList AppController::images() const {
@@ -186,7 +199,7 @@ QVariantMap AppController::imageToVariant(const ImageEntry &entry, int index) co
         {"index", index}, {"name", entry.name},
         {"previewUrl", QUrl::fromLocalFile(entry.previewPath).toString()},
         {"thumbUrl", QUrl::fromLocalFile(entry.thumbPath).toString()},
-        {"originalPath", entry.originalPath}
+        {"originalPath", entry.originalPath}, {"selected", entry.selected}
     };
 }
 
@@ -294,7 +307,13 @@ void AppController::setSetting(const QString &key, double value) {
     if (m_currentIndex < 0 || m_currentIndex >= m_images.size()) return;
     const QVariantMap defaults = defaultSettings();
     if (!defaults.contains(key) || !qIsFinite(value)) return;
-    value = key == QStringLiteral("exposure") ? qBound(-3.0, value, 3.0) : qBound(-100.0, value, 100.0);
+    if (key == "exposure") value = qBound(-3.0, value, 3.0);
+    else if (key.startsWith("crop")) value = qBound(0.0, value, 45.0);
+    else if (key == "rotation") value = qBound(0, qRound(value), 3);
+    else if (key == "straighten") value = qBound(-45.0, value, 45.0);
+    else if (key.startsWith("flip")) value = value >= .5 ? 1 : 0;
+    else if (key == "sharpness" || key == "denoise" || key == "grain") value = qBound(0.0, value, 100.0);
+    else value = qBound(-100.0, value, 100.0);
     if (!m_editInProgress) beginSettingEdit();
     m_images[m_currentIndex].settings.insert(key, value);
     emit currentSettingsChanged();
@@ -360,50 +379,178 @@ void AppController::redo() {
     emit historyChanged();
 }
 
+QString AppController::renderedPreviewUrl() const {
+    if (m_currentIndex < 0 || m_currentIndex >= m_images.size()) return {};
+    const ImageEntry &entry = m_images.at(m_currentIndex);
+    return QUrl::fromLocalFile(entry.renderedPath.isEmpty() ? entry.previewPath : entry.renderedPath).toString();
+}
+
+bool AppController::useRenderedPreview() const { return hasAdvancedSettings(currentSettings()); }
+
+void AppController::schedulePreview() {
+    ++m_previewGeneration;
+    m_previewTimer.stop();
+    if (!useRenderedPreview()) { emit previewChanged(); return; }
+    m_previewTimer.start();
+    emit previewChanged();
+}
+
+void AppController::renderPreview() {
+    if (m_previewActive || !useRenderedPreview() || m_currentIndex < 0) return;
+    const int index = m_currentIndex, generation = m_previewGeneration;
+    const ImageEntry entry = m_images.at(index);
+    m_previewActive = true;
+    emit previewChanged();
+    m_workers.start([this, entry, index, generation]() {
+        const QByteArray signature = entry.previewPath.toUtf8() + QJsonDocument::fromVariant(entry.settings).toJson(QJsonDocument::Compact);
+        const QString path = QDir(cacheRoot()).filePath(QString::fromLatin1(QCryptographicHash::hash(signature,QCryptographicHash::Sha256).toHex()) + "_edited.png");
+        bool ok = !QImage(path).isNull();
+        QString error;
+        if (!ok) {
+            QImage image(entry.previewPath);
+            image = applyAdvancedRecipe(applyColorRecipe(image,entry.settings),entry.settings);
+            QSaveFile file(path);
+            if (!image.isNull() && file.open(QIODevice::WriteOnly)) {
+                QImageWriter writer(&file,"png");
+                ok = writer.write(image) && file.commit();
+                if (!ok) error = writer.errorString();
+            } else error = file.errorString();
+        }
+        QMetaObject::invokeMethod(this,[this,index,generation,path,ok,error]() {
+            m_previewActive = false;
+            if (generation == m_previewGeneration && index == m_currentIndex) {
+                if (ok) m_images[index].renderedPath = path;
+                else emit errorOccurred(error.isEmpty() ? QStringLiteral("error.previewFailed") : error);
+                emit previewChanged();
+            } else if (useRenderedPreview()) m_previewTimer.start();
+        },Qt::QueuedConnection);
+    });
+}
+
+void AppController::setSelected(int index, bool selected) {
+    if (index < 0 || index >= m_images.size()) return;
+    m_images[index].selected = selected;
+    emit imagesChanged();
+}
+void AppController::selectAll(bool selected) {
+    for (ImageEntry &entry : m_images) entry.selected = selected;
+    emit imagesChanged();
+}
+void AppController::syncSelected(const QString &group) {
+    if (m_currentIndex < 0 || (group != "all" && group != "color" && group != "geometry" && group != "detail")) return;
+    if (m_editInProgress) endSettingEdit();
+    const QVariantMap source = currentSettings();
+    for (int i = 0; i < m_images.size(); ++i) {
+        if (i == m_currentIndex || !m_images[i].selected) continue;
+        ImageEntry &entry = m_images[i];
+        const QVariantMap before = entry.settings;
+        for (auto it = source.cbegin(); it != source.cend(); ++it) {
+            const bool geometry = isGeometryKey(it.key());
+            const bool detail = it.key() == "sharpness" || it.key() == "denoise";
+            if (group == "all" || (group == "geometry" && geometry) || (group == "detail" && detail) || (group == "color" && !geometry && !detail)) entry.settings.insert(it.key(),it.value());
+        }
+        pushUndoSnapshot(entry,before);
+        entry.renderedPath.clear();
+    }
+    emit imagesChanged();
+    emit historyChanged();
+}
+void AppController::savePreset(const QUrl &fileUrl) {
+    if (m_currentIndex < 0 || !fileUrl.isLocalFile()) return;
+    if (m_editInProgress) endSettingEdit();
+    QSaveFile file(fileUrl.toLocalFile());
+    if (!file.open(QIODevice::WriteOnly)) { emit errorOccurred(file.errorString()); return; }
+    const QByteArray data = QJsonDocument(QJsonObject{{"schema",1},{"settings",QJsonObject::fromVariantMap(currentSettings())}}).toJson();
+    if (file.write(data) != data.size() || !file.commit()) emit errorOccurred(file.errorString());
+}
+void AppController::loadPreset(const QUrl &fileUrl) {
+    if (m_currentIndex < 0 || !fileUrl.isLocalFile()) return;
+    QFile file(fileUrl.toLocalFile());
+    if (!file.open(QIODevice::ReadOnly)) { emit errorOccurred(file.errorString()); return; }
+    QJsonParseError parse;
+    const QJsonDocument document = QJsonDocument::fromJson(file.readAll(),&parse);
+    const QJsonObject object = document.object();
+    if (parse.error != QJsonParseError::NoError || object.value("schema").toInt() != 1 || !object.value("settings").isObject()) {
+        emit errorOccurred(QStringLiteral("error.invalidPreset")); return;
+    }
+    const QVariantMap values = object.value("settings").toObject().toVariantMap();
+    const QVariantMap defaults = defaultSettings();
+    for (auto it = values.cbegin(); it != values.cend(); ++it) {
+        bool numeric = false;
+        const double value = it.value().toDouble(&numeric);
+        if (!defaults.contains(it.key()) || !numeric || !qIsFinite(value)) { emit errorOccurred(QStringLiteral("error.invalidPreset")); return; }
+    }
+    if (m_editInProgress) endSettingEdit();
+    beginSettingEdit();
+    // Missing keys reset to defaults, so older presets do not retain hidden effects.
+    for (auto it = defaults.cbegin(); it != defaults.cend(); ++it) setSetting(it.key(), values.value(it.key(),it.value()).toDouble());
+    endSettingEdit();
+}
+
 void AppController::exportCurrent(const QUrl &folderUrl, const QString &format, int quality) {
     if (m_busy || m_currentIndex < 0 || m_currentIndex >= m_images.size()) return;
     if (m_editInProgress) endSettingEdit();
-    const ImageEntry entry = m_images.at(m_currentIndex);
-    const QVariantMap settings = entry.settings;
+    exportEntries({m_images.at(m_currentIndex)},folderUrl,format,quality);
+}
+void AppController::exportSelected(const QUrl &folderUrl, const QString &format, int quality) {
+    if (m_busy) return;
+    if (m_editInProgress) endSettingEdit();
+    QList<ImageEntry> entries;
+    for (const ImageEntry &entry : m_images) if (entry.selected) entries.push_back(entry);
+    if (entries.isEmpty()) { emit errorOccurred(QStringLiteral("error.noSelection")); return; }
+    exportEntries(entries,folderUrl,format,quality);
+}
+void AppController::cancelExport() { m_cancelExport.store(true); }
+
+void AppController::exportEntries(const QList<ImageEntry> &entries, const QUrl &folderUrl, const QString &format, int quality) {
+    if (entries.isEmpty() || m_busy) return;
     const QString folder = folderUrl.isLocalFile() ? folderUrl.toLocalFile() : folderUrl.toString();
     if (folder.isEmpty()) { emit errorOccurred(QStringLiteral("error.noExportFolder")); return; }
-
-    setBusy(true);
-    setStatusText(QStringLiteral("status.export"));
-
-    m_workers.start([this, entry, settings, folder, format, quality]() {
-        QString decodeError;
-        QImage original = decodeImage(entry.originalPath, 0, &decodeError);
-        if (original.isNull()) {
-            QMetaObject::invokeMethod(this, [this]() {
-                setBusy(false); setStatusText(QStringLiteral("status.ready"));
-                emit errorOccurred(QStringLiteral("error.readOriginal"));
-            }, Qt::QueuedConnection);
-            return;
+    m_cancelExport.store(false);
+    m_exportCompleted = 0; m_exportTotal = entries.size();
+    emit exportProgressChanged();
+    setBusy(true); setStatusText(QStringLiteral("status.export"));
+    m_workers.start([this,entries,folder,format,quality]() {
+        int succeeded = 0, failed = 0, completed = 0;
+        const bool folderOk = QDir().mkpath(folder);
+        for (const ImageEntry &entry : entries) {
+            if (m_cancelExport.load()) break;
+            QString error;
+            QImage original = folderOk ? decodeImage(entry.originalPath,0,&error) : QImage();
+            bool ok = !original.isNull();
+            QString outPath;
+            qint64 bytes = 0;
+            int width = 0, height = 0;
+            if (ok) {
+                QImage output = applyAdvancedRecipe(applyColorRecipe(original,entry.settings),entry.settings);
+                QString fmt = format.toLower();
+                if (fmt != "png" && fmt != "webp" && fmt != "tiff") fmt = "jpg";
+                const QString base = QFileInfo(entry.name).completeBaseName();
+                outPath = QDir(folder).filePath(base+"_TBRetoch."+fmt);
+                for (int copy = 1; QFileInfo::exists(outPath); ++copy) outPath = QDir(folder).filePath(base+"_TBRetoch_"+QString::number(copy)+"."+fmt);
+                QSaveFile file(outPath);
+                ok = file.open(QIODevice::WriteOnly);
+                if (ok) {
+                    QImageWriter writer(&file,fmt == "jpg" ? QByteArray("jpeg") : fmt.toLatin1());
+                    writer.setQuality(qBound(0,quality,100));
+                    ok = writer.write(output) && file.commit();
+                    if (!ok) error = writer.errorString();
+                } else error = file.errorString();
+                width = output.width(); height = output.height();
+                bytes = ok ? QFileInfo(outPath).size() : 0;
+            }
+            if (ok) ++succeeded; else ++failed;
+            ++completed;
+            QMetaObject::invokeMethod(this,[this,ok,outPath,bytes,width,height,error,completed]() {
+                m_exportCompleted = completed; emit exportProgressChanged();
+                if (ok) emit exportFinished(outPath,bytes,width,height);
+                else emit errorOccurred(error.isEmpty() ? QStringLiteral("error.exportFailed") : error);
+            },Qt::QueuedConnection);
         }
-
-        QImage output = applyColorRecipe(original, settings);
-        QDir().mkpath(folder);
-        QString fmt = format.toLower();
-        if (fmt != "png" && fmt != "webp") fmt = "jpg";
-        const QString base = QFileInfo(entry.name).completeBaseName();
-        QString outPath = QDir(folder).filePath(base + "_TBRetoch." + fmt);
-        for (int copy = 1; QFileInfo::exists(outPath); ++copy)
-            outPath = QDir(folder).filePath(base + "_TBRetoch_" + QString::number(copy) + "." + fmt);
-        QImageWriter writer(outPath, fmt == "jpg" ? QByteArray("jpeg") : fmt.toLatin1());
-        writer.setQuality(qBound(70, quality, 100));
-        const bool ok = writer.write(output);
-        const QFileInfo outInfo(outPath);
-        const qint64 bytes = ok ? outInfo.size() : 0;
-        const int width = output.width();
-        const int height = output.height();
-        const QString error = writer.errorString();
-
-        QMetaObject::invokeMethod(this, [this, ok, outPath, bytes, width, height, error]() {
-            setBusy(false);
-            setStatusText(QStringLiteral("status.ready"));
-            if (!ok) emit errorOccurred(error.isEmpty() ? QStringLiteral("error.exportFailed") : error);
-            else emit exportFinished(outPath, bytes, width, height);
-        }, Qt::QueuedConnection);
+        const bool cancelled = m_cancelExport.load();
+        QMetaObject::invokeMethod(this,[this,succeeded,failed,cancelled]() {
+            setBusy(false); setStatusText(QStringLiteral("status.ready"));
+            emit exportQueueFinished(succeeded,failed,cancelled);
+        },Qt::QueuedConnection);
     });
 }
