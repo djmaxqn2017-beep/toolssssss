@@ -16,11 +16,12 @@ layout(std140, binding = 0) uniform buf {
     float tint;
     float saturation;
     float vibrance;
+    float clarity;
+    float dehaze;
+    float fade;
 };
 
 layout(binding = 1) uniform sampler2D source;
-
-float satf(float x) { return clamp(x, 0.0, 1.0); }
 
 void main() {
     vec4 px = texture(source, texCoord);
@@ -53,6 +54,22 @@ void main() {
     float vibGain = 1.0 + (vibrance / 100.0) * (1.0 - min(1.0, chroma * 2.2));
     float satGain = max(0.0, 1.0 + saturation / 100.0) * vibGain;
     c = vec3(l) + (c - vec3(l)) * satGain;
+
+    l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    float midWeight = clamp(1.0 - abs(l - 0.5) * 2.0, 0.0, 1.0);
+    float clarityGain = 1.0 + (clarity / 100.0) * 0.32 * midWeight;
+    c = vec3(l) + (c - vec3(l)) * clarityGain;
+
+    float hazeContrast = 1.0 + (dehaze / 100.0) * 0.42;
+    c = (c - 0.5) * hazeContrast + 0.5;
+
+    float f = clamp(fade / 100.0, -1.0, 1.0);
+    if (f >= 0.0) {
+        c = c * (1.0 - f * 0.18) + vec3(f * 0.045);
+    } else {
+        float a = -f;
+        c = (c - vec3(0.04 * a)) * (1.0 + 0.14 * a);
+    }
 
     fragColor = vec4(clamp(c, 0.0, 1.0), px.a) * qt_Opacity;
 }
