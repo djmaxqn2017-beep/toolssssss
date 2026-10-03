@@ -17,6 +17,9 @@ layout(std140, binding = 0) uniform buf {
     float tint;
     float saturation;
     float vibrance;
+    float clarity;
+    float dehaze;
+    float fade;
 };
 
 void main() {

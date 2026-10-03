@@ -11,7 +11,7 @@ on:
 
 jobs:
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,18 +26,22 @@ jobs:
 
       - name: Configure
         shell: pwsh
-        run: cmake -S tuan-bo-ai-studio/native -B tuan-bo-ai-studio/native/build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S tuan-bo-ai-studio/native -B tuan-bo-ai-studio/native/build -G "Visual Studio 17 2022" -A x64 -DBUILD_TESTING=ON
 
       - name: Build
         shell: pwsh
         run: cmake --build tuan-bo-ai-studio/native/build --config Release --parallel
+
+      - name: Test native image pipeline
+        shell: pwsh
+        run: ctest --test-dir tuan-bo-ai-studio/native/build -C Release --output-on-failure
 
       - name: Deploy Qt runtime
         shell: pwsh
         run: |
           $pkg = 'tuan-bo-ai-studio/native/package'
           New-Item -ItemType Directory -Force -Path $pkg | Out-Null
-          Copy-Item 'tuan-bo-ai-studio/native/build/TBRetoch.exe' "$pkg/TBRetoch.exe"
+          Copy-Item 'tuan-bo-ai-studio/native/build/Release/TBRetoch.exe' "$pkg/TBRetoch.exe"
           windeployqt --release --qmldir 'tuan-bo-ai-studio/native/qml' --no-translations "$pkg/TBRetoch.exe"
           @(
             'TBRetoch V0.5 Native Core',
@@ -47,13 +51,31 @@ jobs:
             'No license/quota system.'
           ) | Set-Content "$pkg/README.txt" -Encoding UTF8
 
+      - name: Verify deployed application starts
+        shell: pwsh
+        run: |
+          $env:QT_QPA_PLATFORM = 'offscreen'
+          $env:QSG_RHI_BACKEND = 'd3d11'
+          $proc = Start-Process -FilePath './tuan-bo-ai-studio/native/package/TBRetoch.exe' -ArgumentList '--smoke-test' -Wait -PassThru
+          if ($proc.ExitCode -ne 0) { throw "Application smoke test failed: $($proc.ExitCode)" }
+
       - name: Package portable build
         shell: pwsh
         run: |
           Compress-Archive -Path 'tuan-bo-ai-studio/native/package/*' -DestinationPath 'TBRetoch-V0.5-Native-Core-Windows.zip' -Force
 
+      - name: Build offline installer
+        shell: pwsh
+        run: |
+          & "${env:ProgramFiles(x86)}/Inno Setup 6/ISCC.exe" 'tuan-bo-ai-studio/native/installer.iss'
+          if ($LASTEXITCODE -ne 0) { throw "Installer build failed" }
+
       - name: Upload artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: TBRetoch-V0.5-Native-Core-Windows
-          path: TBRetoch-V0.5-Native-Core-Windows.zip
+          if-no-files-found: error
+          path: |
+            TBRetoch-V0.5-Native-Core-Windows.zip
+            tuan-bo-ai-studio/native/dist/TBRetoch-Native-Core-Setup.exe

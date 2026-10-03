@@ -62,7 +62,7 @@ ApplicationWindow {
             toastTimer.restart()
         }
         function onErrorOccurred(message) {
-            toastText = message
+            toastText = trKey(message)
             toastTimer.restart()
         }
         function onCurrentImageChanged() { Qt.callLater(resetView) }
@@ -72,6 +72,9 @@ ApplicationWindow {
 
     Shortcut { sequence: "Ctrl+0"; onActivated: resetView() }
     Shortcut { sequence: "Ctrl+1"; onActivated: zoomTo(1.0) }
+    Shortcut { sequence: "Ctrl+Z"; onActivated: appController.undo() }
+    Shortcut { sequence: "Ctrl+Y"; onActivated: appController.redo() }
+    Shortcut { sequence: "Space"; onActivated: viewMode = viewMode === "before" ? "after" : "before" }
     Shortcut { sequence: "Ctrl+C"; onActivated: appController.copySettings() }
     Shortcut { sequence: "Ctrl+V"; onActivated: appController.pasteSettings() }
     Shortcut { sequence: "Ctrl+Shift+E"; onActivated: if (appController.currentIndex >= 0) exportFolderDialog.open() }
@@ -114,7 +117,7 @@ ApplicationWindow {
 
             Item { Layout.fillWidth: true }
 
-            Label { text: appController.statusText; color: "#cfa5ff"; font.pixelSize: 10 }
+            Label { text: trKey(appController.statusText); color: "#cfa5ff"; font.pixelSize: 10 }
             BusyIndicator { running: appController.busy; visible: running; implicitWidth: 24; implicitHeight: 24 }
 
             ComboBox {
@@ -164,8 +167,8 @@ ApplicationWindow {
                         anchors.margins: 10
                         Label { text: trKey("section.mask"); color: "white"; font.bold: true }
                         Repeater {
-                            model: ["Chủ thể / Subject", "Người / Person", "Da mặt / Face Skin", "Da cơ thể / Body Skin", "Tóc / Hair", "Trang phục / Clothing", "Phông nền / Background", "Mắt / Eyes", "Môi / Lips", "Răng / Teeth"]
-                            delegate: Button { required property string modelData; text: modelData; Layout.fillWidth: true; enabled: false }
+                            model: ["mask.subject", "mask.person", "mask.faceSkin", "mask.bodySkin", "section.hair", "section.clothing", "section.background", "section.eyes", "mask.lips", "mask.teeth"]
+                            delegate: Button { required property string modelData; text: trKey(modelData); Layout.fillWidth: true; enabled: false }
                         }
                         Label {
                             Layout.fillWidth: true
@@ -424,7 +427,7 @@ ApplicationWindow {
                                 Column {
                                     anchors.centerIn: parent
                                     spacing: 4
-                                    Label { text: "GPU COLOR PREVIEW"; color: "#b36cff"; font.pixelSize: 9; font.bold: true }
+                                    Label { text: trKey("info.gpuColor"); color: "#b36cff"; font.pixelSize: 9; font.bold: true }
                                     Label { text: trKey("info.gpuPreview"); color: "#8f8996"; font.pixelSize: 10 }
                                 }
                             }

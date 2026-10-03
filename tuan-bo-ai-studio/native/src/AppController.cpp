@@ -2,6 +2,7 @@
 
 #include <QCryptographicHash>
 #include <QDir>
+#include <QDateTime>
 #include <QFileInfo>
 #include <QImage>
 #include <QImageReader>
@@ -101,6 +102,7 @@ static QImage applyColorRecipe(QImage img, const QVariantMap &s) {
 }
 
 AppController::AppController(QObject *parent) : QObject(parent) {}
+AppController::~AppController() { m_workers.waitForDone(); }
 
 QVariantMap AppController::defaultSettings() {
     return {
@@ -200,33 +202,42 @@ void AppController::pushUndoSnapshot(ImageEntry &entry, const QVariantMap &snaps
 }
 
 void AppController::importFiles(const QVariantList &urls) {
-    if (urls.isEmpty()) return;
-    setBusy(true);
-    setStatusText(QStringLiteral("Đang tạo preview…"));
-
-    const int firstNew = m_images.size();
+    if (urls.isEmpty() || m_busy) return;
+    QStringList paths;
     for (const QVariant &v : urls) {
         const QUrl url = v.canConvert<QUrl>() ? v.toUrl() : QUrl(v.toString());
         const QString path = url.isLocalFile() ? url.toLocalFile() : v.toString();
-        if (path.isEmpty() || !QFileInfo::exists(path)) continue;
-        ImageEntry e;
-        e.originalPath = QFileInfo(path).absoluteFilePath();
-        e.name = QFileInfo(path).fileName();
-        e.previewPath = makePreview(e.originalPath, 2200, "_preview");
-        e.thumbPath = makePreview(e.originalPath, 260, "_thumb");
-        e.settings = defaultSettings();
-        if (!e.previewPath.isEmpty()) m_images.push_back(e);
+        if (!path.isEmpty() && QFileInfo::exists(path)) paths.push_back(QFileInfo(path).absoluteFilePath());
     }
-    emit imagesChanged();
-    if (m_currentIndex < 0 && firstNew < m_images.size()) selectImage(firstNew);
-    setStatusText(QStringLiteral("GPU Preview • CPU Export • Offline"));
-    setBusy(false);
+    if (paths.isEmpty()) { emit errorOccurred(QStringLiteral("error.noReadableImages")); return; }
+    setBusy(true);
+    setStatusText(QStringLiteral("status.preview"));
+    m_workers.start([this, paths]() {
+        QList<ImageEntry> decoded;
+        for (const QString &path : paths) {
+            ImageEntry e;
+            e.originalPath = path;
+            e.name = QFileInfo(path).fileName();
+            e.previewPath = makePreview(path, 2200, "_preview");
+            e.thumbPath = makePreview(path, 260, "_thumb");
+            e.settings = defaultSettings();
+            if (!e.previewPath.isEmpty()) decoded.push_back(e);
+        }
+        QMetaObject::invokeMethod(this, [this, decoded]() {
+            const int firstNew = m_images.size();
+            m_images.append(decoded);
+            emit imagesChanged();
+            if (m_currentIndex < 0 && !decoded.isEmpty()) selectImage(firstNew);
+            setStatusText(QStringLiteral("status.ready"));
+            setBusy(false);
+            if (decoded.isEmpty()) emit errorOccurred(QStringLiteral("error.noReadableImages"));
+        }, Qt::QueuedConnection);
+    });
 }
 
 void AppController::selectImage(int index) {
     if (index < 0 || index >= m_images.size() || index == m_currentIndex) return;
-    m_editInProgress = false;
-    m_editStartSettings.clear();
+    if (m_editInProgress) endSettingEdit();
     m_currentIndex = index;
     emit currentIndexChanged();
     emit currentImageChanged();
@@ -242,6 +253,9 @@ void AppController::beginSettingEdit() {
 
 void AppController::setSetting(const QString &key, double value) {
     if (m_currentIndex < 0 || m_currentIndex >= m_images.size()) return;
+    const QVariantMap defaults = defaultSettings();
+    if (!defaults.contains(key) || !qIsFinite(value)) return;
+    value = key == QStringLiteral("exposure") ? qBound(-3.0, value, 3.0) : qBound(-100.0, value, 100.0);
     if (!m_editInProgress) beginSettingEdit();
     m_images[m_currentIndex].settings.insert(key, value);
     emit currentSettingsChanged();
@@ -259,12 +273,13 @@ void AppController::endSettingEdit() {
 
 void AppController::resetCurrentSettings() {
     if (m_currentIndex < 0 || m_currentIndex >= m_images.size()) return;
+    if (m_editInProgress) endSettingEdit();
     ImageEntry &entry = m_images[m_currentIndex];
     const QVariantMap before = entry.settings;
     const QVariantMap after = defaultSettings();
     if (before == after) return;
-    pushUndoSnapshot(entry, before);
     entry.settings = after;
+    pushUndoSnapshot(entry, before);
     emit currentSettingsChanged();
     emit historyChanged();
 }
@@ -278,15 +293,17 @@ void AppController::pasteSettings() {
     if (m_currentIndex < 0 || m_currentIndex >= m_images.size() || m_copiedSettings.isEmpty()) return;
     ImageEntry &entry = m_images[m_currentIndex];
     if (entry.settings == m_copiedSettings) return;
-    pushUndoSnapshot(entry, entry.settings);
+    if (m_editInProgress) endSettingEdit();
+    const QVariantMap before = entry.settings;
     entry.settings = m_copiedSettings;
+    pushUndoSnapshot(entry, before);
     emit currentSettingsChanged();
     emit historyChanged();
 }
 
 void AppController::undo() {
-    if (!canUndo()) return;
     if (m_editInProgress) endSettingEdit();
+    if (!canUndo()) return;
     ImageEntry &entry = m_images[m_currentIndex];
     entry.redoStack.push_back(entry.settings);
     entry.settings = entry.undoStack.takeLast();
@@ -295,8 +312,8 @@ void AppController::undo() {
 }
 
 void AppController::redo() {
-    if (!canRedo()) return;
     if (m_editInProgress) endSettingEdit();
+    if (!canRedo()) return;
     ImageEntry &entry = m_images[m_currentIndex];
     entry.undoStack.push_back(entry.settings);
     entry.settings = entry.redoStack.takeLast();
@@ -310,19 +327,19 @@ void AppController::exportCurrent(const QUrl &folderUrl, const QString &format, 
     const ImageEntry entry = m_images.at(m_currentIndex);
     const QVariantMap settings = entry.settings;
     const QString folder = folderUrl.isLocalFile() ? folderUrl.toLocalFile() : folderUrl.toString();
-    if (folder.isEmpty()) { emit errorOccurred(QStringLiteral("Chưa chọn thư mục xuất.")); return; }
+    if (folder.isEmpty()) { emit errorOccurred(QStringLiteral("error.noExportFolder")); return; }
 
     setBusy(true);
-    setStatusText(QStringLiteral("Đang xuất từ ảnh gốc…"));
+    setStatusText(QStringLiteral("status.export"));
 
-    QtConcurrent::run([this, entry, settings, folder, format, quality]() {
+    m_workers.start([this, entry, settings, folder, format, quality]() {
         QImageReader reader(entry.originalPath);
         reader.setAutoTransform(true);
         QImage original = reader.read();
         if (original.isNull()) {
             QMetaObject::invokeMethod(this, [this]() {
-                setBusy(false); setStatusText(QStringLiteral("GPU Preview • CPU Export • Offline"));
-                emit errorOccurred(QStringLiteral("Không đọc được ảnh gốc để xuất."));
+                setBusy(false); setStatusText(QStringLiteral("status.ready"));
+                emit errorOccurred(QStringLiteral("error.readOriginal"));
             }, Qt::QueuedConnection);
             return;
         }
@@ -332,7 +349,9 @@ void AppController::exportCurrent(const QUrl &folderUrl, const QString &format, 
         QString fmt = format.toLower();
         if (fmt != "png" && fmt != "webp") fmt = "jpg";
         const QString base = QFileInfo(entry.name).completeBaseName();
-        const QString outPath = QDir(folder).filePath(base + "_TBRetoch." + fmt);
+        QString outPath = QDir(folder).filePath(base + "_TBRetoch." + fmt);
+        for (int copy = 1; QFileInfo::exists(outPath); ++copy)
+            outPath = QDir(folder).filePath(base + "_TBRetoch_" + QString::number(copy) + "." + fmt);
         QImageWriter writer(outPath, fmt == "jpg" ? QByteArray("jpeg") : fmt.toLatin1());
         writer.setQuality(qBound(70, quality, 100));
         const bool ok = writer.write(output);
@@ -344,8 +363,8 @@ void AppController::exportCurrent(const QUrl &folderUrl, const QString &format, 
 
         QMetaObject::invokeMethod(this, [this, ok, outPath, bytes, width, height, error]() {
             setBusy(false);
-            setStatusText(QStringLiteral("GPU Preview • CPU Export • Offline"));
-            if (!ok) emit errorOccurred(error.isEmpty() ? QStringLiteral("Xuất ảnh thất bại.") : error);
+            setStatusText(QStringLiteral("status.ready"));
+            if (!ok) emit errorOccurred(error.isEmpty() ? QStringLiteral("error.exportFailed") : error);
             else emit exportFinished(outPath, bytes, width, height);
         }, Qt::QueuedConnection);
     });

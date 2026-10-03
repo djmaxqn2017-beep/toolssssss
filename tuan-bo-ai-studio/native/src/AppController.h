@@ -4,6 +4,7 @@
 #include <QVariantList>
 #include <QVariantMap>
 #include <QUrl>
+#include <QThreadPool>
 
 class AppController final : public QObject {
     Q_OBJECT
@@ -19,6 +20,7 @@ class AppController final : public QObject {
 
 public:
     explicit AppController(QObject *parent = nullptr);
+    ~AppController() override;
 
     QVariantList images() const;
     int currentIndex() const;
@@ -64,12 +66,13 @@ private:
         QList<QVariantMap> redoStack;
     };
 
+    QThreadPool m_workers;
     QList<ImageEntry> m_images;
     int m_currentIndex = -1;
     bool m_busy = false;
     bool m_editInProgress = false;
     QVariantMap m_editStartSettings;
-    QString m_statusText = QStringLiteral("GPU Preview • CPU Export • Offline");
+    QString m_statusText = QStringLiteral("status.ready");
     QVariantMap m_copiedSettings;
 
     static QVariantMap defaultSettings();
