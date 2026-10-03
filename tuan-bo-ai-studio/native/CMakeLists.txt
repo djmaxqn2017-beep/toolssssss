@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(TBRetoch VERSION 0.6.2 LANGUAGES CXX)
+project(TBRetoch VERSION 0.7.0 LANGUAGES CXX)
 
 if(MSVC)
     add_compile_options(/utf-8)
@@ -20,9 +20,13 @@ find_library(LIBRAW_LIBRARY NAMES raw libraw raw_r libraw_r REQUIRED)
 find_path(LIBHEIF_INCLUDE_DIR libheif/heif.h REQUIRED)
 find_library(LIBHEIF_LIBRARY NAMES heif libheif REQUIRED)
 
-add_library(TBImageDecoder STATIC src/ImageDecoder.cpp src/ImageDecoder.h src/AdvancedRecipe.cpp src/AdvancedRecipe.h)
-target_include_directories(TBImageDecoder PRIVATE ${LIBRAW_INCLUDE_DIR} ${LIBHEIF_INCLUDE_DIR})
-target_link_libraries(TBImageDecoder PUBLIC Qt6::Gui PRIVATE ${LIBRAW_LIBRARY} ${LIBHEIF_LIBRARY})
+find_package(OpenCV 4 REQUIRED COMPONENTS core imgproc photo)
+find_path(ONNXRUNTIME_INCLUDE_DIR onnxruntime_cxx_api.h REQUIRED)
+find_library(ONNXRUNTIME_LIBRARY NAMES onnxruntime REQUIRED)
+
+add_library(TBImageDecoder STATIC src/SemanticEngine.cpp src/SemanticEngine.h src/PortraitRecipe.cpp src/ExportMetadata.cpp src/ExportMetadata.h src/ImageDecoder.cpp src/ImageDecoder.h src/AdvancedRecipe.cpp src/AdvancedRecipe.h)
+target_include_directories(TBImageDecoder PRIVATE ${LIBRAW_INCLUDE_DIR} ${LIBHEIF_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS} ${ONNXRUNTIME_INCLUDE_DIR})
+target_link_libraries(TBImageDecoder PUBLIC Qt6::Gui PRIVATE ${LIBRAW_LIBRARY} ${LIBHEIF_LIBRARY} ${OpenCV_LIBS} ${ONNXRUNTIME_LIBRARY})
 
 qt_add_executable(TBRetoch
     src/main.cpp
@@ -52,7 +56,8 @@ qt_add_shaders(TBRetoch "tbretouch_shaders"
         shaders/color.frag
 )
 
-target_link_libraries(TBRetoch PRIVATE
+find_package(Qt6 REQUIRED COMPONENTS Test)
+target_link_libraries(TBRetoch PRIVATE Qt6::Test
     TBImageDecoder
     Qt6::Widgets
     Qt6::Quick
@@ -80,5 +85,5 @@ if(BUILD_TESTING)
     target_include_directories(TBRetochTests PRIVATE src)
     target_link_libraries(TBRetochTests PRIVATE TBImageDecoder Qt6::Widgets Qt6::Quick Qt6::Concurrent Qt6::Test)
     add_test(NAME native-controller COMMAND TBRetochTests)
-    set_tests_properties(native-controller PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 120)
+    set_tests_properties(native-controller PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 360)
 endif()

@@ -4,6 +4,7 @@ import QtQuick.Layouts
 
 Item {
     id: root
+    objectName: "edit-" + keyName
     enabled: appController.currentIndex >= 0
     property string title: ""
     property string keyName: ""
@@ -26,6 +27,7 @@ Item {
 
     TextField {
         id: valueLabel
+        objectName: "value-" + root.keyName
         anchors.top: parent.top
         anchors.right: parent.right
         width: 62
@@ -45,6 +47,7 @@ Item {
 
     Slider {
         id: slider
+        objectName: "slider-" + root.keyName
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top

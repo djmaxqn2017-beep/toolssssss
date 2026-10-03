@@ -7,6 +7,11 @@
 #include <QFile>
 #include <QJSEngine>
 #include <QQmlEngine>
+#include <QImageWriter>
+#include <QProcess>
+#include <QColorSpace>
+#include <QPainter>
+#include "SemanticEngine.h"
 #include "ImageDecoder.h"
 #include "AdvancedRecipe.h"
 #include "AppController.h"
@@ -14,6 +19,46 @@
 class ControllerTests : public QObject {
     Q_OBJECT
 private slots:
+    void masterExportAndSixteenBitMetadata() {
+        QTemporaryDir dir;
+        QImage source(256,128,QImage::Format_RGBA64);
+        source.setColorSpace(QColorSpace(QColorSpace::AdobeRgb));
+        for(int y=0;y<source.height();++y){auto row=reinterpret_cast<QRgba64*>(source.scanLine(y));for(int x=0;x<source.width();++x)row[x]=QRgba64::fromRgba64(12000+x,22000+x*2,32000+y,65535);}
+        const QString input=dir.filePath(QString::fromUtf8("Ảnh gốc.png"));QVERIFY(source.save(input));
+        QProcess metadata;QString helper=qEnvironmentVariable("TBRETOCH_EXIFTOOL_PATH");
+        QVERIFY2(!helper.isEmpty(),"Metadata runtime must be configured in CI");
+        metadata.start(helper,{"-Artist=TB Test","-Copyright=Original photographer","-overwrite_original",input});QVERIFY(metadata.waitForFinished(30000));QCOMPARE(metadata.exitCode(),0);
+        AppController c;QSignalSpy errors(&c,&AppController::errorOccurred);QSignalSpy exports(&c,&AppController::exportFinished);
+        c.importFiles({input});QTRY_VERIFY(!c.busy());c.exportCurrent(QUrl::fromLocalFile(dir.path()),"master",100);QTRY_COMPARE_WITH_TIMEOUT(exports.count(),1,30000);
+        QFile original(input),exact(exports[0][0].toString());QVERIFY(original.open(QIODevice::ReadOnly));QVERIFY(exact.open(QIODevice::ReadOnly));QCOMPARE(exact.readAll(),original.readAll());
+        exports.clear();c.setSetting("exposure",.1);c.endSettingEdit();
+        for(const QString &format:{QString("png"),QString("tiff")}){
+            c.exportCurrent(QUrl::fromLocalFile(dir.path()),format,100);QTRY_COMPARE_WITH_TIMEOUT(exports.count(),1,30000);
+            QString path=exports[0][0].toString();QImage result(path);QCOMPARE(result.size(),source.size());QCOMPARE(result.depth(),64);
+            auto row=reinterpret_cast<const QRgba64*>(result.constScanLine(20));QVERIFY(row[21].red()!=row[20].red());QCOMPARE(result.colorSpace().iccProfile(),source.colorSpace().iccProfile());
+            metadata.start(helper,{"-Artist","-Copyright","-Orientation#",path});QVERIFY(metadata.waitForFinished(30000));const auto text=metadata.readAllStandardOutput();QVERIFY(text.contains("TB Test"));QVERIFY(text.contains("Original photographer"));QVERIFY(text.contains("1"));exports.clear();
+        }
+        QCOMPARE(errors.count(),0);
+    }
+    void semanticPortraitAndTargetedTools() {
+        const QString fixture=qEnvironmentVariable("TBRETOCH_PORTRAIT_FIXTURE");if(fixture.isEmpty())QSKIP("Real portrait fixture not configured");
+        QTemporaryDir dir;QImage source(fixture);QVERIFY(!source.isNull());source=source.scaled(640,640,Qt::KeepAspectRatio,Qt::SmoothTransformation);
+        auto analysis=analysePortrait(source,dir.filePath("analysis"),true,true);QVERIFY(analysis);QVERIFY(analysis->faces.size()>0);QCOMPARE(analysis->faces[0].landmarks.size(),478);
+        auto defaults=semanticDefaults();QCOMPARE(applyPortraitRecipe(source,defaults,*analysis),source);
+        for(const QString &key:{QString("skinSoftening"),QString("textureRecovery"),QString("faceShine"),QString("skinUnify"),QString("eyeBags"),QString("darkCircles"),QString("faceWidth"),QString("jaw"),QString("chin"),QString("vShape"),QString("eyeSize"),QString("noseWidth"),QString("lipSize"),QString("doubleChin"),QString("iris"),QString("eyeWhites"),QString("catchlight"),QString("teethWhitening"),QString("lipstick"),QString("blush"),QString("eyeliner"),QString("eyeshadow"),QString("eyebrow"),QString("hairSmooth"),QString("hairShine"),QString("bgBlur"),QString("bgCleanup"),QString("lensBlur")}) {
+            auto settings=defaults;settings[key]=70;auto result=applyPortraitRecipe(source,settings,*analysis);QCOMPARE(result.size(),source.size());QVERIFY2(result!=source.convertToFormat(QImage::Format_RGBA64),qPrintable("No effect: "+key));
+        }
+        auto settings=defaults;settings["mask_hair_exposure"]=1.;auto result=applyPortraitRecipe(source,settings,*analysis);QVERIFY(result!=source.convertToFormat(QImage::Format_RGBA64));
+        QImage asset(source.size(),QImage::Format_RGB32);asset.fill(QColor(20,50,180));QString file=dir.filePath("replacement.png");QVERIFY(asset.save(file));
+        for(const QString &key:{QString("sky"),QString("background")}) {auto recipe=defaults;recipe[key+"File"]=file;recipe[key=="sky"?"skyReplacement":"backgroundReplacement"]=100;QVERIFY(applyPortraitRecipe(source,recipe,*analysis)!=source.convertToFormat(QImage::Format_RGBA64));}
+        // Synthetic local defects inside the real clothing segmentation, with a
+        // meaningful repair target rather than expecting clean fabric to change.
+        QImage cloth=semanticMask(*analysis,"clothes",source.size());QPoint center(-1,-1);
+        for(int y=source.height()/2;y<source.height()-10&&center.x()<0;++y)for(int x=20;x<source.width()-20;++x)if(qGray(cloth.pixel(x,y))>220&&qGray(cloth.pixel(x+8,y+8))>220){center={x+4,y+4};break;}
+        QVERIFY(center.x()>0);
+        for(const QString &key:{QString("wrinkleRemoval"),QString("lintRemoval"),QString("stainRemoval")}) {QImage defect=source.convertToFormat(QImage::Format_RGBA64);QPainter painter(&defect);painter.setPen(QPen(key=="lintRemoval"?Qt::white:Qt::black,2));painter.drawLine(center-QPoint(4,0),center+QPoint(4,0));if(key=="stainRemoval"){painter.setBrush(QColor(180,20,30));painter.drawEllipse(center,4,4);}painter.end();auto recipe=defaults;recipe[key]=100;QVERIFY2(applyPortraitRecipe(defect,recipe,*analysis)!=defect,qPrintable(key));}
+        QImage blank(256,256,QImage::Format_RGB32);blank.fill(QColor(90,100,110));auto empty=analysePortrait(blank,dir.filePath("blank"));QCOMPARE(empty->faces.size(),0);
+    }
     void codecAndUnicodeImport() {
         QTemporaryDir dir;
         QVERIFY(dir.isValid());

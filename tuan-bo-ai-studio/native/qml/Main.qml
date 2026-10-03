@@ -22,6 +22,7 @@ ApplicationWindow {
     palette.highlight: "#8247d6"
     palette.highlightedText: "#ffffff"
 
+    property bool showMask: false
     property string viewMode: "after"
     property real zoom: 1.0
     property real panX: 0
@@ -84,8 +85,8 @@ ApplicationWindow {
         id: exportFolderDialog
         title: trKey("dialog.chooseExportFolder")
         onAccepted: {
-            if (exportSelection) appController.exportSelected(selectedFolder, formatBox.currentText, Math.round(qualitySlider.value))
-            else appController.exportCurrent(selectedFolder, formatBox.currentText, Math.round(qualitySlider.value))
+            if (exportSelection) appController.exportSelected(selectedFolder, formatBox.currentValue, Math.round(qualitySlider.value))
+            else appController.exportCurrent(selectedFolder, formatBox.currentValue, Math.round(qualitySlider.value))
         }
     }
 
@@ -132,6 +133,7 @@ ApplicationWindow {
             toastTimer.restart()
         }
         function onCurrentImageChanged() { Qt.callLater(resetView) }
+        function onCurrentSettingsChanged() { if (window.viewMode === "before") window.viewMode = "after" }
     }
 
     Timer { id: toastTimer; interval: 4200; onTriggered: toastText = "" }
@@ -242,13 +244,35 @@ ApplicationWindow {
                         Button { text: trKey("nav.sync"); Layout.fillWidth: true; enabled: appController.currentIndex >= 0; onClicked: syncDialog.open() }
                         Label { text: trKey("section.mask"); color: "white"; font.bold: true }
                         Repeater {
-                            model: ["mask.subject", "mask.person", "mask.faceSkin", "mask.bodySkin", "section.hair", "section.clothing", "section.background", "section.eyes", "mask.lips", "mask.teeth"]
-                            delegate: Button { required property string modelData; text: trKey(modelData); Layout.fillWidth: true; enabled: false }
+                            model: ["subject","person","faceSkin","bodySkin","hair","clothes","background","eyes","lips","teeth","sky"]
+                            delegate: Button {
+                                required property string modelData
+                                text: trKey(({hair:"section.hair",clothes:"section.clothing",background:"section.background",eyes:"section.eyes",sky:"control.skyReplacement"})[modelData] ?? "mask."+modelData)
+                                Layout.fillWidth: true
+                                enabled: appController.currentIndex >= 0
+                                highlighted: appController.activeMask === modelData
+                                onClicked: appController.selectMask(modelData)
+                            }
+                        }
+                        CheckBox { text: "Hiện vùng chỉnh sửa"; checked: window.showMask; onToggled: window.showMask = checked; enabled: appController.activeMask.length > 0 }
+                        Label { text: appController.analysisStatus; color: "#c994ff"; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                        Repeater {
+                            model: ["exposure","contrast","saturation","temperature"]
+                            delegate: EditSlider {
+                                required property string modelData
+                                title: trKey("control."+modelData)
+                                keyName: "mask_"+appController.activeMask+"_"+modelData
+                                from: modelData === "exposure" ? -3 : -100
+                                to: modelData === "exposure" ? 3 : 100
+                                stepSize: modelData === "exposure" ? .05 : 1
+                                visible: appController.activeMask.length > 0
+                                Layout.fillWidth: true
+                            }
                         }
                         Label {
                             Layout.fillWidth: true
                             wrapMode: Text.WordWrap
-                            text: trKey("info.semanticPending")
+                            text: "Các vùng được nhận diện bằng mô hình AI chạy trực tiếp trên máy. Ảnh không có khuôn mặt sẽ không áp dụng chỉnh chân dung."
                             color: "#8e8796"
                             font.pixelSize: 10
                         }
@@ -310,40 +334,21 @@ ApplicationWindow {
 
                         Image {
                             id: sourceImage
+                            objectName: "edited-image"
+                            retainWhileLoading: true
                             anchors.fill: parent
                             source: appController.useRenderedPreview ? appController.renderedPreviewUrl : appController.currentPreviewUrl
                             asynchronous: true
                             cache: true
                             smooth: true
                             mipmap: true
-                            visible: viewMode === "after" && appController.useRenderedPreview
+                            visible: viewMode === "after"
                             property int previousWidth: 0
                             property int previousHeight: 0
                             onStatusChanged: if (status === Image.Ready && (implicitWidth !== previousWidth || implicitHeight !== previousHeight)) {
                                 previousWidth = implicitWidth; previousHeight = implicitHeight
                                 Qt.callLater(resetView)
                             }
-                        }
-
-                        ShaderEffect {
-                            anchors.fill: parent
-                            visible: viewMode !== "before" && !appController.useRenderedPreview
-                            property variant source: sourceImage
-                            property real exposure: Number(appController.currentSettings.exposure ?? 0)
-                            property real contrast: Number(appController.currentSettings.contrast ?? 0)
-                            property real highlights: Number(appController.currentSettings.highlights ?? 0)
-                            property real shadows: Number(appController.currentSettings.shadows ?? 0)
-                            property real whites: Number(appController.currentSettings.whites ?? 0)
-                            property real blacks: Number(appController.currentSettings.blacks ?? 0)
-                            property real temperature: Number(appController.currentSettings.temperature ?? 0)
-                            property real tint: Number(appController.currentSettings.tint ?? 0)
-                            property real saturation: Number(appController.currentSettings.saturation ?? 0)
-                            property real vibrance: Number(appController.currentSettings.vibrance ?? 0)
-                            property real clarity: Number(appController.currentSettings.clarity ?? 0)
-                            property real dehaze: Number(appController.currentSettings.dehaze ?? 0)
-                            property real fade: Number(appController.currentSettings.fade ?? 0)
-                            vertexShader: "qrc:/shaders/color.vert.qsb"
-                            fragmentShader: "qrc:/shaders/color.frag.qsb"
                         }
 
                         Image {
@@ -379,6 +384,14 @@ ApplicationWindow {
                             }
                         }
 
+                        Image {
+                            anchors.fill: parent
+                            source: appController.maskPreviewUrl
+                            visible: window.showMask && viewMode === "after"
+                            fillMode: Image.PreserveAspectFit
+                            asynchronous: true
+                            z: 6
+                        }
                         Rectangle {
                             visible: viewMode === "split"
                             x: parent.width / 2 - 1
@@ -518,13 +531,15 @@ ApplicationWindow {
 
                 TabBar {
                     id: tabs
+                    objectName: "edit-tabs"
+                    onCurrentIndexChanged: if (currentIndex >= 1 && currentIndex <= 3) appController.analyseCurrent()
                     Layout.fillWidth: true
-                    TabButton { font.pixelSize: 10; text: trKey("tab.color") }
-                    TabButton { font.pixelSize: 10; text: trKey("tab.portrait") }
-                    TabButton { font.pixelSize: 10; text: trKey("tab.background") }
-                    TabButton { font.pixelSize: 10; text: trKey("tab.clothing") }
-                    TabButton { font.pixelSize: 10; text: trKey("tab.details") }
-                    TabButton { font.pixelSize: 10; text: trKey("tab.crop") }
+                    TabButton { objectName: "tab-color"; font.pixelSize: 10; text: trKey("tab.color") }
+                    TabButton { objectName: "tab-portrait"; font.pixelSize: 10; text: trKey("tab.portrait") }
+                    TabButton { objectName: "tab-background"; font.pixelSize: 10; text: trKey("tab.background") }
+                    TabButton { objectName: "tab-clothing"; font.pixelSize: 10; text: trKey("tab.clothing") }
+                    TabButton { objectName: "tab-details"; font.pixelSize: 10; text: trKey("tab.details") }
+                    TabButton { objectName: "tab-crop"; font.pixelSize: 10; text: trKey("tab.crop") }
                 }
 
                 StackLayout {
@@ -622,13 +637,13 @@ ApplicationWindow {
                                     Label { text: trKey("export.originalResolution"); color: "#9f96a8"; font.pixelSize: 10 }
                                     RowLayout {
                                         Label { text: trKey("export.format"); color: "#ddd8e3"; Layout.fillWidth: true }
-                                        ComboBox { id: formatBox; model: ["jpg", "png", "webp", "tiff"]; currentIndex: 0 }
+                                        ComboBox { id: formatBox; model: [{label: "Giữ nguyên / PNG 16 bit", value: "master"}, {label: "JPEG", value: "jpg"}, {label: "PNG 16 bit", value: "png"}, {label: "TIFF 16 bit", value: "tiff"}, {label: "WebP", value: "webp"}]; textRole: "label"; valueRole: "value"; currentIndex: 0 }
                                     }
                                     RowLayout {
                                         Label { text: trKey("export.quality"); color: "#ddd8e3"; Layout.fillWidth: true }
                                         Label { text: Math.round(qualitySlider.value); color: "#c994ff" }
                                     }
-                                    Slider { id: qualitySlider; from: 0; to: 100; value: 98; stepSize: 1; Layout.fillWidth: true }
+                                    Slider { id: qualitySlider; from: 0; to: 100; value: 100; enabled: formatBox.currentValue === "jpg" || formatBox.currentValue === "webp"; stepSize: 1; Layout.fillWidth: true }
                                 }
                             }
                         }
@@ -640,10 +655,18 @@ ApplicationWindow {
                         clip: true
                         ColumnLayout {
                             width: parent.width
-                            EditSection { title: trKey("section.skin"); Layout.fillWidth: true; ColumnLayout { width: parent.width; Repeater { model: ["control.blemishRemoval","control.skinSoftening","control.textureRecovery","control.faceShine","control.skinUnify","control.eyeBags","control.darkCircles","control.wrinkles","control.doubleChin"]; delegate: Button { required property string modelData; text: trKey(modelData); Layout.fillWidth: true; enabled: false } } } }
-                            EditSection { title: trKey("section.face"); Layout.fillWidth: true; ColumnLayout { width: parent.width; Repeater { model: ["control.faceWidth","control.jaw","control.chin","control.vShape","control.eyeSize","control.noseWidth","control.lipSize"]; delegate: Button { required property string modelData; text: trKey(modelData); Layout.fillWidth: true; enabled: false } } } }
-                            EditSection { title: trKey("section.eyes"); Layout.fillWidth: true; ColumnLayout { width: parent.width; Repeater { model: ["control.iris","control.eyeWhites","control.catchlight","control.teethWhitening"]; delegate: Button { required property string modelData; text: trKey(modelData); Layout.fillWidth: true; enabled: false } } } }
-                            EditSection { title: trKey("section.makeup"); Layout.fillWidth: true; ColumnLayout { width: parent.width; Repeater { model: ["control.lipstick","control.blush","control.eyeliner","control.eyeshadow","control.eyebrow"]; delegate: Button { required property string modelData; text: trKey(modelData); Layout.fillWidth: true; enabled: false } } } }
+                            Label { text: appController.analysisStatus; color: "#c994ff"; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+                            ComboBox {
+                                objectName: "face-selector"
+                                Layout.fillWidth: true
+                                model: { let names=["Tất cả khuôn mặt"]; for(let i=0;i<appController.faceCount;i++) names.push("Khuôn mặt "+(i+1)); return names }
+                                currentIndex: appController.selectedFace+1
+                                onActivated: appController.setSelectedFace(currentIndex-1)
+                            }
+                            EditSection { title: trKey("section.skin"); Layout.fillWidth: true; ColumnLayout { width: parent.width; Repeater { model: ["control.blemishRemoval","control.skinSoftening","control.textureRecovery","control.faceShine","control.skinUnify","control.eyeBags","control.darkCircles","control.wrinkles","control.doubleChin"]; delegate: EditSlider { required property string modelData; title: trKey(modelData); keyName: (appController.selectedFace >= 0 && tabs.currentIndex === 1 ? "face_"+appController.selectedFace+"_" : "") + modelData.substring(8); from: ["faceWidth","jaw","chin","vShape","eyeSize","noseWidth","lipSize"].indexOf(modelData.substring(8)) >= 0 ? -100 : 0; Layout.fillWidth: true } } } }
+                            EditSection { title: trKey("section.face"); Layout.fillWidth: true; ColumnLayout { width: parent.width; Repeater { model: ["control.faceWidth","control.jaw","control.chin","control.vShape","control.eyeSize","control.noseWidth","control.lipSize"]; delegate: EditSlider { required property string modelData; title: trKey(modelData); keyName: (appController.selectedFace >= 0 && tabs.currentIndex === 1 ? "face_"+appController.selectedFace+"_" : "") + modelData.substring(8); from: ["faceWidth","jaw","chin","vShape","eyeSize","noseWidth","lipSize"].indexOf(modelData.substring(8)) >= 0 ? -100 : 0; Layout.fillWidth: true } } } }
+                            EditSection { title: trKey("section.eyes"); Layout.fillWidth: true; ColumnLayout { width: parent.width; Repeater { model: ["control.iris","control.eyeWhites","control.catchlight","control.teethWhitening"]; delegate: EditSlider { required property string modelData; title: trKey(modelData); keyName: (appController.selectedFace >= 0 && tabs.currentIndex === 1 ? "face_"+appController.selectedFace+"_" : "") + modelData.substring(8); from: ["faceWidth","jaw","chin","vShape","eyeSize","noseWidth","lipSize"].indexOf(modelData.substring(8)) >= 0 ? -100 : 0; Layout.fillWidth: true } } } }
+                            EditSection { title: trKey("section.makeup"); Layout.fillWidth: true; ColumnLayout { width: parent.width; Repeater { model: ["control.lipstick","control.blush","control.eyeliner","control.eyeshadow","control.eyebrow"]; delegate: EditSlider { required property string modelData; title: trKey(modelData); keyName: (appController.selectedFace >= 0 && tabs.currentIndex === 1 ? "face_"+appController.selectedFace+"_" : "") + modelData.substring(8); from: ["faceWidth","jaw","chin","vShape","eyeSize","noseWidth","lipSize"].indexOf(modelData.substring(8)) >= 0 ? -100 : 0; Layout.fillWidth: true } } } }
                         }
                     }
 
@@ -653,7 +676,11 @@ ApplicationWindow {
                         clip: true
                         ColumnLayout {
                             width: parent.width
-                            EditSection { title: trKey("section.background"); Layout.fillWidth: true; ColumnLayout { width: parent.width; Repeater { model: ["control.bgCleanup","control.bgBlur","control.lensBlur","control.skyReplacement"]; delegate: Button { required property string modelData; text: trKey(modelData); Layout.fillWidth: true; enabled: false } } } }
+                            Button { text: "Chọn ảnh bầu trời…"; Layout.fillWidth: true; enabled: appController.currentIndex >= 0; onClicked: appController.chooseReplacement(true) }
+                            Button { text: "Chọn ảnh nền…"; Layout.fillWidth: true; enabled: appController.currentIndex >= 0; onClicked: appController.chooseReplacement(false) }
+                            EditSlider { title: "Thay nền"; keyName: "backgroundReplacement"; from: 0; Layout.fillWidth: true }
+                            Label { text: appController.analysisStatus; color: "#c994ff"; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+                            EditSection { title: trKey("section.background"); Layout.fillWidth: true; ColumnLayout { width: parent.width; Repeater { model: ["control.bgCleanup","control.bgBlur","control.lensBlur","control.skyReplacement"]; delegate: EditSlider { required property string modelData; title: trKey(modelData); keyName: (appController.selectedFace >= 0 && tabs.currentIndex === 1 ? "face_"+appController.selectedFace+"_" : "") + modelData.substring(8); from: ["faceWidth","jaw","chin","vShape","eyeSize","noseWidth","lipSize"].indexOf(modelData.substring(8)) >= 0 ? -100 : 0; Layout.fillWidth: true } } } }
                         }
                     }
 
@@ -663,7 +690,9 @@ ApplicationWindow {
                         clip: true
                         ColumnLayout {
                             width: parent.width
-                            EditSection { title: trKey("section.clothing"); Layout.fillWidth: true; ColumnLayout { width: parent.width; Repeater { model: ["control.wrinkleRemoval","control.lintRemoval","control.stainRemoval"]; delegate: Button { required property string modelData; text: trKey(modelData); Layout.fillWidth: true; enabled: false } } } }
+                            EditSlider { title: "Làm mượt tóc"; keyName: "hairSmooth"; from: 0; Layout.fillWidth: true }
+                            EditSlider { title: "Độ bóng tóc"; keyName: "hairShine"; from: 0; Layout.fillWidth: true }
+                            EditSection { title: trKey("section.clothing"); Layout.fillWidth: true; ColumnLayout { width: parent.width; Repeater { model: ["control.wrinkleRemoval","control.lintRemoval","control.stainRemoval"]; delegate: EditSlider { required property string modelData; title: trKey(modelData); keyName: (appController.selectedFace >= 0 && tabs.currentIndex === 1 ? "face_"+appController.selectedFace+"_" : "") + modelData.substring(8); from: ["faceWidth","jaw","chin","vShape","eyeSize","noseWidth","lipSize"].indexOf(modelData.substring(8)) >= 0 ? -100 : 0; Layout.fillWidth: true } } } }
                         }
                     }
 

@@ -1,3 +1,4 @@
+#include <QColorSpace>
 #include "ImageDecoder.h"
 #include <QFile>
 #include <QCoreApplication>
@@ -34,17 +35,20 @@ QImage decodeImage(const QString &path, int maxSide, QString *error) {
             return fail("RAW exceeds 128 megapixel decode limit");
         raw.imgdata.params.use_camera_wb = 1;
         raw.imgdata.params.output_color = 1; // sRGB
-        raw.imgdata.params.output_bps = 8;
+        raw.imgdata.params.output_bps = 16;
         raw.imgdata.params.half_size = maxSide > 0 && qMax(raw.imgdata.sizes.width, raw.imgdata.sizes.height) > maxSide * 2;
         rc = raw.unpack();
         if (rc == LIBRAW_SUCCESS) rc = raw.dcraw_process();
         if (rc != LIBRAW_SUCCESS) return fail(QString::fromUtf8(libraw_strerror(rc)));
         auto deleter = [](libraw_processed_image_t *p) { if (p) LibRaw::dcraw_clear_mem(p); };
         std::unique_ptr<libraw_processed_image_t, decltype(deleter)> bitmap(raw.dcraw_make_mem_image(&rc), deleter);
-        if (!bitmap || rc != LIBRAW_SUCCESS || bitmap->type != LIBRAW_IMAGE_BITMAP || bitmap->colors != 3 || bitmap->bits != 8)
+        if (!bitmap || rc != LIBRAW_SUCCESS || bitmap->type != LIBRAW_IMAGE_BITMAP || bitmap->colors != 3 || bitmap->bits != 16)
             return fail("RAW RGB conversion failed");
-        QImage image(bitmap->data, bitmap->width, bitmap->height, bitmap->width * 3, QImage::Format_RGB888);
-        return scaled(image.copy(), maxSide);
+        QImage image(bitmap->width,bitmap->height,QImage::Format_RGBX64);
+        const auto *src=reinterpret_cast<const quint16*>(bitmap->data);
+        for(int y=0;y<image.height();++y){auto *dst=reinterpret_cast<QRgba64*>(image.scanLine(y));for(int x=0;x<image.width();++x){auto n=(y*image.width()+x)*3;dst[x]=QRgba64::fromRgba64(src[n],src[n+1],src[n+2],65535);}}
+        image.setColorSpace(QColorSpace(QColorSpace::SRgb));
+        return scaled(image, maxSide);
     }
     if (ext == "heic" || ext == "heif") {
         if (file.size() > 1024LL * 1024 * 1024) return fail("HEIF exceeds 1 GiB input limit");

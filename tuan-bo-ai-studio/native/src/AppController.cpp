@@ -1,6 +1,9 @@
 #include "AppController.h"
 #include "ImageDecoder.h"
 #include "AdvancedRecipe.h"
+#include "SemanticEngine.h"
+#include "ExportMetadata.h"
+#include <QColorSpace>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QFile>
@@ -21,11 +24,14 @@
 #include <QtMath>
 
 namespace {
-static int clamp8(double v) { return qBound(0, qRound(v), 255); }
+static int clamp16(double v) { return qBound(0, qRound(v), 65535); }
 static double clamp01(double v) { return qBound(0.0, v, 1.0); }
 
 static QImage applyColorRecipe(QImage img, const QVariantMap &s) {
-    img = img.convertToFormat(QImage::Format_ARGB32);
+    bool changed = false;
+    for (const char *key : {"exposure","contrast","highlights","shadows","whites","blacks","temperature","tint","saturation","vibrance","clarity","dehaze","fade"}) changed |= s.value(key).toDouble() != 0;
+    if (!changed) return img;
+    img = img.convertToFormat(QImage::Format_RGBA64);
     const double exposure = s.value("exposure", 0.0).toDouble();
     const double contrast = s.value("contrast", 0.0).toDouble() / 100.0;
     const double highlights = s.value("highlights", 0.0).toDouble() / 100.0;
@@ -42,12 +48,12 @@ static QImage applyColorRecipe(QImage img, const QVariantMap &s) {
     const double gain = qPow(2.0, exposure);
 
     for (int y = 0; y < img.height(); ++y) {
-        auto *line = reinterpret_cast<QRgb*>(img.scanLine(y));
+        auto *line = reinterpret_cast<QRgba64*>(img.scanLine(y));
         for (int x = 0; x < img.width(); ++x) {
-            const QRgb px = line[x];
-            double r = qRed(px) / 255.0;
-            double g = qGreen(px) / 255.0;
-            double b = qBlue(px) / 255.0;
+            const QRgba64 px = line[x];
+            double r = px.red() / 65535.0;
+            double g = px.green() / 65535.0;
+            double b = px.blue() / 65535.0;
 
             r *= gain; g *= gain; b *= gain;
             double l = clamp01(0.2126*r + 0.7152*g + 0.0722*b);
@@ -103,7 +109,7 @@ static QImage applyColorRecipe(QImage img, const QVariantMap &s) {
                 }
             }
 
-            line[x] = qRgba(clamp8(r*255.0), clamp8(g*255.0), clamp8(b*255.0), qAlpha(px));
+            line[x] = QRgba64::fromRgba64(clamp16(r*65535.0), clamp16(g*65535.0), clamp16(b*65535.0), px.alpha());
         }
     }
     return img;
@@ -111,11 +117,13 @@ static QImage applyColorRecipe(QImage img, const QVariantMap &s) {
 }
 
 AppController::AppController(QObject *parent) : QObject(parent) {
-    QImageReader::setAllocationLimit(512);
+    QImageReader::setAllocationLimit(1024);
+    m_workers.setMaxThreadCount(2);
     m_previewTimer.setSingleShot(true);
     m_previewTimer.setInterval(45);
     connect(&m_previewTimer, &QTimer::timeout, this, &AppController::renderPreview);
     connect(this, &AppController::currentSettingsChanged, this, &AppController::schedulePreview);
+    connect(this, &AppController::currentSettingsChanged, this, &AppController::analysisChanged);
 }
 AppController::~AppController() { m_workers.waitForDone(); }
 
@@ -128,6 +136,8 @@ QVariantMap AppController::defaultSettings() {
     };
     const QVariantMap extra = advancedDefaults();
     for (auto it = extra.cbegin(); it != extra.cend(); ++it) settings.insert(it.key(), it.value());
+    const auto semantic = semanticDefaults();
+    for (auto it = semantic.cbegin(); it != semantic.cend(); ++it) settings.insert(it.key(),it.value());
     return settings;
 }
 
@@ -292,6 +302,8 @@ void AppController::selectImage(int index) {
     if (m_editInProgress) endSettingEdit();
     m_currentIndex = index;
     emit currentIndexChanged();
+    m_selectedFace=-1;
+    emit analysisChanged();
     emit currentImageChanged();
     emit currentSettingsChanged();
     emit historyChanged();
@@ -306,8 +318,8 @@ void AppController::beginSettingEdit() {
 void AppController::setSetting(const QString &key, double value) {
     if (m_currentIndex < 0 || m_currentIndex >= m_images.size()) return;
     const QVariantMap defaults = defaultSettings();
-    if (!defaults.contains(key) || !qIsFinite(value)) return;
-    if (key == "exposure") value = qBound(-3.0, value, 3.0);
+    if (!defaults.contains(canonicalSettingKey(key)) || !qIsFinite(value) || canonicalSettingKey(key).endsWith("File")) return;
+    if (key == "exposure" || key.endsWith("_exposure")) value = qBound(-3.0, value, 3.0);
     else if (key.startsWith("crop")) value = qBound(0.0, value, 45.0);
     else if (key == "rotation") value = qBound(0, qRound(value), 3);
     else if (key == "straighten") value = qBound(-45.0, value, 45.0);
@@ -385,12 +397,13 @@ QString AppController::renderedPreviewUrl() const {
     return QUrl::fromLocalFile(entry.renderedPath.isEmpty() ? entry.previewPath : entry.renderedPath).toString();
 }
 
-bool AppController::useRenderedPreview() const { return hasAdvancedSettings(currentSettings()); }
+bool AppController::useRenderedPreview() const { return m_currentIndex >= 0; }
 
 void AppController::schedulePreview() {
     ++m_previewGeneration;
     m_previewTimer.stop();
     if (!useRenderedPreview()) { emit previewChanged(); return; }
+    m_images[m_currentIndex].renderedPath.clear();
     m_previewTimer.start();
     emit previewChanged();
 }
@@ -399,30 +412,43 @@ void AppController::renderPreview() {
     if (m_previewActive || !useRenderedPreview() || m_currentIndex < 0) return;
     const int index = m_currentIndex, generation = m_previewGeneration;
     const ImageEntry entry = m_images.at(index);
+    const bool needSky = m_activeMask == "sky";
     m_previewActive = true;
+    emit analysisChanged();
     emit previewChanged();
-    m_workers.start([this, entry, index, generation]() {
-        const QByteArray signature = entry.previewPath.toUtf8() + QJsonDocument::fromVariant(entry.settings).toJson(QJsonDocument::Compact);
+    m_workers.start([this, entry, index, generation, needSky]() {
+        const QByteArray signature = QByteArray("pipeline-v7.0.0") + entry.previewPath.toUtf8() + QJsonDocument::fromVariant(entry.settings).toJson(QJsonDocument::Compact);
         const QString path = QDir(cacheRoot()).filePath(QString::fromLatin1(QCryptographicHash::hash(signature,QCryptographicHash::Sha256).toHex()) + "_edited.png");
         bool ok = !QImage(path).isNull();
         QString error;
-        if (!ok) {
+        auto analysis = entry.analysis;
+        try {
             QImage image(entry.previewPath);
-            image = applyAdvancedRecipe(applyColorRecipe(image,entry.settings),entry.settings);
-            QSaveFile file(path);
-            if (!image.isNull() && file.open(QIODevice::WriteOnly)) {
-                QImageWriter writer(&file,"png");
-                ok = writer.write(image) && file.commit();
-                if (!ok) error = writer.errorString();
-            } else error = file.errorString();
-        }
-        QMetaObject::invokeMethod(this,[this,index,generation,path,ok,error]() {
+            if(qMax(image.width(),image.height())>1200)image=image.scaled(1200,1200,Qt::KeepAspectRatio,Qt::SmoothTransformation);
+            if (hasSemanticSettings(entry.settings) || m_analyseRequested.load()) {
+                analysis = analysePortrait(image,entry.previewPath+"_semantic",entry.settings.value("lensBlur").toDouble()!=0,needSky || entry.settings.value("skyReplacement").toDouble()!=0 || entry.settings.value("mask_sky_exposure").toDouble()!=0 || entry.settings.value("mask_sky_contrast").toDouble()!=0 || entry.settings.value("mask_sky_saturation").toDouble()!=0 || entry.settings.value("mask_sky_temperature").toDouble()!=0);
+            }
+            if (!ok) {
+                image = applyColorRecipe(image,entry.settings);
+                if (hasSemanticSettings(entry.settings) && analysis) image = applyPortraitRecipe(image,entry.settings,*analysis);
+                image = applyAdvancedRecipe(image,entry.settings);
+                QSaveFile file(path);
+                if (!image.isNull() && file.open(QIODevice::WriteOnly)) {
+                    QImageWriter writer(&file,"png");
+                    ok = writer.write(image) && file.commit();
+                    if (!ok) error = writer.errorString();
+                } else error = file.errorString();
+            }
+        } catch (const std::exception &e) { ok=false;error=QString::fromUtf8(e.what()); }
+        QMetaObject::invokeMethod(this,[this,index,generation,path,ok,error,analysis]() {
             m_previewActive = false;
+            if (index < m_images.size() && analysis) { m_images[index].analysis = analysis; emit analysisChanged(); }
             if (generation == m_previewGeneration && index == m_currentIndex) {
                 if (ok) m_images[index].renderedPath = path;
                 else emit errorOccurred(error.isEmpty() ? QStringLiteral("error.previewFailed") : error);
                 emit previewChanged();
-            } else if (useRenderedPreview()) m_previewTimer.start();
+            }
+            if (generation != m_previewGeneration && useRenderedPreview()) m_previewTimer.start();
         },Qt::QueuedConnection);
     });
 }
@@ -447,7 +473,8 @@ void AppController::syncSelected(const QString &group) {
         for (auto it = source.cbegin(); it != source.cend(); ++it) {
             const bool geometry = isGeometryKey(it.key());
             const bool detail = it.key() == "sharpness" || it.key() == "denoise";
-            if (group == "all" || (group == "geometry" && geometry) || (group == "detail" && detail) || (group == "color" && !geometry && !detail)) entry.settings.insert(it.key(),it.value());
+            const bool semantic = isSemanticKey(it.key());
+            if (group == "all" || (group == "geometry" && geometry) || (group == "detail" && detail) || (group == "color" && !geometry && !detail && !semantic)) entry.settings.insert(it.key(),it.value());
         }
         pushUndoSnapshot(entry,before);
         entry.renderedPath.clear();
@@ -478,12 +505,19 @@ void AppController::loadPreset(const QUrl &fileUrl) {
     for (auto it = values.cbegin(); it != values.cend(); ++it) {
         bool numeric = false;
         const double value = it.value().toDouble(&numeric);
-        if (!defaults.contains(it.key()) || !numeric || !qIsFinite(value)) { emit errorOccurred(QStringLiteral("error.invalidPreset")); return; }
+        const QString base=canonicalSettingKey(it.key());
+        if (base.endsWith("File") && defaults.contains(base) && it.value().metaType().id()==QMetaType::QString) continue;
+        if (!defaults.contains(base) || !numeric || !qIsFinite(value)) { emit errorOccurred(QStringLiteral("error.invalidPreset")); return; }
     }
     if (m_editInProgress) endSettingEdit();
     beginSettingEdit();
     // Missing keys reset to defaults, so older presets do not retain hidden effects.
-    for (auto it = defaults.cbegin(); it != defaults.cend(); ++it) setSetting(it.key(), values.value(it.key(),it.value()).toDouble());
+    m_images[m_currentIndex].settings = defaults;
+    for (auto it = values.cbegin(); it != values.cend(); ++it) {
+        if (it.key().endsWith("File")) m_images[m_currentIndex].settings.insert(it.key(),it.value());
+        else setSetting(it.key(),it.value().toDouble());
+    }
+    emit currentSettingsChanged();
     endSettingEdit();
 }
 
@@ -522,22 +556,40 @@ void AppController::exportEntries(const QList<ImageEntry> &entries, const QUrl &
             qint64 bytes = 0;
             int width = 0, height = 0;
             if (ok) {
-                QImage output = applyAdvancedRecipe(applyColorRecipe(original,entry.settings),entry.settings);
-                QString fmt = format.toLower();
-                if (fmt != "png" && fmt != "webp" && fmt != "tiff") fmt = "jpg";
-                const QString base = QFileInfo(entry.name).completeBaseName();
-                outPath = QDir(folder).filePath(base+"_TBRetoch."+fmt);
-                for (int copy = 1; QFileInfo::exists(outPath); ++copy) outPath = QDir(folder).filePath(base+"_TBRetoch_"+QString::number(copy)+"."+fmt);
-                QSaveFile file(outPath);
-                ok = file.open(QIODevice::WriteOnly);
-                if (ok) {
-                    QImageWriter writer(&file,fmt == "jpg" ? QByteArray("jpeg") : fmt.toLatin1());
-                    writer.setQuality(qBound(0,quality,100));
-                    ok = writer.write(output) && file.commit();
-                    if (!ok) error = writer.errorString();
-                } else error = file.errorString();
-                width = output.width(); height = output.height();
-                bytes = ok ? QFileInfo(outPath).size() : 0;
+                try {
+                    bool edited=false;
+                    for(auto it=entry.settings.cbegin();it!=entry.settings.cend();++it) if(!it.key().endsWith("File") && it.value().toDouble()!=0) edited=true;
+                    QString fmt = format.toLower();
+                    const bool exact = (fmt == "master" || fmt == "original") && !edited;
+                    if (exact) fmt = QFileInfo(entry.originalPath).suffix().toLower();
+                    else if (fmt == "master" || fmt == "original") fmt = "png";
+                    else if (fmt != "png" && fmt != "webp" && fmt != "tiff") fmt = "jpg";
+                    const QString base = QFileInfo(entry.name).completeBaseName();
+                    outPath = QDir(folder).filePath(base+"_TBRetoch."+fmt);
+                    for (int copy = 1; QFileInfo::exists(outPath); ++copy) outPath = QDir(folder).filePath(base+"_TBRetoch_"+QString::number(copy)+"."+fmt);
+                    width=original.width();height=original.height();
+                    if (exact) {
+                        QFile source(entry.originalPath);QSaveFile target(outPath);ok=source.open(QIODevice::ReadOnly)&&target.open(QIODevice::WriteOnly);
+                        while(ok&&!source.atEnd()){auto block=source.read(1024*1024);if(block.isEmpty()&&source.error()!=QFile::NoError){ok=false;break;}ok=target.write(block)==block.size();}
+                        ok=ok&&target.commit();if(!ok)error=source.errorString()+" "+target.errorString();
+                    } else {
+                        QImage output=applyColorRecipe(original,entry.settings);
+                        if(hasSemanticSettings(entry.settings)) {
+                            auto analysis=analysePortrait(original,entry.previewPath+"_semantic",entry.settings.value("lensBlur").toDouble()!=0,entry.settings.value("skyReplacement").toDouble()!=0||entry.settings.value("mask_sky_exposure").toDouble()!=0||entry.settings.value("mask_sky_contrast").toDouble()!=0||entry.settings.value("mask_sky_saturation").toDouble()!=0||entry.settings.value("mask_sky_temperature").toDouble()!=0);
+                            output=applyPortraitRecipe(output,entry.settings,*analysis);
+                        }
+                        output=applyAdvancedRecipe(output,entry.settings);
+                        if(fmt=="png"||fmt=="tiff")output=output.convertToFormat(QImage::Format_RGBA64);
+                        QTemporaryFile encoded(QDir(folder).filePath(".TBRetoch-XXXXXX."+fmt));
+                        ok=encoded.open();QString temporary=encoded.fileName();encoded.close();
+                        if(ok){QImageWriter writer(temporary,fmt=="jpg"?QByteArray("jpeg"):fmt.toLatin1());writer.setQuality(qBound(0,quality,100));if(fmt=="tiff")writer.setCompression(1);ok=writer.write(output);if(!ok)error=writer.errorString();}
+                        if(ok)ok=preserveExportMetadata(entry.originalPath,temporary,output.size(),&error);
+                        if(ok){QFile source(temporary);QSaveFile target(outPath);ok=source.open(QIODevice::ReadOnly)&&target.open(QIODevice::WriteOnly);while(ok&&!source.atEnd()){auto block=source.read(1024*1024);ok=!block.isEmpty()&&target.write(block)==block.size();}ok=ok&&target.commit();if(!ok)error=target.errorString();}
+                        width=output.width();height=output.height();
+                    }
+                    bytes=ok?QFileInfo(outPath).size():0;
+                } catch(const std::exception &e) {ok=false;error=QString::fromUtf8(e.what());}
+
             }
             if (ok) ++succeeded; else ++failed;
             ++completed;
@@ -553,4 +605,35 @@ void AppController::exportEntries(const QList<ImageEntry> &entries, const QUrl &
             emit exportQueueFinished(succeeded,failed,cancelled);
         },Qt::QueuedConnection);
     });
+}
+
+int AppController::faceCount() const {return m_currentIndex>=0&&m_images[m_currentIndex].analysis?m_images[m_currentIndex].analysis->faces.size():0;}
+QString AppController::analysisStatus() const {
+    if(m_previewActive&&m_analyseRequested.load())return QStringLiteral("Đang phân tích ảnh…");
+    if(m_currentIndex<0||!m_images[m_currentIndex].analysis)return QStringLiteral("Mở ảnh để phân tích vùng chỉnh sửa");
+    return QStringLiteral("%1 khuôn mặt · %2").arg(faceCount()).arg(m_images[m_currentIndex].analysis->backend);
+}
+void AppController::analyseCurrent() {m_analyseRequested.store(true);schedulePreview();emit analysisChanged();}
+void AppController::selectMask(const QString &name) {
+    if(!semanticMaskNames().contains(name)||m_currentIndex<0)return;m_activeMask=name;analyseCurrent();emit analysisChanged();
+}
+QString AppController::maskPreviewUrl() const {
+    if(m_currentIndex<0||m_activeMask.isEmpty()||!m_images[m_currentIndex].analysis)return {};
+    const auto &entry=m_images[m_currentIndex];
+    if(!entry.analysis->masks.contains(m_activeMask))return {};
+    QImage mask=semanticMask(*entry.analysis,m_activeMask,QImage(entry.previewPath).size(),m_selectedFace);
+    QImage overlay(mask.size(),QImage::Format_RGBA8888);
+    for(int y=0;y<mask.height();++y){const auto *src=mask.constScanLine(y);auto *dst=overlay.scanLine(y);for(int x=0;x<mask.width();++x){dst[x*4]=214;dst[x*4+1]=96;dst[x*4+2]=255;dst[x*4+3]=src[x]/2;}}
+    QVariantMap geometry=advancedDefaults();for(auto it=geometry.begin();it!=geometry.end();++it)if(isGeometryKey(it.key()))it.value()=entry.settings.value(it.key());
+    overlay=applyAdvancedRecipe(overlay,geometry);
+    const auto hash=QCryptographicHash::hash(QJsonDocument::fromVariant(geometry).toJson(),QCryptographicHash::Sha1).toHex();
+    QString path=entry.previewPath+"_semantic/overlay_"+m_activeMask+"_"+QString::number(m_selectedFace)+"_"+hash+".png";
+    if(!QFileInfo::exists(path)&&!overlay.save(path))return {};
+    return QUrl::fromLocalFile(path).toString();
+}
+void AppController::setSelectedFace(int face) {m_selectedFace=qBound(-1,face,faceCount()-1);emit analysisChanged();}
+void AppController::chooseReplacement(bool sky) {
+    if(m_currentIndex<0)return;QString file=QFileDialog::getOpenFileName(nullptr,sky?QStringLiteral("Chọn ảnh bầu trời"):QStringLiteral("Chọn ảnh nền"),{},QStringLiteral("Images (*.jpg *.jpeg *.png *.tif *.tiff *.webp)"));if(file.isEmpty())return;
+    if(QImage(file).isNull()){emit errorOccurred(QStringLiteral("Không đọc được ảnh thay thế"));return;}
+    beginSettingEdit();m_images[m_currentIndex].settings.insert(sky?"skyFile":"backgroundFile",file);setSetting(sky?"skyReplacement":"backgroundReplacement",100);endSettingEdit();
 }

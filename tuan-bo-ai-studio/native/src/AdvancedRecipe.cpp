@@ -7,7 +7,7 @@
 namespace {
 const std::array<const char *, 8> bands = {"red", "orange", "yellow", "green", "cyan", "blue", "purple", "magenta"};
 const std::array<double, 8> centers = {0, 30, 60, 120, 180, 220, 260, 310};
-int byte(double value) { return qBound(0, qRound(value), 255); }
+int byte(double value) { return qBound(0, qRound(value), 65535); }
 double unit(double value) { return qBound(0.0, value, 1.0); }
 double curve(double x, const std::array<double,6> &points) {
     const double p = unit(x) * 5;
@@ -38,29 +38,29 @@ bool hasAdvancedSettings(const QVariantMap &settings) {
 
 QImage applyAdvancedRecipe(QImage image, const QVariantMap &s) {
     if (!hasAdvancedSettings(s)) return image;
-    image = image.convertToFormat(QImage::Format_ARGB32);
+    image = image.convertToFormat(QImage::Format_RGBA64);
     const double sharp = s.value("sharpness").toDouble() / 100;
     const double noise = s.value("denoise").toDouble() / 100;
     if (sharp > 0 || noise > 0) {
         // Edge-aware 3x3 denoise and unsharp mask, with an immutable input plane.
         const QImage source = image;
         for (int y = 0; y < image.height(); ++y) {
-            QRgb *dst = reinterpret_cast<QRgb *>(image.scanLine(y));
+            QRgba64 *dst = reinterpret_cast<QRgba64 *>(image.scanLine(y));
             for (int x = 0; x < image.width(); ++x) {
-                const QRgb center = source.pixel(x, y);
+                const QRgba64 center = reinterpret_cast<const QRgba64 *>(source.constScanLine(y))[x];
                 double sums[3] = {0, 0, 0}, weight = 0;
                 for (int j = -1; j <= 1; ++j) {
-                    const auto *row = reinterpret_cast<const QRgb *>(source.constScanLine(qBound(0, y+j, source.height()-1)));
+                    const auto *row = reinterpret_cast<const QRgba64 *>(source.constScanLine(qBound(0, y+j, source.height()-1)));
                     for (int i = -1; i <= 1; ++i) {
-                        const QRgb p = row[qBound(0, x+i, source.width()-1)];
-                        const double delta = qAbs(qRed(p)-qRed(center)) + qAbs(qGreen(p)-qGreen(center)) + qAbs(qBlue(p)-qBlue(center));
-                        const double w = noise > 0 ? qExp(-delta / (8 + noise * 75)) : 1;
-                        sums[0] += qRed(p)*w; sums[1] += qGreen(p)*w; sums[2] += qBlue(p)*w; weight += w;
+                        const QRgba64 p = row[qBound(0, x+i, source.width()-1)];
+                        const double delta = qAbs(p.red()-center.red()) + qAbs(p.green()-center.green()) + qAbs(p.blue()-center.blue());
+                        const double w = noise > 0 ? qExp(-delta / 257 / (8 + noise * 75)) : 1;
+                        sums[0] += p.red()*w; sums[1] += p.green()*w; sums[2] += p.blue()*w; weight += w;
                     }
                 }
-                const double r = qRed(center), g = qGreen(center), b = qBlue(center);
+                const double r = center.red(), g = center.green(), b = center.blue();
                 const double amount = sharp * 1.8 - noise;
-                dst[x] = qRgba(byte(r+(r-sums[0]/weight)*amount), byte(g+(g-sums[1]/weight)*amount), byte(b+(b-sums[2]/weight)*amount), qAlpha(center));
+                dst[x] = QRgba64::fromRgba64(byte(r+(r-sums[0]/weight)*amount), byte(g+(g-sums[1]/weight)*amount), byte(b+(b-sums[2]/weight)*amount), center.alpha());
             }
         }
     }
@@ -83,10 +83,10 @@ QImage applyAdvancedRecipe(QImage image, const QVariantMap &s) {
     const double grain = s.value("grain").toDouble()/100;
     if (hslEnabled || curveEnabled || vignette != 0 || grain > 0) {
         for (int y = 0; y < image.height(); ++y) {
-            auto *row = reinterpret_cast<QRgb *>(image.scanLine(y));
+            auto *row = reinterpret_cast<QRgba64 *>(image.scanLine(y));
             for (int x = 0; x < image.width(); ++x) {
-                const QRgb p = row[x];
-                double r = qRed(p)/255.0, g = qGreen(p)/255.0, b = qBlue(p)/255.0;
+                const QRgba64 p = row[x];
+                double r = p.red()/65535.0, g = p.green()/65535.0, b = p.blue()/65535.0;
                 if (hslEnabled) {
                     float h, sat, lum;
                     QColor::fromRgbF(r, g, b).getHslF(&h, &sat, &lum);
@@ -119,7 +119,7 @@ QImage applyAdvancedRecipe(QImage image, const QVariantMap &s) {
                     const double value = ((hash>>8)&65535)/65535.0-.5;
                     r += value*grain*.12; g += value*grain*.12; b += value*grain*.12;
                 }
-                row[x] = qRgba(byte(r*255),byte(g*255),byte(b*255),qAlpha(p));
+                row[x] = QRgba64::fromRgba64(byte(r*65535),byte(g*65535),byte(b*65535),p.alpha());
             }
         }
     }

@@ -8,9 +8,15 @@
 #include <QImage>
 #include <QTimer>
 #include <atomic>
+#include "SemanticEngine.h"
 
 class AppController final : public QObject {
     Q_OBJECT
+    Q_PROPERTY(int faceCount READ faceCount NOTIFY analysisChanged)
+    Q_PROPERTY(int selectedFace READ selectedFace WRITE setSelectedFace NOTIFY analysisChanged)
+    Q_PROPERTY(QString analysisStatus READ analysisStatus NOTIFY analysisChanged)
+    Q_PROPERTY(QString activeMask READ activeMask NOTIFY analysisChanged)
+    Q_PROPERTY(QString maskPreviewUrl READ maskPreviewUrl NOTIFY analysisChanged)
     Q_PROPERTY(QVariantList images READ images NOTIFY imagesChanged)
     Q_PROPERTY(int currentIndex READ currentIndex NOTIFY currentIndexChanged)
     Q_PROPERTY(QString currentPreviewUrl READ currentPreviewUrl NOTIFY currentImageChanged)
@@ -46,6 +52,15 @@ public:
     bool canUndo() const;
     bool canRedo() const;
 
+    int faceCount() const;
+    int selectedFace() const { return m_selectedFace; }
+    QString analysisStatus() const;
+    QString activeMask() const { return m_activeMask; }
+    QString maskPreviewUrl() const;
+    Q_INVOKABLE void analyseCurrent();
+    Q_INVOKABLE void selectMask(const QString &name);
+    Q_INVOKABLE void setSelectedFace(int face);
+    Q_INVOKABLE void chooseReplacement(bool sky);
     QString importDetails() const { return m_importDetails; }
     Q_INVOKABLE void chooseImages(const QString &title, const QString &filter);
     Q_INVOKABLE void importFiles(const QVariantList &urls);
@@ -68,6 +83,7 @@ public:
     Q_INVOKABLE void exportCurrent(const QUrl &folderUrl, const QString &format, int quality);
 
 signals:
+    void analysisChanged();
     void imagesChanged();
     void previewChanged();
     void exportProgressChanged();
@@ -91,10 +107,14 @@ private:
         QString renderedPath;
         bool selected = true;
         QVariantMap settings;
+        std::shared_ptr<PortraitAnalysis> analysis;
         QList<QVariantMap> undoStack;
         QList<QVariantMap> redoStack;
     };
 
+    std::atomic_bool m_analyseRequested{false};
+    QString m_activeMask;
+    int m_selectedFace = -1;
     QThreadPool m_workers;
     QTimer m_previewTimer;
     int m_previewGeneration = 0;
