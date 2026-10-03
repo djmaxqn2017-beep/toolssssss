@@ -37,8 +37,13 @@ void repair(cv::Mat &rgb,const cv::Mat &region,double amount,int mode) {
     for(int i=1;i<count;++i){int area=stats.at<int>(i,cv::CC_STAT_AREA);if(area>=2*scale*scale&&area<(mode==2?1600:350)*scale*scale)selected.setTo(255,labels==i);}
     cv::dilate(selected,selected,cv::getStructuringElement(cv::MORPH_ELLIPSE,{3,3}));cv::bitwise_and(selected,allowed,selected);
     if(cv::countNonZero(selected)==0)return;
-    cv::Mat u,repaired;rgb.convertTo(u,CV_8UC3,255);cv::inpaint(u,selected,repaired,3*scale,cv::INPAINT_TELEA);repaired.convertTo(repaired,CV_32FC3,1./255);
-    cv::Mat weight;selected.convertTo(weight,CV_32F,1./255);weight=smooth(weight,scale);blend(rgb,repaired,weight,amount);
+    cv::Rect roi=cv::boundingRect(selected);const int pad=qMax(4,int(scale*10));
+    roi={qMax(0,roi.x-pad),qMax(0,roi.y-pad),qMin(rgb.cols,roi.x+roi.width+pad)-qMax(0,roi.x-pad),qMin(rgb.rows,roi.y+roi.height+pad)-qMax(0,roi.y-pad)};
+    cv::Mat target=rgb(roi),repaired=target.clone();
+    // OpenCV supports float inpainting for single-channel input. Repair each
+    // channel at native 16-bit scale, avoiding an 8-bit quantization round trip.
+    for(int c=0;c<3;++c){cv::Mat plane,out;cv::extractChannel(target,plane,c);plane*=65535;cv::inpaint(plane,selected(roi),out,3*scale,cv::INPAINT_TELEA);out/=65535;cv::insertChannel(out,repaired,c);}
+    cv::Mat weight;selected(roi).convertTo(weight,CV_32F,1./255);weight=smooth(weight,scale);blend(target,repaired,weight,amount);
 }
 void makeup(cv::Mat &rgb,const cv::Mat &m,double amount,cv::Vec3f color) {
     if(amount==0)return;
@@ -104,6 +109,11 @@ QImage applyPortraitRecipe(QImage image,const QVariantMap &s,const PortraitAnaly
     for(const auto&name:semanticMaskNames()) {
         double e=s.value("mask_"+name+"_exposure").toDouble(),c=s.value("mask_"+name+"_contrast").toDouble(),sat=s.value("mask_"+name+"_saturation").toDouble(),t=s.value("mask_"+name+"_temperature").toDouble();
         if(e||c||sat||t)tone(rgb,mask(a,name,rgb.size()),e,c,sat,t);
+    }
+    for(int face=0;face<a.faces.size();++face)for(const QString &name:{QString("faceSkin"),QString("eyes"),QString("lips"),QString("teeth")}) {
+        const QString key=QString("face_%1_mask_%2_").arg(face).arg(name);
+        double e=s.value(key+"exposure").toDouble(),c=s.value(key+"contrast").toDouble(),sat=s.value(key+"saturation").toDouble(),t=s.value(key+"temperature").toDouble();
+        if(e||c||sat||t)tone(rgb,mask(a,name,rgb.size(),face),e,c,sat,t);
     }
     for(int y=0;y<original.height();++y){auto d=reinterpret_cast<QRgba64*>(original.scanLine(y));auto p=rgb.ptr<cv::Vec3f>(y);for(int x=0;x<original.width();++x)d[x]=QRgba64::fromRgba64(qBound(0,qRound(p[x][0]*65535),65535),qBound(0,qRound(p[x][1]*65535),65535),qBound(0,qRound(p[x][2]*65535),65535),d[x].alpha());}
     return original;

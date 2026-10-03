@@ -261,7 +261,7 @@ ApplicationWindow {
                             delegate: EditSlider {
                                 required property string modelData
                                 title: trKey("control."+modelData)
-                                keyName: "mask_"+appController.activeMask+"_"+modelData
+                                keyName: (appController.selectedFace >= 0 && ["faceSkin","eyes","lips","teeth"].indexOf(appController.activeMask) >= 0 ? "face_"+appController.selectedFace+"_" : "") + "mask_"+appController.activeMask+"_"+modelData
                                 from: modelData === "exposure" ? -3 : -100
                                 to: modelData === "exposure" ? 3 : 100
                                 stepSize: modelData === "exposure" ? .05 : 1

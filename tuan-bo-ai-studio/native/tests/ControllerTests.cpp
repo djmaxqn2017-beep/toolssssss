@@ -57,6 +57,11 @@ private slots:
         for(int y=source.height()/2;y<source.height()-10&&center.x()<0;++y)for(int x=20;x<source.width()-20;++x)if(qGray(cloth.pixel(x,y))>220&&qGray(cloth.pixel(x+8,y+8))>220){center={x+4,y+4};break;}
         QVERIFY(center.x()>0);
         for(const QString &key:{QString("wrinkleRemoval"),QString("lintRemoval"),QString("stainRemoval")}) {QImage defect=source.convertToFormat(QImage::Format_RGBA64);QPainter painter(&defect);painter.setPen(QPen(key=="lintRemoval"?Qt::white:Qt::black,2));painter.drawLine(center-QPoint(4,0),center+QPoint(4,0));if(key=="stainRemoval"){painter.setBrush(QColor(180,20,30));painter.drawEllipse(center,4,4);}painter.end();auto recipe=defaults;recipe[key]=100;QVERIFY2(applyPortraitRecipe(defect,recipe,*analysis)!=defect,qPrintable(key));}
+        QImage group(source.width()*2,source.height(),QImage::Format_RGBA64);QPainter groupPainter(&group);groupPainter.drawImage(0,0,source);groupPainter.drawImage(source.width(),0,source);groupPainter.end();
+        auto people=analysePortrait(group,dir.filePath("group"));QCOMPARE(people->faces.size(),2);
+        auto faceRecipe=defaults;faceRecipe["face_0_mask_faceSkin_exposure"]=1.;auto isolated=applyPortraitRecipe(group,faceRecipe,*people);
+        QVERIFY(isolated.copy(0,0,source.width(),source.height())!=group.copy(0,0,source.width(),source.height()));
+        QCOMPARE(isolated.copy(source.width(),0,source.width(),source.height()),group.copy(source.width(),0,source.width(),source.height()));
         QImage blank(256,256,QImage::Format_RGB32);blank.fill(QColor(90,100,110));auto empty=analysePortrait(blank,dir.filePath("blank"));QCOMPARE(empty->faces.size(),0);
     }
     void codecAndUnicodeImport() {

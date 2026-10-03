@@ -621,7 +621,8 @@ QString AppController::maskPreviewUrl() const {
     if(m_currentIndex<0||m_activeMask.isEmpty()||!m_images[m_currentIndex].analysis)return {};
     const auto &entry=m_images[m_currentIndex];
     if(!entry.analysis->masks.contains(m_activeMask))return {};
-    QImage mask=semanticMask(*entry.analysis,m_activeMask,QImage(entry.previewPath).size(),m_selectedFace);
+    const bool facialMask = m_activeMask=="faceSkin" || m_activeMask=="eyes" || m_activeMask=="lips" || m_activeMask=="teeth";
+    QImage mask=semanticMask(*entry.analysis,m_activeMask,QImage(entry.previewPath).size(),facialMask?m_selectedFace:-1);
     QImage overlay(mask.size(),QImage::Format_RGBA8888);
     for(int y=0;y<mask.height();++y){const auto *src=mask.constScanLine(y);auto *dst=overlay.scanLine(y);for(int x=0;x<mask.width();++x){dst[x*4]=214;dst[x*4+1]=96;dst[x*4+2]=255;dst[x*4+3]=src[x]/2;}}
     QVariantMap geometry=advancedDefaults();for(auto it=geometry.begin();it!=geometry.end();++it)if(isGeometryKey(it.key()))it.value()=entry.settings.value(it.key());
