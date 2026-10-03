@@ -4,6 +4,7 @@ import QtQuick.Layouts
 
 Item {
     id: root
+    enabled: appController.currentIndex >= 0
     property string title: ""
     property string keyName: ""
     property real from: -100

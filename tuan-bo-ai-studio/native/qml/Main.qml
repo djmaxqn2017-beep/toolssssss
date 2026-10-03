@@ -111,22 +111,24 @@ ApplicationWindow {
 
             Label { text: "TBRetoch"; color: "white"; font.bold: true; font.pixelSize: 14 }
 
-            ToolSeparator {}
-            Button { text: trKey("nav.library") }
-            Button { text: trKey("nav.edit"); highlighted: true }
-            Button { text: trKey("nav.compare") }
-            Button { text: trKey("nav.ai") }
-            Button { text: trKey("nav.sync") }
+            ToolSeparator { visible: window.width >= 1480 }
+            Button { text: trKey("nav.library"); visible: window.width >= 1480; onClicked: openDialog.open() }
+            Button { text: trKey("nav.edit"); visible: window.width >= 1480; highlighted: true; onClicked: tabs.currentIndex = 0 }
+            Button { text: trKey("nav.compare"); visible: window.width >= 1480; onClicked: viewMode = "split" }
+            Button { text: trKey("nav.ai"); visible: window.width >= 1480; onClicked: tabs.currentIndex = 1 }
+            Button { text: trKey("nav.sync"); visible: window.width >= 1480; enabled: false; ToolTip.text: trKey("info.semanticPending"); ToolTip.visible: hovered }
 
-            ToolSeparator {}
+            ToolSeparator { visible: window.width >= 1480 }
             Button { text: trKey("action.addImages"); onClicked: openDialog.open() }
             Button { text: trKey("action.copy"); enabled: appController.currentIndex >= 0; onClicked: appController.copySettings() }
             Button { text: trKey("action.paste"); enabled: appController.currentIndex >= 0; onClicked: appController.pasteSettings() }
             Button { text: trKey("action.reset"); enabled: appController.currentIndex >= 0; onClicked: appController.resetCurrentSettings() }
 
+            ToolButton { text: "↶"; font.pixelSize: 19; enabled: appController.canUndo; onClicked: appController.undo(); ToolTip.text: trKey("action.undo"); ToolTip.visible: hovered }
+            ToolButton { text: "↷"; font.pixelSize: 19; enabled: appController.canRedo; onClicked: appController.redo(); ToolTip.text: trKey("action.redo"); ToolTip.visible: hovered }
             Item { Layout.fillWidth: true }
 
-            Label { text: trKey(appController.statusText); color: "#cfa5ff"; font.pixelSize: 10 }
+            Label { visible: window.width >= 1480; text: trKey(appController.statusText); color: "#cfa5ff"; font.pixelSize: 10 }
             BusyIndicator { running: appController.busy; visible: running; implicitWidth: 24; implicitHeight: 24 }
 
             ComboBox {
@@ -138,6 +140,8 @@ ApplicationWindow {
             }
 
             Button {
+                objectName: "exportButton"
+                Layout.preferredWidth: 90
                 text: trKey("action.export")
                 enabled: appController.currentIndex >= 0 && !appController.busy
                 highlighted: true
@@ -162,11 +166,13 @@ ApplicationWindow {
 
                 TabBar {
                     Layout.fillWidth: true
-                    TabButton { text: trKey("section.mask") }
-                    TabButton { text: trKey("action.undo") + "/" + trKey("action.redo") }
+                    TabButton { font.pixelSize: 10; text: trKey("section.mask") }
+                    TabButton { font.pixelSize: 10; text: trKey("action.undo") + "/" + trKey("action.redo") }
                 }
 
                 ScrollView {
+                        contentWidth: availableWidth
+                        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
@@ -410,12 +416,12 @@ ApplicationWindow {
                 TabBar {
                     id: tabs
                     Layout.fillWidth: true
-                    TabButton { text: trKey("tab.color") }
-                    TabButton { text: trKey("tab.portrait") }
-                    TabButton { text: trKey("tab.background") }
-                    TabButton { text: trKey("tab.clothing") }
-                    TabButton { text: trKey("tab.lighting") }
-                    TabButton { text: trKey("tab.crop") }
+                    TabButton { font.pixelSize: 10; text: trKey("tab.color") }
+                    TabButton { font.pixelSize: 10; text: trKey("tab.portrait") }
+                    TabButton { font.pixelSize: 10; text: trKey("tab.background") }
+                    TabButton { font.pixelSize: 10; text: trKey("tab.clothing") }
+                    TabButton { font.pixelSize: 10; text: trKey("tab.lighting") }
+                    TabButton { font.pixelSize: 10; text: trKey("tab.crop") }
                 }
 
                 StackLayout {
@@ -424,6 +430,8 @@ ApplicationWindow {
                     currentIndex: tabs.currentIndex
 
                     ScrollView {
+                        contentWidth: availableWidth
+                        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                         clip: true
                         ColumnLayout {
                             width: parent.width
@@ -484,6 +492,8 @@ ApplicationWindow {
                     }
 
                     ScrollView {
+                        contentWidth: availableWidth
+                        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                         clip: true
                         ColumnLayout {
                             width: parent.width
@@ -495,6 +505,8 @@ ApplicationWindow {
                     }
 
                     ScrollView {
+                        contentWidth: availableWidth
+                        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                         clip: true
                         ColumnLayout {
                             width: parent.width
@@ -503,6 +515,8 @@ ApplicationWindow {
                     }
 
                     ScrollView {
+                        contentWidth: availableWidth
+                        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                         clip: true
                         ColumnLayout {
                             width: parent.width
@@ -511,6 +525,8 @@ ApplicationWindow {
                     }
 
                     ScrollView {
+                        contentWidth: availableWidth
+                        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                         clip: true
                         ColumnLayout {
                             width: parent.width

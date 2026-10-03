@@ -73,7 +73,10 @@ int main(int argc, char *argv[]) {
                                                        qBound(0, qRound(center.y()*dpr), frame.height()-1));
                 const QColor source = proxy.pixelColor(proxy.width()/2, proxy.height()/2);
                 const QColor expected(qMin(255, source.red()*2), qMin(255, source.green()*2), qMin(255, source.blue()*2));
-                const bool ok = qAbs(actual.red()-expected.red()) <= 5
+                auto *exportButton = window->findChild<QQuickItem*>(QStringLiteral("exportButton"));
+                const bool exportVisible = exportButton && exportButton->isVisible()
+                    && exportButton->mapToScene(QPointF(exportButton->width(), 0)).x() <= window->width();
+                const bool ok = exportVisible && qAbs(actual.red()-expected.red()) <= 5
                     && qAbs(actual.green()-expected.green()) <= 5
                     && qAbs(actual.blue()-expected.blue()) <= 5;
                 qInfo() << "Rendered exposure preview:" << actual << "expected:" << expected << "passed:" << ok;

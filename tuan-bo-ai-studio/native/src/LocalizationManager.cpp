@@ -35,7 +35,7 @@ const QHash<QString, TrPair> &dictionary() {
         {"filter.images", {"Ảnh (*.jpg *.jpeg *.png *.webp *.bmp *.tif *.tiff)", "Images (*.jpg *.jpeg *.png *.webp *.bmp *.tif *.tiff)"}},
         {"filter.all", {"Tất cả (*.*)", "All files (*.*)"}},
         {"viewer.noImage", {"Chưa chọn ảnh", "No image selected"}},
-        {"viewer.nativeOffline", {"Không gian làm việc native GPU • Offline", "Native GPU workspace • Offline"}},
+        {"viewer.nativeOffline", {"Chỉnh ảnh offline • TBRetoch", "Offline photo editing • TBRetoch"}},
         {"viewer.imagesCount", {"%1 ảnh", "%1 images"}},
         {"status.ready", {"GPU Preview • CPU Export • Offline", "GPU Preview • CPU Export • Offline"}},
         {"status.preview", {"Đang tạo ảnh xem trước…", "Generating previews…"}},
@@ -148,7 +148,7 @@ const QHash<QString, TrPair> &dictionary() {
         {"language.vi", {"Tiếng Việt", "Vietnamese"}},
         {"language.en", {"Tiếng Anh", "English"}},
         {"info.gpuPreview", {"Xem trước bằng GPU • Xuất từ ảnh gốc", "GPU preview • Export from original"}},
-        {"info.semanticPending", {"Đang xây engine semantic thật, không dùng slider giả.", "Building real semantic engine; no fake sliders."}}
+        {"info.semanticPending", {"Tính năng này chưa có trong bản Native Core.", "This feature is not available in the Native Core build."}}
     };
     return d;
 }
