@@ -75,6 +75,10 @@ jobs:
         run: |
           cmake --build tuan-bo-ai-studio/native/build --config Release --parallel
           if ($LASTEXITCODE -ne 0) { throw "Native build failed" }
+          # Use the same local runtime layout for tests and the installed app.
+          Copy-Item "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin/*.dll" 'tuan-bo-ai-studio/native/build/Release/'
+          windeployqt --release --no-translations 'tuan-bo-ai-studio/native/build/Release/TBRetochTests.exe'
+          if ($LASTEXITCODE -ne 0) { throw "Test runtime deployment failed" }
           # Windows searches System32 before PATH. Keep the pinned inference
           # runtime beside both binaries, including during CTest.
           Copy-Item 'native-deps/ort/runtimes/win-x64/native/*.dll' 'tuan-bo-ai-studio/native/build/Release/'
@@ -94,7 +98,17 @@ jobs:
 
       - name: Test native image pipeline
         shell: pwsh
-        run: ctest --test-dir tuan-bo-ai-studio/native/build -C Release -V --output-on-failure
+        run: |
+          # Prevent a loader error dialog from hanging an unattended launch.
+          Add-Type @'
+          using System.Runtime.InteropServices;
+          public static class NativeErrorMode {
+            [DllImport("kernel32.dll")] public static extern uint SetErrorMode(uint mode);
+          }
+          '@
+          [NativeErrorMode]::SetErrorMode(0x8003) | Out-Null
+          ctest --test-dir tuan-bo-ai-studio/native/build -C Release -V --output-on-failure
+          if ($LASTEXITCODE -ne 0) { throw "Native controller tests failed" }
 
       - name: Deploy Qt runtime
         shell: pwsh

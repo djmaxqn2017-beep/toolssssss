@@ -369,6 +369,8 @@ private slots:
 
 int main(int argc,char **argv) {
     std::setvbuf(stdout,nullptr,_IONBF,0);std::setvbuf(stderr,nullptr,_IONBF,0);
-    QApplication app(argc,argv);ControllerTests tests;return QTest::qExec(&tests,argc,argv);
+    std::fprintf(stderr,"Native tests: entering QApplication\n");
+    QApplication app(argc,argv);std::fprintf(stderr,"Native tests: QApplication ready\n");
+    ControllerTests tests;return QTest::qExec(&tests,argc,argv);
 }
 #include "ControllerTests.moc"
