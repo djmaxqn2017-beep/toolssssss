@@ -33,11 +33,11 @@ private slots:
         QVERIFY2(!helper.isEmpty(),"Metadata runtime must be configured in CI");
         QVERIFY2(runMetadataTool(helper,{"-Artist=TB Test","-Copyright=Original photographer","-overwrite_original",input},&metadataOutput,&metadataError),qPrintable(metadataError));
         AppController c;QObject::connect(&c,&AppController::errorOccurred,&c,[](const QString &error){std::fprintf(stderr,"Controller error: %s\n",qPrintable(error));});QSignalSpy errors(&c,&AppController::errorOccurred);QSignalSpy exports(&c,&AppController::exportFinished);
-        c.importFiles({input});QTRY_VERIFY(!c.busy());c.exportCurrent(QUrl::fromLocalFile(dir.path()),"master",100);QTRY_COMPARE_WITH_TIMEOUT(exports.count(),1,30000);
+        c.importFiles({input});QTRY_VERIFY(!c.busy());c.exportCurrent(QUrl::fromLocalFile(dir.path()),"master",100);QTRY_VERIFY_WITH_TIMEOUT(exports.count()==1||!c.busy(),30000);QVERIFY2(exports.count()==1,errors.isEmpty()?"No exported file":qPrintable(errors.last()[0].toString()));
         QFile original(input),exact(exports[0][0].toString());QVERIFY(original.open(QIODevice::ReadOnly));QVERIFY(exact.open(QIODevice::ReadOnly));QCOMPARE(exact.readAll(),original.readAll());
         exports.clear();c.setSetting("exposure",.1);c.endSettingEdit();
         for(const QString &format:{QString("png"),QString("tiff")}){
-            c.exportCurrent(QUrl::fromLocalFile(dir.path()),format,100);QTRY_COMPARE_WITH_TIMEOUT(exports.count(),1,30000);
+            c.exportCurrent(QUrl::fromLocalFile(dir.path()),format,100);QTRY_VERIFY_WITH_TIMEOUT(exports.count()==1||!c.busy(),30000);QVERIFY2(exports.count()==1,errors.isEmpty()?"No exported file":qPrintable(errors.last()[0].toString()));
             QString path=exports[0][0].toString();if(format=="png")QVERIFY(QFileInfo(path).size()<source.sizeInBytes()/2);QImage result(path);QCOMPARE(result.size(),source.size());QCOMPARE(result.depth(),64);
             auto row=reinterpret_cast<const QRgba64*>(result.constScanLine(20));QVERIFY(row[21].red()!=row[20].red());QCOMPARE(result.colorSpace().iccProfile(),source.colorSpace().iccProfile());
             QVERIFY2(runMetadataTool(helper,{"-Artist","-Copyright","-Orientation#",path},&metadataOutput,&metadataError),qPrintable(metadataError));const auto text=metadataOutput;QVERIFY2(text.contains("TB Test"),text.constData());QVERIFY2(text.contains("Original photographer"),text.constData());QVERIFY2(text.contains("1"),text.constData());exports.clear();
@@ -150,7 +150,7 @@ private slots:
         QVERIFY2(c.images().size() == 1, qPrintable(c.importDetails()));
         QSignalSpy exported(&c, &AppController::exportFinished);
         c.exportCurrent(QUrl::fromLocalFile(dir.path()), "png", 98);
-        QTRY_COMPARE_WITH_TIMEOUT(exported.count(), 1, 30000);
+        QTRY_VERIFY_WITH_TIMEOUT(exported.count()==1||!c.busy(),30000);QCOMPARE(exported.count(),1);
         const QImage output(exported.first()[0].toString());
         QCOMPARE(output.size(), original.size());
     }
@@ -186,7 +186,7 @@ private slots:
         QVERIFY2(c.images().size() == 1, qPrintable(c.importDetails()));
         QSignalSpy exported(&c, &AppController::exportFinished);
         c.exportCurrent(QUrl::fromLocalFile(dir.path()), "png", 98);
-        QTRY_COMPARE_WITH_TIMEOUT(exported.count(), 1, 30000);
+        QTRY_VERIFY_WITH_TIMEOUT(exported.count()==1||!c.busy(),30000);QCOMPARE(exported.count(),1);
         const QImage output(exported.first()[0].toString());
         QVERIFY(!output.isNull());
         QVERIFY(output.width() >= 100);

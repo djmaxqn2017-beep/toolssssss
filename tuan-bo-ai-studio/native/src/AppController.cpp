@@ -10,6 +10,7 @@
 #include <QFileDialog>
 #include <QSaveFile>
 #include <QTemporaryFile>
+#include <QTemporaryDir>
 #include <QJSValue>
 
 #include <QCryptographicHash>
@@ -580,8 +581,12 @@ void AppController::exportEntries(const QList<ImageEntry> &entries, const QUrl &
                         }
                         output=applyAdvancedRecipe(output,entry.settings);
                         if(fmt=="png"||fmt=="tiff")output=output.convertToFormat(QImage::Format_RGBA64);
-                        QTemporaryFile encoded(QDir(folder).filePath(".TBRetoch-XXXXXX."+fmt));
-                        ok=encoded.open();QString temporary=encoded.fileName();encoded.close();
+                        // QTemporaryFile retains its native handle after close().
+                        // A normal file in a private directory can be reopened by
+                        // the metadata helper on Windows before atomic publication.
+                        QTemporaryDir encoded(QDir(folder).filePath("TBRetoch-export-XXXXXX"));
+                        ok=encoded.isValid();QString temporary=encoded.filePath("image."+fmt);
+                        if(!ok)error=encoded.errorString();
                         if(ok){QImageWriter writer(temporary,fmt=="jpg"?QByteArray("jpeg"):fmt.toLatin1());if(fmt=="jpg"||fmt=="webp")writer.setQuality(qBound(0,quality,100));
                             if(fmt=="png")writer.setCompression(70);
                             if(fmt=="tiff")writer.setCompression(1);ok=writer.write(output);if(!ok)error=writer.errorString();}
