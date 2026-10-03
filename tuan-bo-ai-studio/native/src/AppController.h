@@ -14,6 +14,8 @@ class AppController final : public QObject {
     Q_PROPERTY(QVariantMap currentSettings READ currentSettings NOTIFY currentSettingsChanged)
     Q_PROPERTY(bool busy READ busy NOTIFY busyChanged)
     Q_PROPERTY(QString statusText READ statusText NOTIFY statusTextChanged)
+    Q_PROPERTY(bool canUndo READ canUndo NOTIFY historyChanged)
+    Q_PROPERTY(bool canRedo READ canRedo NOTIFY historyChanged)
 
 public:
     explicit AppController(QObject *parent = nullptr);
@@ -25,13 +27,19 @@ public:
     QVariantMap currentSettings() const;
     bool busy() const;
     QString statusText() const;
+    bool canUndo() const;
+    bool canRedo() const;
 
     Q_INVOKABLE void importFiles(const QVariantList &urls);
     Q_INVOKABLE void selectImage(int index);
+    Q_INVOKABLE void beginSettingEdit();
     Q_INVOKABLE void setSetting(const QString &key, double value);
+    Q_INVOKABLE void endSettingEdit();
     Q_INVOKABLE void resetCurrentSettings();
     Q_INVOKABLE void copySettings();
     Q_INVOKABLE void pasteSettings();
+    Q_INVOKABLE void undo();
+    Q_INVOKABLE void redo();
     Q_INVOKABLE void exportCurrent(const QUrl &folderUrl, const QString &format, int quality);
 
 signals:
@@ -41,6 +49,7 @@ signals:
     void currentSettingsChanged();
     void busyChanged();
     void statusTextChanged();
+    void historyChanged();
     void exportFinished(const QString &path, qint64 bytes, int width, int height);
     void errorOccurred(const QString &message);
 
@@ -51,11 +60,15 @@ private:
         QString previewPath;
         QString thumbPath;
         QVariantMap settings;
+        QList<QVariantMap> undoStack;
+        QList<QVariantMap> redoStack;
     };
 
     QList<ImageEntry> m_images;
     int m_currentIndex = -1;
     bool m_busy = false;
+    bool m_editInProgress = false;
+    QVariantMap m_editStartSettings;
     QString m_statusText = QStringLiteral("GPU Preview • CPU Export • Offline");
     QVariantMap m_copiedSettings;
 
@@ -65,4 +78,5 @@ private:
     QVariantMap imageToVariant(const ImageEntry &entry, int index) const;
     void setBusy(bool value);
     void setStatusText(const QString &text);
+    void pushUndoSnapshot(ImageEntry &entry, const QVariantMap &snapshot);
 };
