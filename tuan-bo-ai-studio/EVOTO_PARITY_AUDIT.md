@@ -4,9 +4,26 @@ Audit date: 2026-10-03
 
 ## Scope and evidence rule
 
-This document is the implementation baseline for TBRetoch. It is based on Evoto's public first-party Download page, Release Notes, Features catalog, and Support documentation. It does **not** copy Evoto source code, proprietary model weights, private assets, or internal configuration.
+This document is the implementation baseline for TBRetoch. It is based on Evoto's public first-party Download page, Release Notes, Features catalog, Support documentation, and direct static inspection of the user-provided official Windows bootstrap installer. It does **not** copy Evoto source code, proprietary model weights, private assets, or internal configuration.
 
 A feature is only listed as an Evoto-parity target when it is documented by Evoto publicly. If a behavior is not documented, it is marked as unknown rather than guessed.
+
+## Direct installer audit — user-provided official Windows bootstrapper
+
+File inspected: `EvotoInstaller_Setup_1.0.0-408_stable.exe`
+
+Observed facts from the actual PE executable:
+- Windows x86-64 GUI bootstrap installer.
+- File size: 11,862,016 bytes.
+- SHA-256: `c05f8bf7abd5a6176c6bc889f0eba3e4ae70a1dff376caeef2ea39327e22f951`.
+- The installer is a downloader/bootstrapper rather than the full Evoto application package.
+- Build-path strings identify a downloader project (`PixDownloader`) and download components such as `DownloadThread.cpp`, `Downloader.cpp`, `DownloaderManager.cpp`, `ConfigManager.cpp`, and `InstallManager.cpp`.
+- It requests software/package metadata from Evoto services, including `https://api.evoto.ai/v1/app/get_software?` and country/package configuration endpoints.
+- It contains resume/retry/range-download logic and verifies the downloaded package before launching installation.
+- Process names referenced by the installer include `Evoto.exe`, `Evoto-worker.exe`, and `Evoto-camera-link.exe`.
+- The bootstrapper refuses installation while Evoto processes are running.
+
+Conclusion: the supplied 11.8 MB installer does **not** contain the full desktop application or its complete local model/resources payload. Static inspection is useful for installer architecture, but feature/model parity must be derived from the installed application plus official documentation. TBRetoch will therefore not pretend that this bootstrapper alone reveals Evoto's complete internal model stack.
 
 ## Current official baseline
 
@@ -270,6 +287,8 @@ TBRetoch target controls include the documented face geometry families:
 - Lip makeup amount/saturation/brightness/dimensionality.
 - Makeup presets/components.
 
+Current documented PC makeup breadth includes preset/component families for eyebrow, eyeshadow, eyelashes, eyeliner, contacts, blush, lipstick, contour and face decorations; several controls support linked or independent left/right adjustment.
+
 ## Hair
 - Smooth Hair.
 - Hair Shine.
@@ -310,6 +329,7 @@ Target controls:
 - Unify Lighting.
 - Color Banding Removal.
 - Background Enhancement.
+- Manual tuning brush for including/excluding affected regions.
 
 ## Matte Refinement
 V7.3 adds Black & White Edge Removal to reduce black/white fringes at subject edges.
@@ -322,6 +342,9 @@ V7.3 adds Black & White Edge Removal to reduce black/white fringes at subject ed
 - **Batch AI Set Design** in V7.3.
 - Floor Reflection.
 - Subject placement / scaling / scene blending as required by the replacement workflow.
+- Preserved-area modes documented for subject, subject+related objects, and broader object preservation.
+- Fill-region and fill-mode controls.
+- Edge adjustment, opacity, size, horizontal/vertical positioning.
 
 ## Sky Replacement
 Documented controls:
@@ -339,6 +362,7 @@ Documented controls:
 - Human Color matching.
 - Water Reflection.
 - Water Blur.
+- Smart edge/manual brush refinement.
 
 ## Depth / blur
 - Lens Blur.
@@ -350,12 +374,17 @@ Documented controls:
 
 This must be a first-class module because Evoto exposes it as a first-class edit module.
 
-Documented public feature pages include:
-- Clothing wrinkle removal.
+Documented public features include:
+- De-wrinkle Clothing.
+  - Fine wrinkles.
+  - Coarse wrinkles.
+- De-Blemish Clothing for lint/dust/flakes.
+- Clothing Edge Smoothing.
+- Clothing Edge Refinement/manual tuning.
+- Nearby-object protection.
 - Shoe editing.
 - Clothing extraction.
 - Clothing color change.
-- Lint/pilling removal.
 
 ---
 
@@ -398,6 +427,7 @@ Evoto documents:
 - Lightroom Classic round-trip support and basic color-parameter synchronization.
 - Auto Import & Export / Hot Folder workflows.
 - Integrity wait/check behavior for hot folders.
+- Tethered-shooting workflow, including optional camera auto-connect.
 
 TBRetoch internal target:
 - libraw/rawspeed-class RAW decode path.
@@ -412,6 +442,11 @@ TBRetoch internal target:
 A previous TBRetoch build incorrectly exported the reduced preview canvas. This is prohibited by the V0.5 architecture.
 
 Evoto documents:
+- Quick Export.
+- Custom Export.
+- Export with previous settings.
+- Lightroom Catalog export when the project is a catalog workflow.
+- Multiple export presets can be applied simultaneously, producing multiple outputs per source image.
 - Original-format behavior.
 - JPG 8-bit.
 - TIFF 8-bit / 16-bit.
@@ -424,7 +459,7 @@ Evoto documents:
   - Screen Low / Standard / High
   - Print Low / Standard / High
   - None
-- Watermark controls.
+- Watermark controls including rotation, size, opacity and position.
 - Metadata options.
 - Max simultaneous exports automatically selected by hardware with user adjustment.
 
@@ -521,6 +556,8 @@ Primary Evoto pages used in this audit:
 - Support: Eyes / Makeup / Hair / Teeth.
 - Support: Full Body Reshape.
 - Support: Background Adjustments / Sky Replacement.
-- Support: Auto Import & Export.
+- Support: Clothing & Accessories.
+- Support: Auto Import & Export / tethering.
+- Direct static inspection of the user-provided official Evoto bootstrap installer.
 
 This document supersedes earlier TBRetoch parity notes that incorrectly treated an unverified future version as the current Evoto release.
