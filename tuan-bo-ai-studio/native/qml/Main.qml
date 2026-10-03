@@ -10,7 +10,7 @@ ApplicationWindow {
     minimumWidth: 1180
     minimumHeight: 720
     visible: true
-    title: "TBRetoch"
+    title: "TBRetoch 0.7.0"
     color: "#0d0c10"
     palette.window: "#17151b"
     palette.windowText: "#e9e5ee"

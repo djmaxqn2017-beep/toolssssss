@@ -36,7 +36,7 @@ private slots:
             c.exportCurrent(QUrl::fromLocalFile(dir.path()),format,100);QTRY_COMPARE_WITH_TIMEOUT(exports.count(),1,30000);
             QString path=exports[0][0].toString();QImage result(path);QCOMPARE(result.size(),source.size());QCOMPARE(result.depth(),64);
             auto row=reinterpret_cast<const QRgba64*>(result.constScanLine(20));QVERIFY(row[21].red()!=row[20].red());QCOMPARE(result.colorSpace().iccProfile(),source.colorSpace().iccProfile());
-            metadata.start(helper,{"-Artist","-Copyright","-Orientation#",path});QVERIFY(metadata.waitForFinished(30000));const auto text=metadata.readAllStandardOutput();QVERIFY(text.contains("TB Test"));QVERIFY(text.contains("Original photographer"));QVERIFY(text.contains("1"));exports.clear();
+            metadata.start(helper,{"-Artist","-Copyright","-Orientation#",path});QVERIFY(metadata.waitForFinished(30000));const auto text=metadata.readAllStandardOutput();QVERIFY2(text.contains("TB Test"),text.constData());QVERIFY2(text.contains("Original photographer"),text.constData());QVERIFY2(text.contains("1"),text.constData());exports.clear();
         }
         QCOMPARE(errors.count(),0);
     }

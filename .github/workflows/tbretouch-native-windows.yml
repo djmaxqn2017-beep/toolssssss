@@ -24,6 +24,12 @@ jobs:
           modules: 'qtshadertools qtimageformats'
           cache: true
 
+      - name: Cache native decoder builds
+        uses: actions/cache@v4
+        with:
+          path: ~/AppData/Local/vcpkg/archives
+          key: tbretouch-decoders-windows-2022-v1
+
       - name: Install RAW and HEIC decoders
         shell: pwsh
         run: |

@@ -84,7 +84,8 @@ int main(int argc, char *argv[]) {
                 auto *window=qobject_cast<QQuickWindow*>(engine.rootObjects().value(0));
                 if(!window){app.exit(31);return;}
                 auto wait=[&](const std::function<bool()> &condition,int timeout=45000){QElapsedTimer clock;clock.start();while(!condition()&&clock.elapsed()<timeout)QTest::qWait(25);return condition();};
-                auto click=[&](const QString&name){auto *item=window->findChild<QQuickItem*>(name);if(!item||!item->isVisible())return false;auto pos=item->mapToScene(QPointF(item->width()/2,item->height()/2)).toPoint();qInfo()<<"Click"<<name<<pos;QTest::mouseClick(window,Qt::LeftButton,Qt::NoModifier,pos);QTest::qWait(100);return true;};
+                std::function<QQuickItem*(QQuickItem*,const QString&)> findItem=[&](QQuickItem *root,const QString &name)->QQuickItem*{if(root->objectName()==name&&root->isVisible())return root;for(auto *child:root->childItems())if(auto *found=findItem(child,name))return found;return nullptr;};
+                auto click=[&](const QString&name){auto *item=findItem(window->contentItem(),name);if(!item||!item->isVisible())return false;auto pos=item->mapToScene(QPointF(item->width()/2,item->height()/2)).toPoint();qInfo()<<"Click"<<name<<pos;QTest::mouseClick(window,Qt::LeftButton,Qt::NoModifier,pos);QTest::qWait(100);return true;};
                 auto type=[&](const QString&key,const QString&value){if(!click("value-"+key))return false;QTest::keyClick(window,Qt::Key_A,Qt::ControlModifier);for(QChar c:value)QTest::keyClick(window,c.toLatin1());QTest::keyClick(window,Qt::Key_Return);QTest::qWait(100);qInfo()<<"Typed"<<key<<controller.currentSettings().value(key);return true;};
                 QStringList failures;
                 if(!type("exposure","1")||controller.currentSettings().value("exposure").toDouble()!=1)failures<<"Exposure keyboard input";

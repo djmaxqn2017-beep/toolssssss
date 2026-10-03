@@ -20,7 +20,8 @@ def fetch(item):
  if hashlib.sha256(p.read_bytes()).hexdigest()!=checksum:raise RuntimeError('Checksum mismatch: '+name)
  print('Verified '+name,flush=True)
 with concurrent.futures.ThreadPoolExecutor(4) as pool:list(pool.map(fetch,files.items()))
-subprocess.run(['7z','x','-y',str(root/'opencv.exe'),'-o'+str(root)],check=True,stdout=subprocess.DEVNULL)
+seven=shutil.which('7z') or str(pathlib.Path(os.environ.get('ProgramFiles','C:/Program Files'))/'7-Zip/7z.exe')
+subprocess.run([seven,'x','-y',str(root/'opencv.exe'),'-o'+str(root)],check=True,stdout=subprocess.DEVNULL)
 for name in ['ort','directml','exiftool']:
  with zipfile.ZipFile(root/(name+('.zip' if name=='exiftool' else '.nupkg'))) as z:z.extractall(root/name)
 env=dict(os.environ,OMP_NUM_THREADS='2',TF_NUM_INTRAOP_THREADS='2',TF_NUM_INTEROP_THREADS='2')
