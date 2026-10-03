@@ -22,6 +22,7 @@ class ControllerTests : public QObject {
     Q_OBJECT
 private slots:
     void masterExportAndSixteenBitMetadata() {
+        std::fprintf(stderr,"TEST masterExportAndSixteenBitMetadata: enter\n");
         QTemporaryDir dir;
         QImage source(256,128,QImage::Format_RGBA64);
         source.setColorSpace(QColorSpace(QColorSpace::AdobeRgb));
@@ -43,6 +44,7 @@ private slots:
         QCOMPARE(errors.count(),0);
     }
     void semanticPortraitAndTargetedTools() {
+        std::fprintf(stderr,"TEST semanticPortraitAndTargetedTools: enter\n");
         const QString fixture=qEnvironmentVariable("TBRETOCH_PORTRAIT_FIXTURE");if(fixture.isEmpty())QSKIP("Real portrait fixture not configured");
         QTemporaryDir dir;QImage source(fixture);QVERIFY(!source.isNull());source=source.scaled(640,640,Qt::KeepAspectRatio,Qt::SmoothTransformation);
         auto analysis=analysePortrait(source,dir.filePath("analysis"),true,true);QVERIFY(analysis);QVERIFY(analysis->faces.size()>0);QCOMPARE(analysis->faces[0].landmarks.size(),478);
@@ -74,6 +76,7 @@ private slots:
         QImage blank(256,256,QImage::Format_RGB32);blank.fill(QColor(90,100,110));auto empty=analysePortrait(blank,dir.filePath("blank"));QCOMPARE(empty->faces.size(),0);
     }
     void codecAndUnicodeImport() {
+        std::fprintf(stderr,"TEST codecAndUnicodeImport: enter\n");
         QTemporaryDir dir;
         QVERIFY(dir.isValid());
         const QString folder = dir.filePath(QString::fromUtf8("Ảnh cưới # 100%"));
@@ -107,6 +110,7 @@ private slots:
     }
 
     void invalidAndMixedSelection() {
+        std::fprintf(stderr,"TEST invalidAndMixedSelection: enter\n");
         QTemporaryDir dir;
         const QString valid = dir.filePath("valid.png");
         const QString invalid = dir.filePath("broken.jpg");
@@ -130,6 +134,7 @@ private slots:
     }
 
     void heicDecodeAndExport() {
+        std::fprintf(stderr,"TEST heicDecodeAndExport: enter\n");
         const QString fixture = qEnvironmentVariable("TBRETOCH_HEIC_FIXTURE");
         if (fixture.isEmpty()) QSKIP("Set TBRETOCH_HEIC_FIXTURE to the upstream HEIC fixture");
         QTemporaryDir dir;
@@ -150,6 +155,7 @@ private slots:
     }
 
     void blockedCacheFallsBack() {
+        std::fprintf(stderr,"TEST blockedCacheFallsBack: enter\n");
         QTemporaryDir dir;
         const QString path = dir.filePath("source.png");
         QImage image(32, 32, QImage::Format_RGB32);
@@ -169,6 +175,7 @@ private slots:
     }
 
     void rawDecodeAndExport() {
+        std::fprintf(stderr,"TEST rawDecodeAndExport: enter\n");
         QTemporaryDir dir;
         const QString path = dir.filePath(QString::fromUtf8("Ảnh gốc.dng"));
         QVERIFY(QFile::copy(QStringLiteral(":/fixtures/sample.dng"), path));
@@ -186,6 +193,7 @@ private slots:
     }
 
     void geometryAndColorEffects() {
+        std::fprintf(stderr,"TEST geometryAndColorEffects: enter\n");
         QImage source(100,80,QImage::Format_ARGB32);
         source.fill(qRgba(255,0,0,128));
         source.setPixelColor(90,70,QColor(0,0,255,128));
@@ -214,6 +222,7 @@ private slots:
     }
 
     void presetSyncPreviewAndBatchExport() {
+        std::fprintf(stderr,"TEST presetSyncPreviewAndBatchExport: enter\n");
         QTemporaryDir dir;
         QImage source(100,80,QImage::Format_ARGB32);
         source.fill(qRgba(255,0,0,128));
@@ -267,6 +276,7 @@ private slots:
     }
 
     void invalidPresetDoesNotChangeImageAndQueueCancels() {
+        std::fprintf(stderr,"TEST invalidPresetDoesNotChangeImageAndQueueCancels: enter\n");
         QTemporaryDir dir;
         QImage source(32,32,QImage::Format_RGB32); source.fill(Qt::gray);
         const QString path = dir.filePath("source.png"); QVERIFY(source.save(path));
@@ -288,6 +298,7 @@ private slots:
     }
 
     void imageWorkflow() {
+        std::fprintf(stderr,"TEST imageWorkflow: enter\n");
         QTemporaryDir dir;
         QVERIFY(dir.isValid());
         QImage source(6000, 4000, QImage::Format_RGB32);
@@ -346,6 +357,7 @@ private slots:
     }
 
     void selectionCommitsPendingEdit() {
+        std::fprintf(stderr,"TEST selectionCommitsPendingEdit: enter\n");
         QTemporaryDir dir;
         QImage img(80, 60, QImage::Format_RGB32);
         img.fill(Qt::gray);
@@ -371,6 +383,12 @@ int main(int argc,char **argv) {
     std::setvbuf(stdout,nullptr,_IONBF,0);std::setvbuf(stderr,nullptr,_IONBF,0);
     std::fprintf(stderr,"Native tests: entering QApplication\n");
     QApplication app(argc,argv);std::fprintf(stderr,"Native tests: QApplication ready\n");
-    ControllerTests tests;return QTest::qExec(&tests,argc,argv);
+    ControllerTests tests;
+    std::fprintf(stderr,"Native tests: constructing logger\n");
+    QTest::qInit(&tests,argc,argv);
+    std::fprintf(stderr,"Native tests: logger ready, running cases\n");
+    int result=QTest::qRun();
+    std::fprintf(stderr,"Native tests: cases complete\n");
+    QTest::qCleanup();return result;
 }
 #include "ControllerTests.moc"
