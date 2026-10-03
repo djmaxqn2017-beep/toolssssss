@@ -127,7 +127,7 @@ ApplicationWindow {
             toastTimer.restart()
         }
         function onErrorOccurred(message) {
-            if (appController.importDetails.length > 0) importErrorDialog.open()
+            if ((message === "error.noReadableImages" || message === "error.partialImport") && appController.importDetails.length > 0) importErrorDialog.open()
             toastText = trKey(message)
             toastTimer.restart()
         }
