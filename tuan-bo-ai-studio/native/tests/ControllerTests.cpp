@@ -16,6 +16,7 @@
 #include "SemanticEngine.h"
 #include "ImageDecoder.h"
 #include "AdvancedRecipe.h"
+#include "ExportMetadata.h"
 #include "AppController.h"
 
 class ControllerTests : public QObject {
@@ -28,10 +29,10 @@ private slots:
         source.setColorSpace(QColorSpace(QColorSpace::AdobeRgb));
         for(int y=0;y<source.height();++y){auto row=reinterpret_cast<QRgba64*>(source.scanLine(y));for(int x=0;x<source.width();++x)row[x]=QRgba64::fromRgba64(12000+x,22000+x*2,32000+y,65535);}
         const QString input=dir.filePath(QString::fromUtf8("Ảnh gốc.png"));QVERIFY(source.save(input));
-        QProcess metadata;QString helper=qEnvironmentVariable("TBRETOCH_EXIFTOOL_PATH");
+        QString metadataError;QByteArray metadataOutput;QString helper=qEnvironmentVariable("TBRETOCH_EXIFTOOL_PATH");
         QVERIFY2(!helper.isEmpty(),"Metadata runtime must be configured in CI");
-        metadata.start(helper,{"-Artist=TB Test","-Copyright=Original photographer","-overwrite_original",input});QVERIFY(metadata.waitForFinished(30000));QCOMPARE(metadata.exitCode(),0);
-        AppController c;QSignalSpy errors(&c,&AppController::errorOccurred);QSignalSpy exports(&c,&AppController::exportFinished);
+        QVERIFY2(runMetadataTool(helper,{"-Artist=TB Test","-Copyright=Original photographer","-overwrite_original",input},&metadataOutput,&metadataError),qPrintable(metadataError));
+        AppController c;QObject::connect(&c,&AppController::errorOccurred,&c,[](const QString &error){std::fprintf(stderr,"Controller error: %s\n",qPrintable(error));});QSignalSpy errors(&c,&AppController::errorOccurred);QSignalSpy exports(&c,&AppController::exportFinished);
         c.importFiles({input});QTRY_VERIFY(!c.busy());c.exportCurrent(QUrl::fromLocalFile(dir.path()),"master",100);QTRY_COMPARE_WITH_TIMEOUT(exports.count(),1,30000);
         QFile original(input),exact(exports[0][0].toString());QVERIFY(original.open(QIODevice::ReadOnly));QVERIFY(exact.open(QIODevice::ReadOnly));QCOMPARE(exact.readAll(),original.readAll());
         exports.clear();c.setSetting("exposure",.1);c.endSettingEdit();
@@ -39,7 +40,7 @@ private slots:
             c.exportCurrent(QUrl::fromLocalFile(dir.path()),format,100);QTRY_COMPARE_WITH_TIMEOUT(exports.count(),1,30000);
             QString path=exports[0][0].toString();if(format=="png")QVERIFY(QFileInfo(path).size()<source.sizeInBytes()/2);QImage result(path);QCOMPARE(result.size(),source.size());QCOMPARE(result.depth(),64);
             auto row=reinterpret_cast<const QRgba64*>(result.constScanLine(20));QVERIFY(row[21].red()!=row[20].red());QCOMPARE(result.colorSpace().iccProfile(),source.colorSpace().iccProfile());
-            metadata.start(helper,{"-Artist","-Copyright","-Orientation#",path});QVERIFY(metadata.waitForFinished(30000));const auto text=metadata.readAllStandardOutput();QVERIFY2(text.contains("TB Test"),text.constData());QVERIFY2(text.contains("Original photographer"),text.constData());QVERIFY2(text.contains("1"),text.constData());exports.clear();
+            QVERIFY2(runMetadataTool(helper,{"-Artist","-Copyright","-Orientation#",path},&metadataOutput,&metadataError),qPrintable(metadataError));const auto text=metadataOutput;QVERIFY2(text.contains("TB Test"),text.constData());QVERIFY2(text.contains("Original photographer"),text.constData());QVERIFY2(text.contains("1"),text.constData());exports.clear();
         }
         QCOMPARE(errors.count(),0);
     }
@@ -89,7 +90,7 @@ private slots:
             QVERIFY2(image.save(path, format.constData()), format.constData());
             urls.push_back(QUrl::fromLocalFile(path).toString(QUrl::FullyEncoded));
         }
-        AppController c;
+        AppController c;QObject::connect(&c,&AppController::errorOccurred,&c,[](const QString &error){std::fprintf(stderr,"Controller error: %s\n",qPrintable(error));});
         QSignalSpy errors(&c, &AppController::errorOccurred);
         // Exercise the same JavaScript-array -> invokable boundary as QML.
         QJSEngine engine;
@@ -121,7 +122,7 @@ private slots:
         QVERIFY(broken.open(QIODevice::WriteOnly));
         broken.write("not an image");
         broken.close();
-        AppController c;
+        AppController c;QObject::connect(&c,&AppController::errorOccurred,&c,[](const QString &error){std::fprintf(stderr,"Controller error: %s\n",qPrintable(error));});
         QSignalSpy errors(&c, &AppController::errorOccurred);
         c.importFiles({QUrl::fromLocalFile(invalid), QUrl::fromLocalFile(valid), dir.filePath("missing.png")});
         QTRY_VERIFY_WITH_TIMEOUT(!c.busy(), 30000);
@@ -143,7 +144,7 @@ private slots:
         QString error;
         const QImage original = decodeImage(path, 0, &error);
         QVERIFY2(!original.isNull(), qPrintable(error));
-        AppController c;
+        AppController c;QObject::connect(&c,&AppController::errorOccurred,&c,[](const QString &error){std::fprintf(stderr,"Controller error: %s\n",qPrintable(error));});
         c.importFiles({QUrl::fromLocalFile(path)});
         QTRY_VERIFY_WITH_TIMEOUT(!c.busy(), 30000);
         QVERIFY2(c.images().size() == 1, qPrintable(c.importDetails()));
@@ -166,7 +167,7 @@ private slots:
         blocker.close();
         const QByteArray previous = qgetenv("TBRETOCH_CACHE_ROOT");
         qputenv("TBRETOCH_CACHE_ROOT", blocker.fileName().toUtf8());
-        AppController c;
+        AppController c;QObject::connect(&c,&AppController::errorOccurred,&c,[](const QString &error){std::fprintf(stderr,"Controller error: %s\n",qPrintable(error));});
         c.importFiles({QUrl::fromLocalFile(path)});
         QTRY_VERIFY_WITH_TIMEOUT(!c.busy(), 30000);
         qputenv("TBRETOCH_CACHE_ROOT", previous);
@@ -179,7 +180,7 @@ private slots:
         QTemporaryDir dir;
         const QString path = dir.filePath(QString::fromUtf8("Ảnh gốc.dng"));
         QVERIFY(QFile::copy(QStringLiteral(":/fixtures/sample.dng"), path));
-        AppController c;
+        AppController c;QObject::connect(&c,&AppController::errorOccurred,&c,[](const QString &error){std::fprintf(stderr,"Controller error: %s\n",qPrintable(error));});
         c.importFiles({path});
         QTRY_VERIFY_WITH_TIMEOUT(!c.busy(), 30000);
         QVERIFY2(c.images().size() == 1, qPrintable(c.importDetails()));
@@ -228,7 +229,7 @@ private slots:
         source.fill(qRgba(255,0,0,128));
         const QString path = dir.filePath("source.png");
         QVERIFY(source.save(path));
-        AppController c;
+        AppController c;QObject::connect(&c,&AppController::errorOccurred,&c,[](const QString &error){std::fprintf(stderr,"Controller error: %s\n",qPrintable(error));});
         c.importFiles({QUrl::fromLocalFile(path),QUrl::fromLocalFile(path)});
         QTRY_VERIFY(!c.busy());
         c.setSetting("hsl_redHue",100);
@@ -280,7 +281,7 @@ private slots:
         QTemporaryDir dir;
         QImage source(32,32,QImage::Format_RGB32); source.fill(Qt::gray);
         const QString path = dir.filePath("source.png"); QVERIFY(source.save(path));
-        AppController c;
+        AppController c;QObject::connect(&c,&AppController::errorOccurred,&c,[](const QString &error){std::fprintf(stderr,"Controller error: %s\n",qPrintable(error));});
         c.importFiles({path,path,path}); QTRY_VERIFY(!c.busy());
         const QVariantMap before = c.currentSettings();
         const QString preset = dir.filePath("invalid.json");
@@ -305,7 +306,7 @@ private slots:
         source.fill(QColor(60, 80, 100));
         const QString path = dir.filePath("source.png");
         QVERIFY(source.save(path));
-        AppController c;
+        AppController c;QObject::connect(&c,&AppController::errorOccurred,&c,[](const QString &error){std::fprintf(stderr,"Controller error: %s\n",qPrintable(error));});
         QSignalSpy errors(&c, &AppController::errorOccurred);
         c.importFiles({QUrl::fromLocalFile(path), QUrl::fromLocalFile(path)});
         QVERIFY(c.busy());
@@ -362,7 +363,7 @@ private slots:
         QImage img(80, 60, QImage::Format_RGB32);
         img.fill(Qt::gray);
         QVERIFY(img.save(dir.filePath("test.png")));
-        AppController c;
+        AppController c;QObject::connect(&c,&AppController::errorOccurred,&c,[](const QString &error){std::fprintf(stderr,"Controller error: %s\n",qPrintable(error));});
         c.importFiles({QUrl::fromLocalFile(dir.filePath("test.png")), QUrl::fromLocalFile(dir.filePath("test.png"))});
         QTRY_VERIFY(!c.busy());
         c.setSetting("contrast", 23);

@@ -108,7 +108,9 @@ jobs:
           '@
           [NativeErrorMode]::SetErrorMode(0x8003) | Out-Null
           ctest --test-dir tuan-bo-ai-studio/native/build -C Release -V --output-on-failure
-          if ($LASTEXITCODE -ne 0) { throw "Native controller tests failed" }
+          $testExit = $LASTEXITCODE
+          Get-Content tuan-bo-ai-studio/native/build/native-controller.log -ErrorAction SilentlyContinue
+          if ($testExit -ne 0) { throw "Native controller tests failed" }
 
       - name: Deploy Qt runtime
         shell: pwsh
@@ -226,3 +228,4 @@ jobs:
             native-advanced.log
             ai-preview.png
             native-ai.log
+            tuan-bo-ai-studio/native/build/native-controller.log
