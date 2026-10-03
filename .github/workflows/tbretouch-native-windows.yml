@@ -89,14 +89,27 @@ jobs:
           Get-Content 'native-render.log'
           if ($proc.ExitCode -ne 0) { throw "Installed render test failed: $($proc.ExitCode)" }
 
-      - name: Upload artifact
+      - name: Upload installer
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TBRetoch-Native-Core-Installer-Windows
+          if-no-files-found: error
+          path: tuan-bo-ai-studio/native/dist/TBRetoch-Native-Core-Setup.exe
+
+      - name: Upload portable build
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TBRetoch-Native-Core-Portable-Windows
+          if-no-files-found: error
+          path: TBRetoch-V0.5-Native-Core-Windows.zip
+
+      - name: Upload preview diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: TBRetoch-V0.5-Native-Core-Windows
-          if-no-files-found: error
+          name: TBRetoch-Native-Core-Validation
           path: |
-            TBRetoch-V0.5-Native-Core-Windows.zip
-            tuan-bo-ai-studio/native/dist/TBRetoch-Native-Core-Setup.exe
             native-preview.png
             native-render.log
