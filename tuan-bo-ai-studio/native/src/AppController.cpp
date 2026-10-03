@@ -1,4 +1,8 @@
 #include "AppController.h"
+#include "ImageDecoder.h"
+#include <QFileDialog>
+#include <QSaveFile>
+#include <QJSValue>
 
 #include <QCryptographicHash>
 #include <QDir>
@@ -101,7 +105,7 @@ static QImage applyColorRecipe(QImage img, const QVariantMap &s) {
 }
 }
 
-AppController::AppController(QObject *parent) : QObject(parent) {}
+AppController::AppController(QObject *parent) : QObject(parent) { QImageReader::setAllocationLimit(512); }
 AppController::~AppController() { m_workers.waitForDone(); }
 
 QVariantMap AppController::defaultSettings() {
@@ -149,27 +153,23 @@ QString AppController::cacheRoot() const {
     return root;
 }
 
-QString AppController::makePreview(const QString &path, int maxSide, const QString &suffix) const {
+QString AppController::makePreview(const QString &path, const QImage &image, int maxSide, const QString &suffix, QString *error) const {
     const QFileInfo fi(path);
     const QByteArray keyBytes = (fi.absoluteFilePath() + QString::number(fi.lastModified().toMSecsSinceEpoch())
-                                 + QString::number(maxSide)).toUtf8();
+                                 + QString::number(fi.size()) + QString::number(maxSide) + "v2").toUtf8();
     const QString key = QString::fromLatin1(QCryptographicHash::hash(keyBytes, QCryptographicHash::Sha1).toHex());
-    const QString outPath = QDir(cacheRoot()).filePath(key + suffix + ".jpg");
-    if (QFileInfo::exists(outPath)) return outPath;
-
-    QImageReader reader(path);
-    reader.setAutoTransform(true);
-    const QSize src = reader.size();
-    if (src.isValid() && qMax(src.width(), src.height()) > maxSide) {
-        QSize scaled = src;
-        scaled.scale(maxSide, maxSide, Qt::KeepAspectRatio);
-        reader.setScaledSize(scaled);
-    }
-    const QImage image = reader.read();
-    if (image.isNull()) return {};
-    QImageWriter writer(outPath, "jpg");
-    writer.setQuality(suffix == "_thumb" ? 86 : 92);
-    if (!writer.write(image)) return {};
+    const QString outPath = QDir(cacheRoot()).filePath(key + suffix + ".png");
+    if (QFileInfo::exists(outPath) && QImageReader(outPath).canRead()) return outPath;
+    QImage preview = image;
+    if (qMax(image.width(), image.height()) > maxSide)
+        preview = image.scaled(maxSide, maxSide, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    QSaveFile file(outPath);
+    if (!file.open(QIODevice::WriteOnly)) { *error = file.errorString(); return {}; }
+    // PNG is built into Qt and preserves transparency; preview creation must not
+    // depend on an optional JPEG writer plugin.
+    QImageWriter writer(&file, "png");
+    if (!writer.write(preview)) { *error = writer.errorString(); return {}; }
+    if (!file.commit()) { *error = file.errorString(); return {}; }
     return outPath;
 }
 
@@ -201,36 +201,67 @@ void AppController::pushUndoSnapshot(ImageEntry &entry, const QVariantMap &snaps
     entry.redoStack.clear();
 }
 
+void AppController::chooseImages(const QString &title, const QString &filter) {
+    if (m_busy) return;
+    // Pass QString paths directly, avoiding native QML URL-list conversions.
+    const QStringList paths = QFileDialog::getOpenFileNames(nullptr, title, {}, filter);
+    QVariantList values;
+    for (const QString &path : paths) values.push_back(QUrl::fromLocalFile(path));
+    importFiles(values);
+}
+
 void AppController::importFiles(const QVariantList &urls) {
     if (urls.isEmpty() || m_busy) return;
+    m_importDetails.clear();
+    emit importDetailsChanged();
     QStringList paths;
-    for (const QVariant &v : urls) {
-        const QUrl url = v.canConvert<QUrl>() ? v.toUrl() : QUrl(v.toString());
-        const QString path = url.isLocalFile() ? url.toLocalFile() : v.toString();
-        if (!path.isEmpty() && QFileInfo::exists(path)) paths.push_back(QFileInfo(path).absoluteFilePath());
+    QStringList failures;
+    for (const QVariant &value : urls) {
+        const QVariant v = value.metaType() == QMetaType::fromType<QJSValue>() ? value.value<QJSValue>().toVariant() : value;
+        const QString text = v.toString();
+        const QUrl url(text);
+        // Test real paths first: a Windows drive letter must not be treated as a URL scheme.
+        const QString path = QFileInfo(text).isFile() ? text : (url.isLocalFile() ? url.toLocalFile() : text);
+        if (QFileInfo(path).isFile()) paths.push_back(QFileInfo(path).absoluteFilePath());
+        else failures.push_back(text + "\n[path] File does not exist or is not a regular file");
     }
-    if (paths.isEmpty()) { emit errorOccurred(QStringLiteral("error.noReadableImages")); return; }
+    if (paths.isEmpty()) {
+        m_importDetails = failures.join("\n\n");
+        emit importDetailsChanged();
+        emit errorOccurred(QStringLiteral("error.noReadableImages"));
+        return;
+    }
     setBusy(true);
     setStatusText(QStringLiteral("status.preview"));
-    m_workers.start([this, paths]() {
+    m_workers.start([this, paths, failures]() mutable {
         QList<ImageEntry> decoded;
         for (const QString &path : paths) {
+            QString reason;
+            const QImage image = decodeImage(path, 2200, &reason);
+            if (image.isNull()) { failures.push_back(path + "\n[decode] " + reason); continue; }
             ImageEntry e;
             e.originalPath = path;
             e.name = QFileInfo(path).fileName();
-            e.previewPath = makePreview(path, 2200, "_preview");
-            e.thumbPath = makePreview(path, 260, "_thumb");
+            e.previewPath = makePreview(path, image, 2200, "_preview", &reason);
+            e.thumbPath = makePreview(path, image, 260, "_thumb", &reason);
             e.settings = defaultSettings();
-            if (!e.previewPath.isEmpty()) decoded.push_back(e);
+            if (e.previewPath.isEmpty() || e.thumbPath.isEmpty()) {
+                failures.push_back(path + "\n[cache] " + reason);
+                continue;
+            }
+            decoded.push_back(e);
         }
-        QMetaObject::invokeMethod(this, [this, decoded]() {
+        QMetaObject::invokeMethod(this, [this, decoded, failures]() {
             const int firstNew = m_images.size();
             m_images.append(decoded);
             emit imagesChanged();
             if (m_currentIndex < 0 && !decoded.isEmpty()) selectImage(firstNew);
+            m_importDetails = failures.join("\n\n");
+            emit importDetailsChanged();
             setStatusText(QStringLiteral("status.ready"));
             setBusy(false);
             if (decoded.isEmpty()) emit errorOccurred(QStringLiteral("error.noReadableImages"));
+            else if (!failures.isEmpty()) emit errorOccurred(QStringLiteral("error.partialImport"));
         }, Qt::QueuedConnection);
     });
 }
@@ -333,9 +364,8 @@ void AppController::exportCurrent(const QUrl &folderUrl, const QString &format, 
     setStatusText(QStringLiteral("status.export"));
 
     m_workers.start([this, entry, settings, folder, format, quality]() {
-        QImageReader reader(entry.originalPath);
-        reader.setAutoTransform(true);
-        QImage original = reader.read();
+        QString decodeError;
+        QImage original = decodeImage(entry.originalPath, 0, &decodeError);
         if (original.isNull()) {
             QMetaObject::invokeMethod(this, [this]() {
                 setBusy(false); setStatusText(QStringLiteral("status.ready"));

@@ -1,13 +1,109 @@
 #include <QtTest>
 #include <QTemporaryDir>
+#include <QDir>
 #include <QImage>
 #include <QImageReader>
 #include <QSignalSpy>
+#include <QFile>
+#include <QJSEngine>
+#include "ImageDecoder.h"
 #include "AppController.h"
 
 class ControllerTests : public QObject {
     Q_OBJECT
 private slots:
+    void codecAndUnicodeImport() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString folder = dir.filePath(QString::fromUtf8("Ảnh cưới # 100%"));
+        QVERIFY(QDir().mkpath(folder));
+        QImage image(120, 80, QImage::Format_ARGB32);
+        image.fill(qRgba(60, 80, 100, 128));
+        QVariantList urls;
+        for (const QByteArray &format : {QByteArray("jpg"), QByteArray("png"), QByteArray("webp"), QByteArray("tiff")}) {
+            const QString path = QDir(folder).filePath(QString::fromUtf8("Cô dâu 01.") + QString::fromLatin1(format));
+            QVERIFY2(image.save(path, format.constData()), format.constData());
+            urls.push_back(QUrl::fromLocalFile(path).toString(QUrl::FullyEncoded));
+        }
+        AppController c;
+        QSignalSpy errors(&c, &AppController::errorOccurred);
+        // Exercise the same JavaScript-array -> invokable boundary as QML.
+        QJSEngine engine;
+        engine.globalObject().setProperty("controller", engine.newQObject(&c));
+        QJSValue selection = engine.newArray(urls.size());
+        for (int i = 0; i < urls.size(); ++i) selection.setProperty(i, urls[i].toString());
+        engine.globalObject().setProperty("selection", selection);
+        const QJSValue result = engine.evaluate("controller.importFiles(selection)");
+        QVERIFY2(!result.isError(), qPrintable(result.toString()));
+        QTRY_VERIFY_WITH_TIMEOUT(!c.busy(), 30000);
+        QVERIFY2(c.images().size() == 4, qPrintable(c.importDetails()));
+        QCOMPARE(errors.count(), 0);
+        QVERIFY(c.importDetails().isEmpty());
+        c.selectImage(1);
+        const QImage preview(QUrl(c.currentPreviewUrl()).toLocalFile());
+        QCOMPARE(preview.pixelColor(10, 10).alpha(), 128);
+    }
+
+    void invalidAndMixedSelection() {
+        QTemporaryDir dir;
+        const QString valid = dir.filePath("valid.png");
+        const QString invalid = dir.filePath("broken.jpg");
+        QImage image(32, 32, QImage::Format_RGB32);
+        image.fill(Qt::gray);
+        QVERIFY(image.save(valid));
+        QFile broken(invalid);
+        QVERIFY(broken.open(QIODevice::WriteOnly));
+        broken.write("not an image");
+        broken.close();
+        AppController c;
+        QSignalSpy errors(&c, &AppController::errorOccurred);
+        c.importFiles({QUrl::fromLocalFile(invalid), QUrl::fromLocalFile(valid), dir.filePath("missing.png")});
+        QTRY_VERIFY_WITH_TIMEOUT(!c.busy(), 30000);
+        QCOMPARE(c.images().size(), 1);
+        QCOMPARE(c.currentIndex(), 0);
+        QCOMPARE(errors.count(), 1);
+        QCOMPARE(errors.first().first().toString(), QString("error.partialImport"));
+        QVERIFY(c.importDetails().contains("[decode]"));
+        QVERIFY(c.importDetails().contains("[path]"));
+    }
+
+    void heicDecodeAndExport() {
+        const QString fixture = qEnvironmentVariable("TBRETOCH_HEIC_FIXTURE");
+        if (fixture.isEmpty()) QSKIP("Set TBRETOCH_HEIC_FIXTURE to the upstream HEIC fixture");
+        QTemporaryDir dir;
+        const QString path = dir.filePath(QString::fromUtf8("Cô dâu.heic"));
+        QVERIFY(QFile::copy(fixture, path));
+        QString error;
+        const QImage original = decodeImage(path, 0, &error);
+        QVERIFY2(!original.isNull(), qPrintable(error));
+        AppController c;
+        c.importFiles({QUrl::fromLocalFile(path)});
+        QTRY_VERIFY_WITH_TIMEOUT(!c.busy(), 30000);
+        QVERIFY2(c.images().size() == 1, qPrintable(c.importDetails()));
+        QSignalSpy exported(&c, &AppController::exportFinished);
+        c.exportCurrent(QUrl::fromLocalFile(dir.path()), "png", 98);
+        QTRY_COMPARE_WITH_TIMEOUT(exported.count(), 1, 30000);
+        const QImage output(exported.first()[0].toString());
+        QCOMPARE(output.size(), original.size());
+    }
+
+    void rawDecodeAndExport() {
+        QTemporaryDir dir;
+        const QString path = dir.filePath(QString::fromUtf8("Ảnh gốc.dng"));
+        QVERIFY(QFile::copy(QStringLiteral(":/fixtures/sample.dng"), path));
+        AppController c;
+        c.importFiles({path});
+        QTRY_VERIFY_WITH_TIMEOUT(!c.busy(), 30000);
+        QVERIFY2(c.images().size() == 1, qPrintable(c.importDetails()));
+        QSignalSpy exported(&c, &AppController::exportFinished);
+        c.exportCurrent(QUrl::fromLocalFile(dir.path()), "png", 98);
+        QTRY_COMPARE_WITH_TIMEOUT(exported.count(), 1, 30000);
+        const QImage output(exported.first()[0].toString());
+        QVERIFY(!output.isNull());
+        QVERIFY(output.width() >= 100);
+        QVERIFY(output.height() >= 80);
+    }
+
     void imageWorkflow() {
         QTemporaryDir dir;
         QVERIFY(dir.isValid());

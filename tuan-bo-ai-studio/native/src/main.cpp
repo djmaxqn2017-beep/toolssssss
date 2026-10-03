@@ -1,4 +1,5 @@
-#include <QGuiApplication>
+#include <QApplication>
+#include <QDir>
 #include <QTimer>
 #include <QFile>
 #include <QDebug>
@@ -22,7 +23,7 @@ int main(int argc, char *argv[]) {
     QQuickWindow::setGraphicsApi(QSGRendererInterface::Direct3D11);
 #endif
     QQuickStyle::setStyle(QStringLiteral("Fusion"));
-    QGuiApplication app(argc, argv);
+    QApplication app(argc, argv);
     QCoreApplication::setOrganizationName(QStringLiteral("TB"));
     QCoreApplication::setOrganizationDomain(QStringLiteral("tbretouch.local"));
     QCoreApplication::setApplicationName(QStringLiteral("TBRetoch"));
@@ -41,6 +42,37 @@ int main(int argc, char *argv[]) {
 
     engine.loadFromModule("TBRetoch", "Main");
     std::unique_ptr<QTemporaryDir> renderFixture;
+    if (app.arguments().contains(QStringLiteral("--import-smoke-test"))) {
+        renderFixture = std::make_unique<QTemporaryDir>();
+        const QString folder = renderFixture->filePath(QString::fromUtf8("Ảnh cưới # 100%"));
+        if (!QDir().mkpath(folder)) return 10;
+        QImage image(400, 300, QImage::Format_ARGB32);
+        image.fill(qRgba(60, 80, 100, 128));
+        QVariantList urls;
+        for (const QByteArray &format : {QByteArray("jpg"), QByteArray("png"), QByteArray("webp"), QByteArray("tiff")}) {
+            const QString path = QDir(folder).filePath(QString::fromUtf8("Cô dâu.") + QString::fromLatin1(format));
+            if (!image.save(path, format.constData())) return 11;
+            urls.push_back(QUrl::fromLocalFile(path).toString(QUrl::FullyEncoded));
+        }
+        const QString rawPath = QDir(folder).filePath(QString::fromUtf8("Ảnh gốc.dng"));
+        if (!QFile::copy(QStringLiteral(":/fixtures/sample.dng"), rawPath)) return 12;
+        urls.push_back(QUrl::fromLocalFile(rawPath).toString(QUrl::FullyEncoded));
+        const QString heicPath = QDir(folder).filePath(QString::fromUtf8("Cô dâu.heic"));
+        if (!QFile::copy(qEnvironmentVariable("TBRETOCH_HEIC_FIXTURE"), heicPath)) return 13;
+        urls.push_back(QUrl::fromLocalFile(heicPath).toString(QUrl::FullyEncoded));
+        QObject::connect(&controller, &AppController::busyChanged, &app, [&]() {
+            if (controller.busy()) return;
+            const bool ok = controller.images().size() == 6 && controller.importDetails().isEmpty();
+            qInfo() << "Installed QML import: JPG/PNG/WebP/TIFF/DNG/HEIC, Unicode paths:" << ok;
+            if (!ok) qCritical() << controller.importDetails();
+            app.exit(ok ? 0 : 14);
+        });
+        QTimer::singleShot(0, &app, [&engine, urls, &app]() {
+            const bool invoked = QMetaObject::invokeMethod(engine.rootObjects().value(0), "importSelection", Q_ARG(QVariant, QVariant(urls)));
+            if (!invoked) app.exit(15);
+        });
+        QTimer::singleShot(60000, &app, [&app]() { app.exit(16); });
+    }
     if (app.arguments().contains(QStringLiteral("--render-smoke-test"))) {
         if (!QImageWriter::supportedImageFormats().contains("webp")
             || !QImageReader::supportedImageFormats().contains("tiff")) {

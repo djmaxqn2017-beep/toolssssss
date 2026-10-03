@@ -5,6 +5,7 @@
 #include <QVariantMap>
 #include <QUrl>
 #include <QThreadPool>
+#include <QImage>
 
 class AppController final : public QObject {
     Q_OBJECT
@@ -13,6 +14,7 @@ class AppController final : public QObject {
     Q_PROPERTY(QString currentPreviewUrl READ currentPreviewUrl NOTIFY currentImageChanged)
     Q_PROPERTY(QString currentName READ currentName NOTIFY currentImageChanged)
     Q_PROPERTY(QVariantMap currentSettings READ currentSettings NOTIFY currentSettingsChanged)
+    Q_PROPERTY(QString importDetails READ importDetails NOTIFY importDetailsChanged)
     Q_PROPERTY(bool busy READ busy NOTIFY busyChanged)
     Q_PROPERTY(QString statusText READ statusText NOTIFY statusTextChanged)
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY historyChanged)
@@ -32,6 +34,8 @@ public:
     bool canUndo() const;
     bool canRedo() const;
 
+    QString importDetails() const { return m_importDetails; }
+    Q_INVOKABLE void chooseImages(const QString &title, const QString &filter);
     Q_INVOKABLE void importFiles(const QVariantList &urls);
     Q_INVOKABLE void selectImage(int index);
     Q_INVOKABLE void beginSettingEdit();
@@ -46,6 +50,7 @@ public:
 
 signals:
     void imagesChanged();
+    void importDetailsChanged();
     void currentIndexChanged();
     void currentImageChanged();
     void currentSettingsChanged();
@@ -72,12 +77,13 @@ private:
     bool m_busy = false;
     bool m_editInProgress = false;
     QVariantMap m_editStartSettings;
+    QString m_importDetails;
     QString m_statusText = QStringLiteral("status.ready");
     QVariantMap m_copiedSettings;
 
     static QVariantMap defaultSettings();
     QString cacheRoot() const;
-    QString makePreview(const QString &path, int maxSide, const QString &suffix) const;
+    QString makePreview(const QString &path, const QImage &image, int maxSide, const QString &suffix, QString *error) const;
     QVariantMap imageToVariant(const ImageEntry &entry, int index) const;
     void setBusy(bool value);
     void setStatusText(const QString &text);

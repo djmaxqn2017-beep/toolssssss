@@ -24,13 +24,28 @@ jobs:
           modules: 'qtshadertools qtimageformats'
           cache: true
 
+      - name: Install RAW and HEIC decoders
+        shell: pwsh
+        run: |
+          & "$env:VCPKG_INSTALLATION_ROOT/vcpkg.exe" install libraw:x64-windows 'libheif[core]:x64-windows'
+          if ($LASTEXITCODE -ne 0) { throw "Image decoder installation failed" }
+          $env:PATH = "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin;$env:PATH"
+          "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+
       - name: Configure
         shell: pwsh
-        run: cmake -S tuan-bo-ai-studio/native -B tuan-bo-ai-studio/native/build -G "Visual Studio 17 2022" -A x64 -DBUILD_TESTING=ON
+        run: cmake -S tuan-bo-ai-studio/native -B tuan-bo-ai-studio/native/build -G "Visual Studio 17 2022" -A x64 -DBUILD_TESTING=ON "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
 
       - name: Build
         shell: pwsh
         run: cmake --build tuan-bo-ai-studio/native/build --config Release --parallel
+
+      - name: Obtain upstream HEIC regression fixture
+        shell: pwsh
+        run: |
+          $fixture = Join-Path $PWD 'upstream-example.heic'
+          Invoke-WebRequest 'https://raw.githubusercontent.com/strukturag/libheif/v1.20.2/examples/example.heic' -OutFile $fixture
+          "TBRETOCH_HEIC_FIXTURE=$fixture" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Test native image pipeline
         shell: pwsh
@@ -42,6 +57,14 @@ jobs:
           $pkg = 'tuan-bo-ai-studio/native/package'
           New-Item -ItemType Directory -Force -Path $pkg | Out-Null
           Copy-Item 'tuan-bo-ai-studio/native/build/Release/TBRetoch.exe' "$pkg/TBRetoch.exe"
+          Copy-Item "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin/*.dll" "$pkg/"
+          if (Test-Path "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/plugins/libheif") {
+            Copy-Item "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/plugins/libheif/*.dll" "$pkg/"
+          }
+          New-Item -ItemType Directory -Force -Path "$pkg/third-party" | Out-Null
+          foreach ($name in @('libraw', 'libheif', 'libde265')) {
+            Copy-Item "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/share/$name/copyright" "$pkg/third-party/$name-LICENSE.txt"
+          }
           windeployqt --release --qmldir 'tuan-bo-ai-studio/native/qml' --no-translations "$pkg/TBRetoch.exe"
           foreach ($dll in @('vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll')) {
             if (-not (Test-Path "$pkg/$dll")) { Copy-Item "$env:SystemRoot/system32/$dll" "$pkg/$dll" }
@@ -51,7 +74,7 @@ jobs:
             'This is an engineering build of the new native core.',
             'GPU viewer: Qt RHI / Direct3D on Windows.',
             'Export: original-resolution source, CPU pipeline.',
-            'No license/quota system.'
+            'No license/quota system. Portrait AI is not implemented in this build.'
           ) | Set-Content "$pkg/README.txt" -Encoding UTF8
 
       - name: Verify deployed application starts
@@ -84,6 +107,9 @@ jobs:
           $env:QT_QPA_PLATFORM = 'windows'
           $env:QSG_RHI_PREFER_SOFTWARE_RENDERER = '1'
           $env:QSG_RHI_BACKEND = 'd3d11'
+          $import = Start-Process -FilePath "$installDir/TBRetoch.exe" -ArgumentList '--import-smoke-test' -Wait -PassThru -RedirectStandardError 'native-import.log'
+          Get-Content 'native-import.log'
+          if ($import.ExitCode -ne 0) { throw "Installed import test failed: $($import.ExitCode)" }
           $env:TBRETOCH_SMOKE_SCREENSHOT = Join-Path $PWD 'native-preview.png'
           $proc = Start-Process -FilePath "$installDir/TBRetoch.exe" -ArgumentList '--render-smoke-test' -Wait -PassThru -RedirectStandardError 'native-render.log'
           Get-Content 'native-render.log'
@@ -113,3 +139,4 @@ jobs:
           path: |
             native-preview.png
             native-render.log
+            native-import.log

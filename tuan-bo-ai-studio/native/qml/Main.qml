@@ -34,6 +34,12 @@ ApplicationWindow {
         return i18n.t(key)
     }
 
+    function importSelection(selection) {
+        var urls = []
+        for (var i = 0; i < selection.length; ++i) urls.push(selection[i].toString())
+        appController.importFiles(urls)
+    }
+
     function resetView() {
         if (sourceImage.status !== Image.Ready || sourceImage.implicitWidth <= 0 || sourceImage.implicitHeight <= 0) return
         var z = Math.min((viewer.width - 56) / sourceImage.implicitWidth,
@@ -52,7 +58,25 @@ ApplicationWindow {
         title: trKey("dialog.addImages")
         fileMode: FileDialog.OpenFiles
         nameFilters: [trKey("filter.images"), trKey("filter.all")]
-        onAccepted: appController.importFiles(selectedFiles)
+        onAccepted: window.importSelection(selectedFiles)
+    }
+
+    Dialog {
+        id: importErrorDialog
+        title: trKey("dialog.importReport")
+        anchors.centerIn: parent
+        width: Math.min(window.width - 80, 780)
+        height: Math.min(window.height - 100, 540)
+        modal: true
+        standardButtons: Dialog.Close
+        contentItem: ScrollView {
+            TextArea {
+                text: trKey("info.importReport") + "\n\n" + appController.importDetails
+                readOnly: true
+                selectByMouse: true
+                wrapMode: TextEdit.Wrap
+            }
+        }
     }
 
     FolderDialog {
@@ -71,6 +95,7 @@ ApplicationWindow {
             toastTimer.restart()
         }
         function onErrorOccurred(message) {
+            if (appController.importDetails.length > 0) importErrorDialog.open()
             toastText = trKey(message)
             toastTimer.restart()
         }
@@ -112,14 +137,14 @@ ApplicationWindow {
             Label { text: "TBRetoch"; color: "white"; font.bold: true; font.pixelSize: 14 }
 
             ToolSeparator { visible: window.width >= 1480 }
-            Button { text: trKey("nav.library"); visible: window.width >= 1480; onClicked: openDialog.open() }
+            Button { text: trKey("nav.library"); visible: window.width >= 1480; onClicked: appController.chooseImages(trKey("dialog.addImages"), trKey("filter.images") + ";;" + trKey("filter.all")) }
             Button { text: trKey("nav.edit"); visible: window.width >= 1480; highlighted: true; onClicked: tabs.currentIndex = 0 }
             Button { text: trKey("nav.compare"); visible: window.width >= 1480; onClicked: viewMode = "split" }
             Button { text: trKey("nav.ai"); visible: window.width >= 1480; onClicked: tabs.currentIndex = 1 }
             Button { text: trKey("nav.sync"); visible: window.width >= 1480; enabled: false; ToolTip.text: trKey("info.semanticPending"); ToolTip.visible: hovered }
 
             ToolSeparator { visible: window.width >= 1480 }
-            Button { text: trKey("action.addImages"); onClicked: openDialog.open() }
+            Button { text: trKey("action.addImages"); onClicked: appController.chooseImages(trKey("dialog.addImages"), trKey("filter.images") + ";;" + trKey("filter.all")) }
             Button { text: trKey("action.copy"); enabled: appController.currentIndex >= 0; onClicked: appController.copySettings() }
             Button { text: trKey("action.paste"); enabled: appController.currentIndex >= 0; onClicked: appController.pasteSettings() }
             Button { text: trKey("action.reset"); enabled: appController.currentIndex >= 0; onClicked: appController.resetCurrentSettings() }
@@ -307,6 +332,16 @@ ApplicationWindow {
                         }
                     }
 
+                    DropArea {
+                        anchors.fill: parent
+                        onDropped: function(drop) {
+                            if (drop.hasUrls && !appController.busy) {
+                                window.importSelection(drop.urls)
+                                drop.acceptProposedAction()
+                            }
+                        }
+                    }
+
                     Column {
                         anchors.centerIn: parent
                         spacing: 10
@@ -322,11 +357,12 @@ ApplicationWindow {
                         }
                         Label { text: "TBRetoch"; color: "white"; font.pixelSize: 24; font.bold: true; anchors.horizontalCenter: parent.horizontalCenter }
                         Label { text: trKey("viewer.nativeOffline"); color: "#918b99"; anchors.horizontalCenter: parent.horizontalCenter }
-                        Button { text: trKey("action.importImages"); anchors.horizontalCenter: parent.horizontalCenter; onClicked: openDialog.open() }
+                        Button { text: trKey("action.importImages"); anchors.horizontalCenter: parent.horizontalCenter; onClicked: appController.chooseImages(trKey("dialog.addImages"), trKey("filter.images") + ";;" + trKey("filter.all")) }
                     }
 
                     MouseArea {
                         anchors.fill: parent
+                        enabled: appController.currentIndex >= 0
                         acceptedButtons: Qt.LeftButton
                         hoverEnabled: true
                         property real startMouseX
