@@ -1,0 +1,38 @@
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+
+Item {
+    id: root
+    property string title: ""
+    property string keyName: ""
+    property real from: -100
+    property real to: 100
+    property real stepSize: 1
+    implicitHeight: 50
+
+    ColumnLayout {
+        anchors.fill: parent
+        spacing: 3
+        RowLayout {
+            Layout.fillWidth: true
+            Label { text: root.title; color: "#e9e5ee"; font.pixelSize: 11; Layout.fillWidth: true }
+            Label { text: Number(slider.value).toFixed(root.stepSize < 1 ? 2 : 0); color: "#c994ff"; font.pixelSize: 10 }
+        }
+        Slider {
+            id: slider
+            Layout.fillWidth: true
+            from: root.from
+            to: root.to
+            stepSize: root.stepSize
+            onMoved: appController.setSetting(root.keyName, value)
+            Binding {
+                target: slider
+                property: "value"
+                value: Number(appController.currentSettings[root.keyName] ?? 0)
+                when: !slider.pressed
+                restoreMode: Binding.RestoreBinding
+            }
+        }
+    }
+}
